@@ -33,9 +33,9 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.locationBar}>
-        <Ionicons name="location-outline" size={20} color="#666" />
+        <Ionicons name="location-outline" size={20} color="#667" />
         <Text style={styles.locationText}>Trindade, Florianópolis - SC</Text>
-        <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+        <Ionicons name="search-outline" size={20} color="#667" style={styles.searchIcon} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
