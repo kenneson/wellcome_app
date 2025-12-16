@@ -87,6 +87,9 @@ export default function ProfileScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color="#333" />
+                </TouchableOpacity>
                 <Text style={styles.headerTitle}>Meu Perfil</Text>
                 <TouchableOpacity>
                     <Ionicons name="settings-outline" size={24} color="#333" />

@@ -41,24 +41,7 @@ export default function LoginScreen() {
         } else {
             console.log('Email Login Success');
 
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('occupation')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (!profile || !profile.occupation) {
-                    router.replace('/auth/complete-profile');
-                    setLoading(false);
-                    return;
-                }
-            } else {
-                // Should not happen if login success
-            }
-            // If profile complete, _layout listener handles, or we force:
-            // router.replace('/(tabs)');
+            // Navigation is handled by the auth listener in _layout
         }
         setLoading(false);
     }

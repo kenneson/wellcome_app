@@ -50,9 +50,7 @@ export default function RegisterScreen() {
         } else {
             // Check if session exists (auto-login enabled)
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                router.replace('/auth/complete-profile');
-            } else {
+            if (!session) {
                 Alert.alert('Sucesso', 'Verifique seu e-mail para confirmar o cadastro!');
                 router.replace('/auth/login');
             }

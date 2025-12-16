@@ -27,7 +27,7 @@ export default function HomeScreen() {
           style={styles.headerLogo}
           contentFit="contain"
         />
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/profile')}>
           <Ionicons name="person-circle-outline" size={32} color="#FF8C42" />
         </TouchableOpacity>
       </View>
