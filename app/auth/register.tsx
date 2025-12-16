@@ -48,8 +48,14 @@ export default function RegisterScreen() {
         if (error) {
             Alert.alert('Erro', error.message);
         } else {
-            Alert.alert('Sucesso', 'Verifique seu e-mail para confirmar o cadastro!');
-            router.replace('/auth/login');
+            // Check if session exists (auto-login enabled)
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                router.replace('/auth/complete-profile');
+            } else {
+                Alert.alert('Sucesso', 'Verifique seu e-mail para confirmar o cadastro!');
+                router.replace('/auth/login');
+            }
         }
         setLoading(false);
     }
