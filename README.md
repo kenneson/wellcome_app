@@ -1,54 +1,60 @@
-# wellcome_app
+# Wellcome App 🍽️
 
-Welcome é uma plataforma que visa conectar pessoas que desejam desfrutar de uma refeição caseira ou companhia com aqueles que têm habilidades culinárias e espaço em suas mesas de jantar.
+**Wellcome** é uma plataforma inovadora que conecta pessoas através da culinária. Nosso objetivo é unir quem deseja desfrutar de uma refeição caseira ou boa companhia com anfitriões que têm habilidades culinárias e espaço em suas mesas.
 
-# Welcome to your Expo app 👋
+Seja para compartilhar uma receita especial, conhecer novas pessoas ou simplesmente ter uma experiência gastronômica autêntica, o Wellcome é o seu lugar.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## ✨ Funcionalidades
 
-## Get started
+- **Autenticação Segura**: Login e cadastro de usuários integrados.
+- **Gestão de Eventos**: Crie e participe de eventos gastronômicos.
+- **Perfil de Usuário**: Gerencie suas informações e preferências.
+- **Feed Interativo**: Explore experiências culinárias próximas a você.
 
-1. Install dependencies
+## 🚀 Tecnologias Utilizadas
 
+Este projeto foi desenvolvido com as mais modernas tecnologias do ecossistema mobile:
+
+- **[React Native](https://reactnative.dev/)** com **[Expo](https://expo.dev/)**: Para desenvolvimento rápido e compatibilidade multiplataforma.
+- **[TypeScript](https://www.typescriptlang.org/)**: Para maior segurança e escalabilidade do código.
+- **[Supabase](https://supabase.com/)**: Backend as a Service para autenticação e banco de dados.
+- **Expo Router**: Navegação moderna baseada em arquivos.
+
+## 🛠️ Instalação e Configuração
+
+Siga os passos abaixo para rodar o projeto localmente:
+
+### Pré-requisitos
+
+- Node.js instalado.
+- Gerenciador de pacotes (npm ou yarn).
+- Aplicativo **Expo Go** no seu celular (ou um emulador Android/iOS configurado).
+
+### Passo a Passo
+
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/kenneson/wellcome_app.git
+   cd wellcome_app
+   ```
+
+2. **Instale as dependências:**
    ```bash
    npm install
    ```
 
-2. Start the app
-
+3. **Inicie o projeto:**
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+4. **Execute no dispositivo:**
+   - Escaneie o QR Code exibido no terminal com o app Expo Go (Android) ou Câmera (iOS).
+   - Ou pressione `a` para abrir no emulador Android, ou `i` para o simulador iOS.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🤝 Contribuição
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+*Desenvolvido com ❤️ por Kenneson Lino*
