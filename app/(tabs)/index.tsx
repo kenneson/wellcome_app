@@ -85,7 +85,16 @@ export default function HomeScreen() {
           </View>
         </View>
 
+
       </ScrollView>
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/events/create')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={32} color="#FFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
