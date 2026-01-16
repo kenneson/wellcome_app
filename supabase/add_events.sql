@@ -1,48 +1,6 @@
--- Create a table for public profiles
-create table profiles (
-  id uuid references auth.users not null primary key,
-  updated_at timestamp with time zone,
-  full_name text,
-  username text unique,
-  avatar_url text,
-  website text,
-  occupation text,
-  bio text,
-  dietary_restrictions text[], -- Array of strings for multiple restrictions
-  looking_for text CHECK (looking_for IN ('comer', 'cozinhar', 'ambos')),
-
-  constraint username_length check (char_length(username) >= 3)
-);
-
--- Set up Row Level Security (RLS)
--- See https://supabase.com/docs/guides/auth/row-level-security for more details.
-alter table profiles enable row level security;
-
-create policy "Public profiles are viewable by everyone." on profiles
-  for select using (true);
-
-create policy "Users can insert their own profile." on profiles
-  for insert with check (auth.uid() = id);
-
-create policy "Users can update own profile." on profiles
-  for update using (auth.uid() = id);
-
--- Create a storage bucket for avatars
-insert into storage.buckets (id, name, public) 
-values ('avatars', 'avatars', true);
-
-create policy "Avatar images are publicly accessible." on storage.objects
-  for select using (bucket_id = 'avatars');
-
-create policy "Anyone can upload an avatar." on storage.objects
-  for insert with check (bucket_id = 'avatars');
-
-create policy "Anyone can update their own avatar." on storage.objects
-  for update using (auth.uid() = owner) with check (bucket_id = 'avatars');
-
 
 -- Create events table
-create table events (
+create table if not exists events (
   id uuid default gen_random_uuid() primary key,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   host_id uuid references profiles(id) not null,
@@ -50,6 +8,8 @@ create table events (
   description text,
   event_date timestamp with time zone not null,
   location text not null,
+  latitude float,
+  longitude float,
   max_guests integer default 0,
   cover_image_url text
 );
@@ -57,21 +17,48 @@ create table events (
 -- RLS for events
 alter table events enable row level security;
 
+-- Policies (Drop first to avoid errors if re-running)
+drop policy if exists "Events are viewable by everyone." on events;
 create policy "Events are viewable by everyone." on events
   for select using (true);
-
+  
+drop policy if exists "Users can create events." on events;
 create policy "Users can create events." on events
   for insert with check (auth.uid() = host_id);
 
+drop policy if exists "Hosts can update their own events." on events;
 create policy "Hosts can update their own events." on events
   for update using (auth.uid() = host_id);
 
+drop policy if exists "Hosts can delete their own events." on events;
 create policy "Hosts can delete their own events." on events
   for delete using (auth.uid() = host_id);
 
+-- Function to search events by distance (Haversine formula)
+create or replace function get_events_nearby(
+  lat float,
+  long float,
+  radius_km float default 60
+)
+returns setof events
+language sql
+as $$
+  select *
+  from events
+  where 
+    event_date >= now()
+    and (
+      6371 * acos(
+        cos(radians(lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(long)) +
+        sin(radians(lat)) * sin(radians(latitude))
+      )
+    ) <= radius_km
+  order by event_date;
+$$;
+
 
 -- Create event participants table
-create table event_participants (
+create table if not exists event_participants (
   id uuid default gen_random_uuid() primary key,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   event_id uuid references events(id) not null,
@@ -84,11 +71,14 @@ create table event_participants (
 -- RLS for participants
 alter table event_participants enable row level security;
 
+drop policy if exists "Participants are viewable by everyone" on event_participants;
 create policy "Participants are viewable by everyone" on event_participants
   for select using (true);
 
+drop policy if exists "Users can join events." on event_participants;
 create policy "Users can join events." on event_participants
   for insert with check (auth.uid() = user_id);
 
+drop policy if exists "Users can leave events." on event_participants;
 create policy "Users can leave events." on event_participants
   for delete using (auth.uid() = user_id);
