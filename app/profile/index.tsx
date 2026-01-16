@@ -155,6 +155,18 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
 
+                {/* Manage Events Shortcut */}
+                <TouchableOpacity style={styles.manageEventsCard} onPress={() => router.push('/profile/my-events')}>
+                    <View style={styles.manageIconContainer}>
+                        <Ionicons name="calendar" size={24} color="#FF8C42" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.manageTitle}>Meus Eventos Criados</Text>
+                        <Text style={styles.manageSubtitle}>Gerenciar, editar ou cancelar</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </TouchableOpacity>
+
                 <Text style={styles.sectionTitle}>ÚLTIMAS EXPERIÊNCIAS</Text>
 
                 {/* Mock Experience Card */}
@@ -451,5 +463,36 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
         fontWeight: '500',
+    },
+    manageEventsCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    manageIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#FFF3E0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    manageTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    manageSubtitle: {
+        fontSize: 12,
+        color: '#666',
     },
 });

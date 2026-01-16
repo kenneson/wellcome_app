@@ -10,7 +10,7 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
@@ -34,6 +34,7 @@ const lookingForOptions = [
 
 export default function EditProfileScreen() {
     const router = useRouter();
+    const { mandatory } = useLocalSearchParams<{ mandatory: string }>();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
@@ -155,7 +156,11 @@ export default function EditProfileScreen() {
             if (error) throw error;
 
             Alert.alert('Sucesso', 'Perfil atualizado!');
-            router.back(); // Voltar para o dashboard
+            if (mandatory === 'true') {
+                router.replace('/profile');
+            } else {
+                router.back();
+            }
         } catch (error: any) {
             Alert.alert('Erro ao salvar', error.message);
         } finally {
@@ -174,9 +179,13 @@ export default function EditProfileScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={styles.backButtonText}>{'< Voltar'}</Text>
-                </TouchableOpacity>
+                {mandatory === 'true' ? (
+                    <View style={{ width: 60 }} />
+                ) : (
+                    <TouchableOpacity onPress={() => router.back()}>
+                        <Text style={styles.backButtonText}>{'< Voltar'}</Text>
+                    </TouchableOpacity>
+                )}
                 <Text style={styles.title}>Editar Perfil</Text>
                 <View style={{ width: 60 }} />
             </View>
