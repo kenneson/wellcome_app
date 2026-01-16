@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { WizardProgress } from '@/components/event-creation/WizardProgress';
 import { SelectionCard } from '@/components/event-creation/SelectionCard';
 import { useEventCreation } from '@/context/EventCreationContext';
@@ -27,16 +29,78 @@ const RULES = [
 export default function EventCreateStep3() {
     const router = useRouter();
     const { data, updateLocation } = useEventCreation();
+    const [loadingGPS, setLoadingGPS] = useState(false);
 
     const handleNext = () => {
         if (!data.location.address.trim()) {
             Alert.alert('Atenção', 'Informe o endereço do local.');
             return;
         }
+        if (!data.location.latitude || !data.location.longitude) {
+            Alert.alert(
+                'Localização incompleta',
+                'Precisamos das coordenadas exatas. Por favor, use o botão "Usar minha localização atual" ou verifique o endereço.',
+                [
+                    { text: 'Tentar GPS', onPress: handleUseGPS },
+                    { text: 'Continuar mesmo assim (não recomendado)', onPress: () => router.push('/events/create/details'), style: 'cancel' }
+                ]
+            );
+            return;
+        }
         router.push('/events/create/details');
     };
 
     const handleBack = () => router.back();
+
+    const handleUseGPS = async () => {
+        setLoadingGPS(true);
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permissão negada', 'Precisamos de acesso ao GPS para pegar o endereço exato.');
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+            const { latitude, longitude } = location.coords;
+
+            // Web doesn't support built-in reverse geocoding in Expo SDK 50+
+            if (Platform.OS === 'web') {
+                updateLocation({
+                    latitude: latitude,
+                    longitude: longitude
+                });
+                Alert.alert('Sucesso', 'Coordenadas capturadas! Na versão Web, por favor digite o endereço manualmente.');
+                return;
+            }
+
+            // Reverse Geocode to get address text (Native only)
+            let addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+            if (addressResponse && addressResponse.length > 0) {
+                const addr = addressResponse[0];
+                const fullAddress = `${addr.street || ''}, ${addr.streetNumber || ''} - ${addr.district || ''}, ${addr.city || ''} - ${addr.region || ''}`;
+
+                updateLocation({
+                    address: fullAddress,
+                    latitude: latitude,
+                    longitude: longitude
+                });
+            } else {
+                updateLocation({
+                    latitude: latitude,
+                    longitude: longitude
+                });
+                Alert.alert('Coordenadas capturadas', 'Não conseguimos achar o endereço escrito, favor preencher manualmente, mas a localização GPS já foi salva!');
+            }
+
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Erro', 'Falha ao pegar localização GPS.');
+        } finally {
+            setLoadingGPS(false);
+        }
+    };
 
     const toggleFacility = (item: string) => {
         const list = data.location.facilities;
@@ -70,18 +134,39 @@ export default function EventCreateStep3() {
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.sectionTitle}>Informações sobre o local</Text>
                 <Text style={styles.description}>
-                    Seu endereço completo só será mostrado aos convidados após o pagamento da taxa de reserva
+                    A localização exata é importante para convidados num raio de 60km te encontrarem.
                 </Text>
+
+                <TouchableOpacity
+                    style={styles.gpsButton}
+                    onPress={handleUseGPS}
+                    disabled={loadingGPS}
+                >
+                    {loadingGPS ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <>
+                            <IconSymbol name="location.fill" size={20} color="#FFF" />
+                            <Text style={styles.gpsButtonText}>Usar minha localização atual</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
 
                 <TextInput
                     style={styles.addressInput}
-                    placeholder="Endereço completo"
+                    placeholder="Endereço completo (Rua, Número, Bairro, Cidade)"
                     value={data.location.address}
                     onChangeText={(text) => updateLocation({ address: text })}
                     multiline
                     numberOfLines={3}
                     textAlignVertical="top"
                 />
+
+                {data.location.latitude && (
+                    <Text style={styles.coordenadasText}>
+                        ✅ Coordenadas salvas: {data.location.latitude.toFixed(4)}, {data.location.longitude?.toFixed(4)}
+                    </Text>
+                )}
 
                 <View style={styles.divider} />
 
@@ -164,6 +249,21 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 16,
     },
+    gpsButton: {
+        flexDirection: 'row',
+        backgroundColor: '#4A90E2',
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        gap: 8
+    },
+    gpsButtonText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 14
+    },
     addressInput: {
         borderWidth: 1,
         borderColor: '#E0E0E0',
@@ -171,7 +271,13 @@ const styles = StyleSheet.create({
         padding: 12,
         fontSize: 14,
         minHeight: 80,
-        backgroundColor: '#FAFAFA' // Slightly distinct background for address area?
+        backgroundColor: '#FAFAFA'
+    },
+    coordenadasText: {
+        fontSize: 12,
+        color: 'green',
+        marginTop: 4,
+        fontWeight: '600'
     },
     grid: {
         flexDirection: 'row',

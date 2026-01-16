@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Alert, ActivityIndicator, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Note: Must verify if installed or use alternate
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { WizardProgress } from '@/components/event-creation/WizardProgress';
 import { useEventCreation } from '@/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function EventCreateStep4() {
     const router = useRouter();
-    const { data, updateDetails } = useEventCreation();
+    const { data, updateDetails, submitEvent } = useEventCreation();
     const [submitting, setSubmitting] = useState(false);
 
     // Date Pickers State
@@ -35,26 +37,36 @@ export default function EventCreateStep4() {
         }
     };
 
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            updateDetails({ coverImage: result.assets[0].uri });
+        }
+    };
+
     const handleSubmit = async () => {
         // Validation
-        if (!data.details.pricePerGuest || !data.details.maxGuests || !data.details.date || !data.details.registrationDeadline) {
-            Alert.alert('Dados incompletos', 'Preencha todos os campos obrigatórios.');
+        if (!data.details.title || !data.details.pricePerGuest || !data.details.maxGuests || !data.details.date) {
+            Alert.alert('Dados incompletos', 'Preencha todos os campos obrigatórios (Título, Preço, Vagas, Data).');
             return;
         }
 
         setSubmitting(true);
         try {
-            // TODO: Call context submit
-            // await submitEvent();
-
-            // Improve simulation
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await submitEvent();
 
             Alert.alert('Sucesso', 'Evento criado com sucesso!', [
                 { text: 'OK', onPress: () => router.push('/(tabs)') }
             ]);
-        } catch (error) {
-            Alert.alert('Erro', 'Não foi possível criar o evento.');
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert('Erro', `Não foi possível criar o evento: ${error.message || 'Erro desconhecido'}`);
         } finally {
             setSubmitting(false);
         }
@@ -76,13 +88,48 @@ export default function EventCreateStep4() {
             <WizardProgress currentStep={3} />
 
             <ScrollView contentContainerStyle={styles.content}>
+
+                {/* Image Picker */}
+                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                    {data.details.coverImage ? (
+                        <Image source={{ uri: data.details.coverImage }} style={styles.coverImage} />
+                    ) : (
+                        <View style={styles.imagePlaceholder}>
+                            <IconSymbol name="camera.fill" size={32} color="#FF8C42" />
+                            <Text style={styles.imageText}>Adicionar foto de capa</Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
+
                 <Text style={styles.sectionTitle}>Mais informações sobre o seu evento</Text>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Título do Evento</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ex: Jantar Italiano na Mooca"
+                        value={data.details.title}
+                        onChangeText={(text) => updateDetails({ title: text })}
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Descrição do Evento</Text>
+                    <TextInput
+                        style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                        placeholder="Conte um pouco sobre o que vai rolar..."
+                        value={data.details.description}
+                        onChangeText={(text) => updateDetails({ description: text })}
+                        multiline
+                        numberOfLines={4}
+                    />
+                </View>
 
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Valor por convidado</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="R$"
+                        placeholder="0,00"
                         value={data.details.pricePerGuest}
                         onChangeText={(text) => updateDetails({ pricePerGuest: text })}
                         keyboardType="numeric"
@@ -238,5 +285,29 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    imagePicker: {
+        marginBottom: 24,
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderStyle: 'dashed',
+        backgroundColor: '#F9F9F9',
+        height: 200,
+    },
+    coverImage: {
+        width: '100%',
+        height: '100%',
+    },
+    imagePlaceholder: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    imageText: {
+        marginTop: 8,
+        color: '#666',
+        fontSize: 14,
     },
 });

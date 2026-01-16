@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import * as Location from 'expo-location';
 
 export interface Dish {
     id: string;
@@ -8,6 +11,8 @@ export interface Dish {
 
 export interface LocationDetails {
     address: string;
+    latitude: number | null;
+    longitude: number | null;
     facilities: string[];
     rules: string[];
 }
@@ -19,6 +24,7 @@ export interface EventDetails {
     registrationDeadline: Date | null;
     title: string;
     description: string;
+    coverImage: string | null;
 }
 
 interface EventCreationState {
@@ -56,6 +62,8 @@ const defaultState: EventCreationState = {
     dishes: [],
     location: {
         address: '',
+        latitude: null,
+        longitude: null,
         facilities: [],
         rules: [],
     },
@@ -65,7 +73,8 @@ const defaultState: EventCreationState = {
         date: null,
         registrationDeadline: null,
         title: '',
-        description: ''
+        description: '',
+        coverImage: null
     },
     veganOptions: false,
     substitutions: false,
@@ -75,7 +84,10 @@ const defaultState: EventCreationState = {
 const EventCreationContext = createContext<EventCreationContextType | undefined>(undefined);
 
 export function EventCreationProvider({ children }: { children: ReactNode }) {
-    const [data, setData] = useState<EventCreationState>(defaultState);
+    const [data, setData] = useState<EventCreationState>({
+        ...defaultState,
+        details: { ...defaultState.details, coverImage: null }
+    } as EventCreationState);
 
     const setEventType = (type: string) => setData(prev => ({ ...prev, eventType: type }));
 
@@ -117,8 +129,93 @@ export function EventCreationProvider({ children }: { children: ReactNode }) {
     const setMenuAlterations = (value: boolean) => setData(prev => ({ ...prev, menuAlterations: value }));
 
     const submitEvent = async () => {
-        console.log('Submitting event:', data);
-        // TODO: Implement Supabase submission
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Usuário não autenticado');
+
+            let coverImageUrl = null;
+
+            // 1. Upload Image if exists
+            if (data.details.coverImage) {
+                const navKey = data.details.coverImage; // Assume it's a local URI
+                // For simplicity in MVP, we might need to process the URI to blob
+                // But React Native Supabase upload often requires FormData or specialized fetch
+                // Let's implement a basic upload or skip if complex for now.
+                // Assuming we have a helper or just uploading raw.
+
+                // NOTE: Real image upload is complex in Expo without specific polyfills. 
+                // We will try a standard FormData approach.
+                const filename = `${session.user.id}/${Date.now()}.jpg`;
+                const formData = new FormData();
+
+                // @ts-ignore
+                formData.append('file', {
+                    uri: navKey,
+                    name: filename,
+                    type: 'image/jpeg',
+                });
+
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('avatars') // Reusing avatars bucket or 'events' if exists. Let's try 'avatars' as safe bet.
+                    .upload(filename, formData as any);
+
+                if (uploadData) {
+                    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filename);
+                    coverImageUrl = publicUrl;
+                }
+            }
+
+            // 2. Construct Description (Rich Text Simulation)
+            let fullDescription = data.details.description || '';
+            fullDescription += `\n\n--- MENU ---\n`;
+            data.dishes.forEach(d => fullDescription += `• ${d.name}: ${d.description}\n`);
+
+            fullDescription += `\n--- DETALHES ---\n`;
+            if (data.location.facilities.length > 0) fullDescription += `Facilidades: ${data.location.facilities.join(', ')}\n`;
+            if (data.location.rules.length > 0) fullDescription += `Regras: ${data.location.rules.join(', ')}\n`;
+            fullDescription += `Tipo: ${data.eventType}\nCulinária: ${data.cuisineTypes.join(', ')}`;
+
+            // 2b. Ensure Coordinates exist (Geocode fallback)
+            let lat = data.location.latitude;
+            let long = data.location.longitude;
+
+            if ((!lat || !long) && data.location.address) {
+                // Web: Geocoding API not supported by Expo Location directly
+                if (Platform.OS !== 'web') {
+                    try {
+                        const geocoded = await Location.geocodeAsync(data.location.address);
+                        if (geocoded && geocoded.length > 0) {
+                            lat = geocoded[0].latitude;
+                            long = geocoded[0].longitude;
+                        }
+                    } catch (e) {
+                        console.log('Failed to geocode address during submit', e);
+                    }
+                } else {
+                    console.warn('Web platform: skipping server-side geocoding fallback. Event may lack coords if not provided via GPS.');
+                }
+            }
+
+            // 3. Insert Event
+            const { error: insertError } = await supabase.from('events').insert({
+                host_id: session.user.id,
+                title: data.details.title,
+                description: fullDescription,
+                event_date: data.details.date?.toISOString(),
+                location: data.location.address,
+                latitude: lat,
+                longitude: long,
+                max_guests: parseInt(data.details.maxGuests || '0'),
+                cover_image_url: coverImageUrl,
+                price: parseFloat(data.details.pricePerGuest.replace('R$', '').replace(',', '.') || '0')
+            });
+
+            if (insertError) throw insertError;
+
+        } catch (error) {
+            console.error('Submit Error:', error);
+            throw error;
+        }
     };
 
     return (

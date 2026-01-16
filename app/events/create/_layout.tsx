@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { EventCreationProvider } from '@/context/EventCreationContext';
 
-export default function EventCreationLayout() {
+export default function CreateEventLayout() {
     return (
         <EventCreationProvider>
             <Stack screenOptions={{ headerShown: false }}>
