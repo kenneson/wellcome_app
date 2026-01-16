@@ -1,12 +1,58 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
 export default function WelcomeModal() {
     const router = useRouter();
+    const [isChecking, setIsChecking] = useState(true);
+
+    useEffect(() => {
+        checkProfile();
+    }, []);
+
+    async function checkProfile() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session?.user) {
+                // Not logged in -> go to login
+                router.replace('/auth/login');
+                return;
+            }
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('occupation, looking_for')
+                .eq('id', session.user.id)
+                .single();
+
+            const complete = !!(profile?.occupation && profile?.looking_for);
+
+            if (complete) {
+                // Already complete -> go to tabs
+                // Use replace to avoid back stack issues
+                router.replace('/(tabs)');
+            } else {
+                // Incomplete -> show modal
+                setIsChecking(false);
+            }
+        } catch (error) {
+            console.log('Error checking profile in welcome:', error);
+            setIsChecking(false);
+        }
+    }
+
+    // Protection: Show loading until we decide
+    if (isChecking) {
+        return (
+            <View style={[styles.container, { backgroundColor: 'white' }]}>
+                <ActivityIndicator size="large" color="#FF8C42" />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
@@ -27,18 +73,10 @@ export default function WelcomeModal() {
                     <TouchableOpacity
                         style={styles.primaryButton}
                         onPress={() => {
-                            // Handle profile completion
-                            router.back();
+                            router.push('/profile/edit?mandatory=true');
                         }}
                     >
                         <Text style={styles.primaryButtonText}>Completar perfil</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={() => router.back()}
-                    >
-                        <Text style={styles.secondaryButtonText}>Mais tarde</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -102,13 +140,5 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    secondaryButton: {
-        paddingVertical: 8,
-    },
-    secondaryButtonText: {
-        color: '#333',
-        fontSize: 16,
-        fontWeight: '600',
     },
 });
