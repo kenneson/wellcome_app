@@ -1,76 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Alert, ActivityIndicator, Image } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
 import { WizardProgress } from '@/components/event-creation/WizardProgress';
-import { useEventCreation } from '@/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useEventDetailsViewModel } from '@/viewmodels/events/create/useEventDetailsViewModel';
 
 export default function EventCreateStep4() {
     const router = useRouter();
-    const { data, updateDetails, submitEvent } = useEventCreation();
-    const [submitting, setSubmitting] = useState(false);
-
-    // Date Pickers State
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
-
-    // Helper to format date
-    const formatDate = (date: Date | null) => {
-        if (!date) return 'Selecione';
-        return date.toLocaleDateString('pt-BR');
-    };
-
-    const handleDateChange = (event: any, selectedDate?: Date) => {
-        setShowDatePicker(Platform.OS === 'ios');
-        if (selectedDate) {
-            updateDetails({ date: selectedDate });
-        }
-    };
-
-    const handleDeadlineChange = (event: any, selectedDate?: Date) => {
-        setShowDeadlinePicker(Platform.OS === 'ios');
-        if (selectedDate) {
-            updateDetails({ registrationDeadline: selectedDate });
-        }
-    };
-
-    const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            updateDetails({ coverImage: result.assets[0].uri });
-        }
-    };
-
-    const handleSubmit = async () => {
-        // Validation
-        if (!data.details.title || !data.details.pricePerGuest || !data.details.maxGuests || !data.details.date) {
-            Alert.alert('Dados incompletos', 'Preencha todos os campos obrigatórios (Título, Preço, Vagas, Data).');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            await submitEvent();
-
-            Alert.alert('Sucesso', 'Evento criado com sucesso!', [
-                { text: 'OK', onPress: () => router.push('/(tabs)') }
-            ]);
-        } catch (error: any) {
-            console.error(error);
-            Alert.alert('Erro', `Não foi possível criar o evento: ${error.message || 'Erro desconhecido'}`);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+    const vm = useEventDetailsViewModel();
 
     const handleBack = () => router.back();
 
@@ -90,9 +29,9 @@ export default function EventCreateStep4() {
             <ScrollView contentContainerStyle={styles.content}>
 
                 {/* Image Picker */}
-                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                    {data.details.coverImage ? (
-                        <Image source={{ uri: data.details.coverImage }} style={styles.coverImage} />
+                <TouchableOpacity style={styles.imagePicker} onPress={vm.pickImage}>
+                    {vm.data.details.coverImage ? (
+                        <Image source={{ uri: vm.data.details.coverImage }} style={styles.coverImage} />
                     ) : (
                         <View style={styles.imagePlaceholder}>
                             <IconSymbol name="camera.fill" size={32} color="#FF8C42" />
@@ -108,8 +47,8 @@ export default function EventCreateStep4() {
                     <TextInput
                         style={styles.input}
                         placeholder="Ex: Jantar Italiano na Mooca"
-                        value={data.details.title}
-                        onChangeText={(text) => updateDetails({ title: text })}
+                        value={vm.data.details.title}
+                        onChangeText={(text) => vm.updateDetails({ title: text })}
                     />
                 </View>
 
@@ -118,8 +57,8 @@ export default function EventCreateStep4() {
                     <TextInput
                         style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                         placeholder="Conte um pouco sobre o que vai rolar..."
-                        value={data.details.description}
-                        onChangeText={(text) => updateDetails({ description: text })}
+                        value={vm.data.details.description}
+                        onChangeText={(text) => vm.updateDetails({ description: text })}
                         multiline
                         numberOfLines={4}
                     />
@@ -130,8 +69,8 @@ export default function EventCreateStep4() {
                     <TextInput
                         style={styles.input}
                         placeholder="0,00"
-                        value={data.details.pricePerGuest}
-                        onChangeText={(text) => updateDetails({ pricePerGuest: text })}
+                        value={vm.data.details.pricePerGuest}
+                        onChangeText={(text) => vm.updateDetails({ pricePerGuest: text })}
                         keyboardType="numeric"
                     />
                 </View>
@@ -141,8 +80,8 @@ export default function EventCreateStep4() {
                     <TextInput
                         style={styles.input}
                         placeholder="Selecione"
-                        value={data.details.maxGuests}
-                        onChangeText={(text) => updateDetails({ maxGuests: text })}
+                        value={vm.data.details.maxGuests}
+                        onChangeText={(text) => vm.updateDetails({ maxGuests: text })}
                         keyboardType="numeric"
                     />
                 </View>
@@ -151,17 +90,17 @@ export default function EventCreateStep4() {
                     <Text style={styles.label}>Data de realização</Text>
                     <TouchableOpacity
                         style={styles.dateButton}
-                        onPress={() => setShowDatePicker(true)}
+                        onPress={() => vm.setShowDatePicker(true)}
                     >
-                        <Text style={styles.dateText}>{formatDate(data.details.date)}</Text>
+                        <Text style={styles.dateText}>{vm.formatDate(vm.data.details.date)}</Text>
                         <IconSymbol name="calendar" size={20} color="#666" />
                     </TouchableOpacity>
-                    {showDatePicker && (
+                    {vm.showDatePicker && (
                         <DateTimePicker
-                            value={data.details.date || new Date()}
+                            value={vm.data.details.date || new Date()}
                             mode="date"
                             display="default"
-                            onChange={handleDateChange}
+                            onChange={vm.handleDateChange}
                         />
                     )}
                 </View>
@@ -170,17 +109,17 @@ export default function EventCreateStep4() {
                     <Text style={styles.label}>Vagas abertas até</Text>
                     <TouchableOpacity
                         style={styles.dateButton}
-                        onPress={() => setShowDeadlinePicker(true)}
+                        onPress={() => vm.setShowDeadlinePicker(true)}
                     >
-                        <Text style={styles.dateText}>{formatDate(data.details.registrationDeadline)}</Text>
+                        <Text style={styles.dateText}>{vm.formatDate(vm.data.details.registrationDeadline)}</Text>
                         <IconSymbol name="calendar" size={20} color="#666" />
                     </TouchableOpacity>
-                    {showDeadlinePicker && (
+                    {vm.showDeadlinePicker && (
                         <DateTimePicker
-                            value={data.details.registrationDeadline || new Date()}
+                            value={vm.data.details.registrationDeadline || new Date()}
                             mode="date"
                             display="default"
-                            onChange={handleDeadlineChange}
+                            onChange={vm.handleDeadlineChange}
                         />
                     )}
                 </View>
@@ -190,11 +129,11 @@ export default function EventCreateStep4() {
 
             <View style={styles.footer}>
                 <TouchableOpacity
-                    style={[styles.nextButton, submitting && styles.disabledButton]}
-                    onPress={handleSubmit}
-                    disabled={submitting}
+                    style={[styles.nextButton, vm.submitting && styles.disabledButton]}
+                    onPress={vm.handleSubmit}
+                    disabled={vm.submitting}
                 >
-                    {submitting ? (
+                    {vm.submitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
                         <Text style={styles.nextButtonText}>Salvar e prosseguir</Text>

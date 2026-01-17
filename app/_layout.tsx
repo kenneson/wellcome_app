@@ -8,6 +8,7 @@ import { Session } from '@supabase/supabase-js';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/lib/supabase';
 import { View, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -15,6 +16,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
   const segments = useSegments();
@@ -121,8 +123,6 @@ export default function RootLayout() {
     hasInitiallyRouted.current = true;
   }, [initialized, session, segments, isProfileComplete]);
 
-  // Prevent rendering ANY content until we are ready
-  // This avoids "glimpsing" the wrong screen or firing child effects prematurely
   if (!initialized || (session && profileCheckLoading) || (session && isProfileComplete === null)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -135,6 +135,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
         <StatusBar style="light" backgroundColor="#FF8C42" />
+        <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

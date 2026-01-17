@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+import { SideMenu } from '@/components/ui/SideMenu';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
@@ -21,6 +22,26 @@ export default function HomeScreen() {
   // Manual Location State
   const [modalVisible, setModalVisible] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
+
+  // Side Menu State
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  async function fetchCurrentUser() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      setCurrentUser(profile);
+    }
+  }
 
   useEffect(() => {
     loadStoredLocation();
@@ -217,7 +238,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header Customizado */}
       <View style={styles.mainHeader}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)}>
           <Ionicons name="menu" size={28} color="#FFF" />
         </TouchableOpacity>
         <Image
@@ -364,7 +385,14 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView >
+
+      {/* Side Menu */}
+      <SideMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        user={currentUser}
+      />
+    </SafeAreaView>
   );
 }
 
