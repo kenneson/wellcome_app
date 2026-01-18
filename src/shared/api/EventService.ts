@@ -61,40 +61,37 @@ export class EventService {
                 coverImageUrl = await this.uploadImage(data.details.coverImage, session.user.id);
             }
 
-            // Construct Description
-            let fullDescription = data.details.description || '';
-            fullDescription += `\n\n--- MENU ---\n`;
-            data.dishes.forEach(d => fullDescription += `• ${d.name}: ${d.description}\n`);
+            // Construct payload for Backend
+            // Note: In a real app, use an environment variable for the API URL
+            const apiUrl = 'http://10.0.2.2:3000/events'; // Android Emulator localhost
+            // const apiUrl = 'http://localhost:3000/events'; // iOS / Web
 
-            fullDescription += `\n--- DETALHES ---\n`;
-            if (data.location.facilities.length > 0) fullDescription += `Facilidades: ${data.location.facilities.join(', ')}\n`;
-            if (data.location.rules.length > 0) fullDescription += `Regras: ${data.location.rules.join(', ')}\n`;
-            fullDescription += `Tipo: ${data.eventType}\nCulinária: ${data.cuisineTypes.join(', ')}`;
-
-            // Geolocation fallback
-            let { latitude, longitude } = data.location;
-
-            if ((!latitude || !longitude) && data.location.address) {
-                const coords = await this.geocodeLocation(data.location.address);
-                latitude = coords.latitude;
-                longitude = coords.longitude;
-            }
-
-            // Insert Event
-            const { error: insertError } = await supabase.from('events').insert({
-                host_id: session.user.id,
+            // Adapting data to Backend Schema
+            const payload = {
                 title: data.details.title,
-                description: fullDescription,
-                event_date: data.details.date?.toISOString(),
+                description: data.details.description, // Menu detail could be structured better, sending raw for now
+                price: parseFloat(data.details.pricePerGuest.replace('R$', '').replace(',', '.') || '0'),
+                maxGuests: parseInt(data.details.maxGuests || '0'),
+                eventDate: data.details.date ? data.details.date.toISOString() : new Date().toISOString(),
                 location: data.location.address,
-                latitude: latitude,
-                longitude: longitude,
-                max_guests: parseInt(data.details.maxGuests || '0'),
-                cover_image_url: coverImageUrl,
-                price: parseFloat(data.details.pricePerGuest.replace('R$', '').replace(',', '.') || '0')
+                latitude: data.location.latitude,
+                longitude: data.location.longitude,
+                coverImageUrl: coverImageUrl,
+                hostId: session.user.id // In real backend, extract from JWT token
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
             });
 
-            if (insertError) throw insertError;
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao criar evento');
+            }
 
         } catch (error) {
             console.error('Submit Error:', error);
