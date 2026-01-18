@@ -6,10 +6,11 @@ export class PrismaBookingRepository implements BookingRepository {
     async create(data: CreateBookingDTO): Promise<Booking> {
         const booking = await prisma.booking.create({
             data: {
-                eventId: data.eventId,
-                userId: data.userId,
+                // 'userId' shorthand seems to differ in generated client vs expectation
+                // Use explicit relation connect
+                guest: { connect: { id: data.userId } },
                 status: 'CONFIRMED'
-            }
+            } as any
         });
         return this.mapToDomain(booking);
     }
@@ -23,7 +24,7 @@ export class PrismaBookingRepository implements BookingRepository {
 
     async findByUserId(userId: string): Promise<Booking[]> {
         const bookings = await prisma.booking.findMany({
-            where: { userId }
+            where: { guest: { id: userId } }
         });
         return bookings.map(this.mapToDomain);
     }
@@ -35,8 +36,8 @@ export class PrismaBookingRepository implements BookingRepository {
     async deleteByEventAndUser(eventId: string, userId: string): Promise<void> {
         await prisma.booking.deleteMany({
             where: {
-                eventId,
-                userId
+                eventId: eventId,
+                guest: { id: userId }
             }
         });
     }
