@@ -13,7 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { useRouter, Link } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/shared/lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -100,7 +100,7 @@ export default function LoginScreen() {
 
                 <View style={styles.logoContainer}>
                     <Image
-                        source={require('@/assets/images/logo.png')}
+                        source={require('../../../assets/images/logo.png')}
                         style={styles.logoImage}
                         contentFit="contain"
                     />

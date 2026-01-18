@@ -63,8 +63,9 @@ export class EventService {
 
             // Construct payload for Backend
             // Note: In a real app, use an environment variable for the API URL
-            const apiUrl = 'http://10.0.2.2:3000/events'; // Android Emulator localhost
+            // const apiUrl = 'http://10.0.2.2:3000/events'; // Android Emulator localhost
             // const apiUrl = 'http://localhost:3000/events'; // iOS / Web
+            const apiUrl = 'http://192.168.1.4:3000/events'; // Physical Device (Local IP)
 
             // Adapting data to Backend Schema
             const payload = {

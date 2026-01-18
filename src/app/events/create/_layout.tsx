@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { EventCreationProvider } from '@/context/EventCreationContext';
+import { EventCreationProvider } from '@/shared/context/EventCreationContext';
 
 export default function CreateEventLayout() {
     return (

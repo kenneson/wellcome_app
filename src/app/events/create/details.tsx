@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { WizardProgress } from '@/components/event-creation/WizardProgress';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useEventDetailsViewModel } from '@/viewmodels/events/create/useEventDetailsViewModel';
+import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
+import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { useEventDetailsViewModel } from '@/features/events/create/useEventDetailsViewModel';
 
 export default function EventCreateStep4() {
     const router = useRouter();

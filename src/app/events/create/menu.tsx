@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { WizardProgress } from '@/components/event-creation/WizardProgress';
-import { DishInputCard } from '@/components/event-creation/DishInputCard';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { useEventCreation } from '@/context/EventCreationContext';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
+import { DishInputCard } from '@/shared/ui/event-creation/DishInputCard';
+import { Checkbox } from '@/shared/ui/ui/Checkbox';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
 
 export default function EventCreateStep2() {
     const router = useRouter();

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Platform, Alert } from 'react-native';
-import { useEventCreation } from '@/context/EventCreationContext';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 

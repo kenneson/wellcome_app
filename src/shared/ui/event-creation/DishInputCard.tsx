@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
-import { Dish } from '@/context/EventCreationContext';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Dish } from '@/entities/event/model/types';
+import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
 
 interface DishInputCardProps {
     index: number;

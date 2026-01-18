@@ -5,8 +5,8 @@ import 'react-native-reanimated';
 import { useEffect, useState, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { supabase } from '@/lib/supabase';
+import { useColorScheme } from '@/shared/lib/hooks/use-color-scheme';
+import { supabase } from '@/shared/lib/supabase';
 import { View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

@@ -9,10 +9,10 @@ import Animated, {
     Extrapolate,
     runOnJS
 } from 'react-native-reanimated';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/shared/lib/supabase';
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = Math.min(width * 0.75, 280);

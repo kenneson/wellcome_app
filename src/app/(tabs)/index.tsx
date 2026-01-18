@@ -6,8 +6,8 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/lib/supabase';
-import { SideMenu } from '@/components/ui/SideMenu';
+import { supabase } from '@/shared/lib/supabase';
+import { SideMenu } from '@/shared/ui/ui/SideMenu';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
@@ -242,7 +242,7 @@ export default function HomeScreen() {
           <Ionicons name="menu" size={28} color="#FFF" />
         </TouchableOpacity>
         <Image
-          source={require('@/assets/images/logo.png')} // Make sure this is white version if background is orange, or just text
+          source={require('../../../assets/images/logo.png')} // Make sure this is white version if background is orange, or just text
           style={styles.logoImage}
           contentFit="contain"
           tintColor="#FFF"

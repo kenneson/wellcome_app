@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/shared/lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 

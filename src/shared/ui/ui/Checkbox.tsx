@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
 
 interface CheckboxProps {
     label: string;

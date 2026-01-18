@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-import { WizardProgress } from '@/components/event-creation/WizardProgress';
-import { SelectionCard } from '@/components/event-creation/SelectionCard';
-import { useEventCreation } from '@/context/EventCreationContext';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
+import { SelectionCard } from '@/shared/ui/event-creation/SelectionCard';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
 
 const FACILITIES = [
     'Estacionamento para visitantes',
