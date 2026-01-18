@@ -28,6 +28,7 @@ export class EventController {
             const event = await this.createEventUseCase.execute(body);
             return reply.code(201).send(event);
         } catch (error) {
+            console.error('Create Event Error:', error);
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }

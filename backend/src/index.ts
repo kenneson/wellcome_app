@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -307,7 +308,33 @@ const start = async () => {
             }
         }, (req, reply) => eventController.getById(req, reply));
 
-        await fastify.listen({ port: 3000, host: '0.0.0.0' });
+        const address = await fastify.listen({ port: 3000, host: '0.0.0.0' });
+
+        console.log(`\n🚀 Backend running at: ${address}`);
+
+        // Log LAN IPs for easier access
+        const { networkInterfaces } = require('os');
+        const nets = networkInterfaces();
+        const results = Object.create(null);
+
+        for (const name of Object.keys(nets)) {
+            for (const net of nets[name]) {
+                // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+                if (net.family === 'IPv4' && !net.internal) {
+                    if (!results[name]) {
+                        results[name] = [];
+                    }
+                    results[name].push(net.address);
+                }
+            }
+        }
+
+        console.log('📍 Available on your network:');
+        Object.keys(results).forEach(name => {
+            results[name].forEach((ip: string) => console.log(`   - http://${ip}:3000`));
+        });
+        console.log('\n');
+
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);
