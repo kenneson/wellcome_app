@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase';
-import { EventCreationState } from '../models/Event';
+import { supabase } from '@/shared/lib/supabase';
+import { EventCreationState } from '@/entities/event/model/types';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 

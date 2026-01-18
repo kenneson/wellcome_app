@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { EventCreationState, Dish, LocationDetails, EventDetails } from '../models/Event';
-import { eventService } from '../services/EventService';
+import { EventCreationState, Dish, LocationDetails, EventDetails } from '@/entities/event/model/types';
+import { eventService } from '@/shared/api/EventService';
 
 const defaultState: EventCreationState = {
     eventType: '',

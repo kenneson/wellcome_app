@@ -1,60 +1,85 @@
 # Wellcome App 🍽️
 
-**Wellcome** é uma plataforma inovadora que conecta pessoas através da culinária. Nosso objetivo é unir quem deseja desfrutar de uma refeição caseira ou boa companhia com anfitriões que têm habilidades culinárias e espaço em suas mesas.
+> **Connecting people through culinary experiences.**
 
-Seja para compartilhar uma receita especial, conhecer novas pessoas ou simplesmente ter uma experiência gastronômica autêntica, o Wellcome é o seu lugar.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![React Native](https://img.shields.io/badge/React_Native-0.76-blue)
+![Expo](https://img.shields.io/badge/Expo-50-white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 
-## ✨ Funcionalidades
+**Wellcome** is an innovative platform that connects food lovers with hosts who offer authentic home-dining experiences. Whether you want to share a special recipe, meet new people, or enjoy a unique meal, Wellcome is your place.
 
-- **Autenticação Segura**: Login e cadastro de usuários integrados.
-- **Gestão de Eventos**: Crie e participe de eventos gastronômicos.
-- **Perfil de Usuário**: Gerencie suas informações e preferências.
-- **Feed Interativo**: Explore experiências culinárias próximas a você.
+## 🏗 Architecture: Feature-Sliced Design (FSD)
+This project follows the **Feature-Sliced Design** methodology to ensure scalability, maintainability, and team collaboration.
 
-## 🚀 Tecnologias Utilizadas
+### Structure (`src/`)
+- **`app/`**: Global configuration, navigation, providers, and entry points.
+- **`entities/`**: Business domain entities (e.g., `User`, `Event`, `Review`). Reusable across features.
+- **`features/`**: User interactions that bring value (e.g., `create-event`, `join-event`, `auth`).
+- **`shared/`**: Reusable infrastructure code (UI kit, API clients, Utils). Isolated and decoupled.
+- **`pages/`**: (Optional) Composition of features and entities into full screens.
 
-Este projeto foi desenvolvido com as mais modernas tecnologias do ecossistema mobile:
+## 🛠 Tech Stack
 
-- **[React Native](https://reactnative.dev/)** com **[Expo](https://expo.dev/)**: Para desenvolvimento rápido e compatibilidade multiplataforma.
-- **[TypeScript](https://www.typescriptlang.org/)**: Para maior segurança e escalabilidade do código.
-- **[Supabase](https://supabase.com/)**: Backend as a Service para autenticação e banco de dados.
-- **Expo Router**: Navegação moderna baseada em arquivos.
+### Frontend (Mobile)
+- **Framework**: React Native + Expo
+- **Language**: TypeScript
+- **State Management**: Zustand
+- **Data Fetching**: TanStack Query (React Query)
+- **Styling**: NativeWind (Tailwind CSS) + clsx
+- **Forms**: React Hook Form + Zod
+- **Navigation**: Expo Router (File-based routing)
 
-## 🛠️ Instalação e Configuração
+### Backend (`backend/`)
+- **Runtime**: Node.js 20
+- **Framework**: Fastify
+- **ORM**: Prisma
+- **Database**: PostgreSQL (Primary) + Redis (Cache/Queues)
+- **Validation**: Zod (Shared schemas possible)
 
-Siga os passos abaixo para rodar o projeto localmente:
+## 🚀 Getting Started
 
-### Pré-requisitos
+### Prerequisites
+- Node.js (LTS)
+- npm or yarn
 
-- Node.js instalado.
-- Gerenciador de pacotes (npm ou yarn).
-- Aplicativo **Expo Go** no seu celular (ou um emulador Android/iOS configurado).
+### Installation
 
-### Passo a Passo
-
-1. **Clone o repositório:**
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/kenneson/wellcome_app.git
-   cd wellcome_app
+   git clone https://github.com/kenneson/wellcome.git
+   cd wellcome
    ```
 
-2. **Instale as dependências:**
+2. **Install Frontend Dependencies**
    ```bash
    npm install
    ```
 
-3. **Inicie o projeto:**
+3. **Install Backend Dependencies**
    ```bash
-   npx expo start
+   cd backend
+   npm install
+   cd ..
    ```
 
-4. **Execute no dispositivo:**
-   - Escaneie o QR Code exibido no terminal com o app Expo Go (Android) ou Câmera (iOS).
-   - Ou pressione `a` para abrir no emulador Android, ou `i` para o simulador iOS.
+### Running the Project
 
-## 🤝 Contribuição
+#### Mobile App
+```bash
+npx expo start
+```
+- Press `a` for Android, `i` for iOS, or scan the QR code with Expo Go.
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
+#### Backend Server
+```bash
+cd backend
+npm run dev
+```
+- Server runs on `http://localhost:3000`
+
+## 🤝 Contribution
+Please read our [Contribution Guidelines](CONTRIBUTING.md) before submitting a Pull Request.
 
 ---
-*Desenvolvido com ❤️ por Kenneson Lino*
+*Developed with ❤️ by Kenneson Lino*
