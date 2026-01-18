@@ -20,20 +20,53 @@ src/
    ```
 
 2. **Environment Variables**
-   Create a `.env` file based on `.env.example`:
+   Create a `.env` file with your database string:
    ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/wellcome_db"
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/wellcome"
    ```
 
 3. **Database Migration**
+   Push the schema to your database (creates tables):
    ```bash
-   npx prisma migrate dev
+   npx prisma db push
+   ```
+   Or create a migration file:
+   ```bash
+   npx prisma migrate dev --name init
    ```
 
-4. **Run Server**
+4. **Generate Prisma Client**
+   (Run automatically after install/migrate, but if needed):
+   ```bash
+   npx prisma generate
+   ```
+
+5. **Run Server**
    ```bash
    npm run dev
    ```
+   The server runs on `http://localhost:3000`.
+
+## Testing
+
+### Create Event
+**POST** `/events`
+
+**Body**:
+```json
+{
+  "title": "Jantar Italiano",
+  "description": "Uma noite de massas caseiras",
+  "price": 50.0,
+  "maxGuests": 4,
+  "eventDate": "2024-12-25T20:00:00Z",
+  "location": "Rua das Flores, 123",
+  "latitude": -23.5505,
+  "longitude": -46.6333,
+  "coverImageUrl": "http://...",
+  "hostId": "user-uuid"
+}
+```
 
 ## Tech Stack
 - **Fastify**: High-performance web framework.
