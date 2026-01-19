@@ -2,6 +2,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { EventCreationState } from '@/entities/event/model/types';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
+import { API_URL } from '@/shared/config/api';
 
 export class EventService {
     async uploadImage(uri: string, userId: string): Promise<string | null> {
@@ -61,11 +62,8 @@ export class EventService {
                 coverImageUrl = await this.uploadImage(data.details.coverImage, session.user.id);
             }
 
-            // Construct payload for Backend
-            // Note: In a real app, use an environment variable for the API URL
-            // const apiUrl = 'http://10.0.2.2:3000/events'; // Android Emulator localhost
-            // const apiUrl = 'http://localhost:3000/events'; // iOS / Web
-            const apiUrl = 'http://192.168.1.4:3000/events'; // Physical Device (Local IP)
+            // Construct payload forBackend
+            const apiUrl = `${API_URL}/events`;
 
             // Adapting data to Backend Schema
             const payload = {
