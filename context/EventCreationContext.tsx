@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { EventCreationState, Dish, LocationDetails, EventDetails } from '@/models/Event';
-import { useEventCreationViewModel } from '@/viewmodels/useEventCreationViewModel';
+import { EventCreationState, Dish, LocationDetails, EventDetails } from '@/entities/event/model/types';
+import { useEventCreationViewModel } from '@/features/create-event/model/useCreateEvent';
 
 interface EventCreationContextType {
     data: EventCreationState;
