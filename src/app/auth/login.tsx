@@ -14,9 +14,9 @@ import { Image } from 'expo-image';
 import { useRouter, Link } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
+import { authService } from '@/shared/api/AuthService';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
-import { makeRedirectUri } from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -30,18 +30,22 @@ export default function LoginScreen() {
     async function signInWithEmail() {
         setLoading(true);
         console.log('Attempting login with:', email);
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
 
-        if (error) {
+        try {
+            const data = await authService.login(email, password);
+            console.log('Email Login Success', data);
+
+            if (data?.session) {
+                const { error } = await supabase.auth.setSession({
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token,
+                });
+                if (error) throw error;
+            }
+            // Navigation is handled by the auth listener in _layout
+        } catch (error: any) {
             console.error('Email Login Error:', error);
             Alert.alert('Error', error.message);
-        } else {
-            console.log('Email Login Success');
-
-            // Navigation is handled by the auth listener in _layout
         }
         setLoading(false);
     }

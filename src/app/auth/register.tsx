@@ -13,6 +13,7 @@ import {
 import { useRouter, Link } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
+import { authService } from '@/shared/api/AuthService';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 
@@ -35,25 +36,25 @@ export default function RegisterScreen() {
         }
 
         setLoading(true);
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: name,
-                },
-            },
-        });
+        try {
+            const data = await authService.register(email, password, name);
 
-        if (error) {
-            Alert.alert('Erro', error.message);
-        } else {
-            // Check if session exists (auto-login enabled)
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
+            if (data?.session) {
+                const { error } = await supabase.auth.setSession({
+                    access_token: data.session.access_token,
+                    refresh_token: data.session.refresh_token,
+                });
+                if (error) {
+                    Alert.alert('Sucesso', 'Cadastro realizado! Faça login para continuar.');
+                    router.replace('/auth/login');
+                }
+            } else {
                 Alert.alert('Sucesso', 'Verifique seu e-mail para confirmar o cadastro!');
                 router.replace('/auth/login');
             }
+
+        } catch (error: any) {
+            Alert.alert('Erro', error.message);
         }
         setLoading(false);
     }
