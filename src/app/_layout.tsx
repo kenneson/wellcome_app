@@ -40,7 +40,7 @@ export default function RootLayout() {
         setIsProfileComplete(null);
         lastUserId.current = null;
         // Reset routing flag to allow redirection to login
-        hasInitiallyRouted.current = false;
+        lastUserId.current = null;
       }
     });
 
@@ -94,36 +94,33 @@ export default function RootLayout() {
     }
   }, [session, initialized]);
 
-  const hasInitiallyRouted = useRef(false);
+  // 3. Handle Navigation Protection
+  const inAuthGroup = segments[0] === 'auth';
 
-  // 3. Handle Initial Navigation (ONE TIME ONLY)
   useEffect(() => {
     if (!initialized) return;
-
-    if (hasInitiallyRouted.current) return;
-
-    const inAuthGroup = segments[0] === 'auth';
 
     if (!session && !inAuthGroup) {
       // Not logged in -> go to login
       router.replace('/auth/login');
-    } else {
-      // Logged in
-      if (isProfileComplete === false) {
-        console.log('→ Redirecting to welcome (profile incomplete)');
-        router.replace('/welcome');
-      } else if (session && inAuthGroup) {
-        // Logged in + in auth group -> go to tabs
-        router.replace('/(tabs)');
-      }
-      // If none of the above, we are logged in and profile is complete (or null/unknown but we waited for it)
-      // Implicitly allow navigation to proceed (index.tsx handles root)
+    } else if (session && inAuthGroup) {
+      // Logged in + in auth group -> go to tabs
+      router.replace('/(tabs)');
     }
+    // Check for incomplete profile
+    else if (session && isProfileComplete === false && segments[0] !== 'welcome') {
+      // Redirect to welcome if profile incomplete and not already there
+      router.replace('/welcome');
+    }
+  }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
 
-    hasInitiallyRouted.current = true;
-  }, [initialized, session, segments, isProfileComplete]);
-
-  if (!initialized || (session && profileCheckLoading) || (session && isProfileComplete === null)) {
+  if (
+    !initialized ||
+    (session && profileCheckLoading) ||
+    (session && isProfileComplete === null) ||
+    (!session && !inAuthGroup) ||
+    (session && inAuthGroup)
+  ) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#FF8C42" />
