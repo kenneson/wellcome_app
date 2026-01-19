@@ -8,7 +8,6 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    ScrollView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, Link } from 'expo-router';
@@ -97,11 +96,7 @@ export default function LoginScreen() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Login</Text>
-                </View>
-
+            <View style={styles.content}>
                 <View style={styles.logoContainer}>
                     <Image
                         source={require('../../../assets/images/logo.png')}
@@ -182,7 +177,7 @@ export default function LoginScreen() {
                         </TouchableOpacity>
                     </Link>
                 </View>
-            </ScrollView>
+            </View>
         </KeyboardAvoidingView>
     );
 }
@@ -192,51 +187,41 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
-    scrollContent: {
-        flexGrow: 1,
+    content: {
+        flex: 1,
         paddingHorizontal: 24,
-        paddingTop: 60,
-        paddingBottom: 40,
-    },
-    header: {
-        marginBottom: 40,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#330066', // Deep purple/blue from screenshot
+        paddingTop: 40,
+        paddingBottom: 20,
+        justifyContent: 'space-between',
     },
     logoContainer: {
+        flex: 1,
         alignItems: 'center',
-        marginBottom: 40,
-    },
-    welcomeText: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 8,
-        fontWeight: '600',
+        justifyContent: 'center',
+        maxHeight: 120, // Restrict max height for logo area
     },
     logoImage: {
-        width: 280,
-        height: 80,
+        width: '70%',
+        height: '100%',
     },
     formContainer: {
-        marginBottom: 24,
+        flex: 2, // Give form twice the space of header
+        justifyContent: 'center',
     },
     inputGroup: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     label: {
         fontSize: 14,
         color: '#999',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     input: {
         borderWidth: 1,
         borderColor: '#E0E0E0',
         borderRadius: 8,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 10, // Reduced padding
         fontSize: 16,
         color: '#333',
     },
@@ -250,13 +235,13 @@ const styles = StyleSheet.create({
     },
     passwordInput: {
         flex: 1,
-        paddingVertical: 12,
+        paddingVertical: 10, // Reduced padding
         fontSize: 16,
         color: '#333',
     },
     forgotPassword: {
         alignItems: 'flex-end',
-        marginBottom: 24,
+        marginBottom: 16,
     },
     forgotPasswordText: {
         color: '#FF8C42',
@@ -266,9 +251,9 @@ const styles = StyleSheet.create({
     loginButton: {
         backgroundColor: '#FF8C42',
         borderRadius: 8,
-        paddingVertical: 16,
+        paddingVertical: 14,
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 16,
         shadowColor: '#FF8C42',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
@@ -283,7 +268,7 @@ const styles = StyleSheet.create({
     dividerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 16,
     },
     dividerLine: {
         flex: 1,
@@ -302,20 +287,20 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E0E0E0',
         borderRadius: 8,
-        paddingVertical: 12,
-        marginBottom: 12,
+        paddingVertical: 10,
+        marginBottom: 8,
         backgroundColor: '#fff',
     },
     socialButtonText: {
         marginLeft: 12,
-        fontSize: 16,
+        fontSize: 14, // Slightly smaller text
         color: '#333',
         fontWeight: '500',
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 'auto',
+        paddingVertical: 10,
     },
     footerText: {
         color: '#666',
