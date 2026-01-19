@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import path from 'path';
+import dotenv from 'dotenv';
+
+// Explicitly load .env from backend root
+dotenv.config({ path: path.join(__dirname, '../.env') });
 import Fastify from 'fastify';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -12,8 +16,11 @@ import { EventController } from './presentation/http/controllers/EventController
 import { BookingController } from './presentation/http/controllers/BookingController';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
 import { UserController } from './presentation/http/controllers/UserController';
+import { AuthController } from './presentation/http/controllers/AuthController';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
 import { PrismaBookingRepository } from './infrastructure/repositories/PrismaBookingRepository';
+import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
+import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 
 const fastify = Fastify({
     logger: true
@@ -50,6 +57,63 @@ const start = async () => {
         const createEventUseCase = new CreateEventUseCase(eventRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const eventController = new EventController(createEventUseCase, listEventsUseCase);
+
+        // Auth Dependencies
+        const loginUseCase = new LoginUseCase();
+        const registerUseCase = new RegisterUseCase();
+        const authController = new AuthController(loginUseCase, registerUseCase);
+
+        // Auth Routes
+        fastify.post('/auth/login', {
+            schema: {
+                description: 'Login user',
+                tags: ['Auth'],
+                body: {
+                    type: 'object',
+                    required: ['email', 'password'],
+                    properties: {
+                        email: { type: 'string' },
+                        password: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Login successful',
+                        type: 'object',
+                        properties: {
+                            user: { type: 'object', additionalProperties: true },
+                            session: { type: 'object', additionalProperties: true }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => authController.login(req, reply));
+
+        fastify.post('/auth/register', {
+            schema: {
+                description: 'Register user',
+                tags: ['Auth'],
+                body: {
+                    type: 'object',
+                    required: ['email', 'password', 'fullName'],
+                    properties: {
+                        email: { type: 'string' },
+                        password: { type: 'string' },
+                        fullName: { type: 'string' }
+                    }
+                },
+                response: {
+                    201: {
+                        description: 'Registration successful',
+                        type: 'object',
+                        properties: {
+                            user: { type: 'object', additionalProperties: true },
+                            session: { type: 'object', additionalProperties: true }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => authController.register(req, reply));
 
         // Routes
         fastify.post('/events', {
