@@ -20,7 +20,6 @@ export class AuthService {
 
             return await response.json();
         } catch (error) {
-            console.error('Login Service Error:', error);
             throw error;
         }
     }
@@ -42,7 +41,6 @@ export class AuthService {
 
             return await response.json();
         } catch (error) {
-            console.error('Register Service Error:', error);
             throw error;
         }
     }

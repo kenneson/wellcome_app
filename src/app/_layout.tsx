@@ -62,7 +62,6 @@ export default function RootLayout() {
       }
 
       setProfileCheckLoading(true);
-      console.log('Checking profile for user:', session.user.id);
       lastUserId.current = session.user.id;
 
       try {
@@ -73,16 +72,12 @@ export default function RootLayout() {
           .single();
 
         if (error) {
-          console.log('Profile check error:', error);
           setIsProfileComplete(false);
         } else {
-          console.log('Profile data received:', profile);
           const complete = !!(profile?.occupation && profile?.looking_for);
-          console.log('Profile completeness:', complete);
           setIsProfileComplete(complete);
         }
       } catch (e) {
-        console.log('Profile check exception:', e);
         setIsProfileComplete(false);
       } finally {
         setProfileCheckLoading(false);

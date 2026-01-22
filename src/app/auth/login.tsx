@@ -28,11 +28,9 @@ export default function LoginScreen() {
 
     async function signInWithEmail() {
         setLoading(true);
-        console.log('Attempting login with:', email);
 
         try {
             const data = await authService.login(email, password);
-            console.log('Email Login Success', data);
 
             if (data?.session) {
                 const { error } = await supabase.auth.setSession({
@@ -43,7 +41,6 @@ export default function LoginScreen() {
             }
             // Navigation is handled by the auth listener in _layout
         } catch (error: any) {
-            console.error('Email Login Error:', error);
             Alert.alert('Error', error.message);
         }
         setLoading(false);
@@ -52,7 +49,6 @@ export default function LoginScreen() {
     async function signInWithGoogle() {
         try {
             const redirectUri = Linking.createURL('/auth/callback');
-            console.log('Generated Redirect URI:', redirectUri);
 
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
@@ -63,13 +59,11 @@ export default function LoginScreen() {
             });
 
             if (error) {
-                console.error('Supabase OAuth Error:', error);
                 throw error;
             }
 
             if (data?.url) {
                 const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-                console.log('WebBrowser Result:', result);
 
                 if (result.type === 'success' && result.url) {
                     const params = new URLSearchParams(result.url.split('#')[1]);
@@ -86,7 +80,6 @@ export default function LoginScreen() {
                 }
             }
         } catch (error: any) {
-            console.error('Login Error:', error);
             Alert.alert('Error', error.message);
         }
     }

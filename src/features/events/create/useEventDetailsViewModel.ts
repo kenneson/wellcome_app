@@ -56,7 +56,6 @@ export function useEventDetailsViewModel() {
                 { text: 'OK', onPress: () => router.push('/(tabs)') }
             ]);
         } catch (error: any) {
-            console.error(error);
             Alert.alert('Erro', `Não foi possível criar o evento: ${error.message || 'Erro desconhecido'}`);
         } finally {
             setSubmitting(false);

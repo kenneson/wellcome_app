@@ -26,7 +26,6 @@ export class EventService {
         }
 
         if (uploadError) {
-            console.error('Image upload failed', uploadError);
         }
 
         return null;
@@ -34,7 +33,6 @@ export class EventService {
 
     async geocodeLocation(address: string): Promise<{ latitude: number | null, longitude: number | null }> {
         if (Platform.OS === 'web') {
-            console.warn('Web platform: skipping server-side geocoding fallback.');
             return { latitude: null, longitude: null };
         }
 
@@ -47,7 +45,6 @@ export class EventService {
                 };
             }
         } catch (e) {
-            console.log('Failed to geocode address', e);
         }
         return { latitude: null, longitude: null };
     }
@@ -93,7 +90,6 @@ export class EventService {
             }
 
         } catch (error) {
-            console.error('Submit Error:', error);
             throw error;
         }
     }
