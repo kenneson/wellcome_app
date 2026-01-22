@@ -59,7 +59,6 @@ export default function HomeScreen() {
         await getLocation();
       }
     } catch (e) {
-      console.error('Failed to load location', e);
       await getLocation(); // Fallback to GPS
     } finally {
       setLoadingLocation(false);
@@ -108,7 +107,6 @@ export default function HomeScreen() {
         setLocation('Localização desconhecida');
       }
     } catch (error) {
-      console.log('Error getting location:', error);
       // On error (e.g. PC without GPS), ask for manual
       setModalVisible(true);
     } finally {
@@ -176,12 +174,10 @@ export default function HomeScreen() {
       const { data, error } = await query;
 
       if (error) {
-        console.error('Error fetching events:', error);
       } else {
         setEvents(data || []);
       }
     } catch (error) {
-      console.error('Error in getEvents:', error);
     } finally {
       setLoadingEvents(false);
     }

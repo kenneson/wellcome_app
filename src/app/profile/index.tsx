@@ -45,7 +45,6 @@ export default function ProfileScreen() {
                 .single();
 
             if (error && error.code !== 'PGRST116') { // PGRST116 is no rows found
-                console.error(error);
             }
 
             if (data) {
@@ -61,7 +60,6 @@ export default function ProfileScreen() {
                 });
             }
         } catch (error: any) {
-            console.error(error);
         } finally {
             setLoading(false);
         }

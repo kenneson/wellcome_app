@@ -40,7 +40,6 @@ export default function WelcomeModal() {
                 setIsChecking(false);
             }
         } catch (error) {
-            console.log('Error checking profile in welcome:', error);
             setIsChecking(false);
         }
     }

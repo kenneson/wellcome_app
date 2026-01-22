@@ -55,7 +55,6 @@ export default function EventDetailsScreen() {
             setParticipantCount(participants.length);
 
         } catch (error) {
-            console.error(error);
             Alert.alert('Erro', 'Não foi possível carregar o evento.');
             router.back();
         } finally {
@@ -87,7 +86,6 @@ export default function EventDetailsScreen() {
             Alert.alert('Bem-vindo!', 'Sua presença foi confirmada.');
 
         } catch (error: any) {
-            console.error(error);
             Alert.alert('Erro', error.message || 'Falha ao participar do evento.');
         } finally {
             setJoining(false);
@@ -112,7 +110,6 @@ export default function EventDetailsScreen() {
             setParticipantCount(prev => prev - 1);
 
         } catch (error) {
-            console.error(error);
             Alert.alert('Erro', 'Falha ao cancelar participação.');
         } finally {
             setJoining(false);

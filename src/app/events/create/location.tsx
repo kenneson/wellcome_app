@@ -95,7 +95,6 @@ export default function EventCreateStep3() {
             }
 
         } catch (error) {
-            console.error(error);
             Alert.alert('Erro', 'Falha ao pegar localização GPS.');
         } finally {
             setLoadingGPS(false);
