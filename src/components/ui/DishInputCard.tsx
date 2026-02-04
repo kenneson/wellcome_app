@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Dish } from '@/entities/event/model/types';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface DishInputCardProps {
     index: number;
@@ -25,6 +25,7 @@ export function DishInputCard({ index, dish, onUpdate }: DishInputCardProps) {
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: Tainha assada"
+                    placeholderTextColor="#666"
                     value={dish.name}
                     onChangeText={(text) => onUpdate({ name: text })}
                 />
@@ -35,6 +36,7 @@ export function DishInputCard({ index, dish, onUpdate }: DishInputCardProps) {
                 <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Dica: Descreva ingredientes, como é o preparo e outras informações que ajudem o convidado a entender o que irá comer"
+                    placeholderTextColor="#666"
                     value={dish.description}
                     onChangeText={(text) => onUpdate({ description: text })}
                     multiline

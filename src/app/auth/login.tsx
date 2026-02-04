@@ -13,7 +13,7 @@ import { Image } from 'expo-image';
 import { useRouter, Link } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
-import { authService } from '@/shared/api/AuthService';
+import { authService } from '@/services/api/AuthService';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 
@@ -88,6 +88,7 @@ export default function LoginScreen() {
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
             <View style={styles.content}>
                 <View style={styles.logoContainer}>
@@ -104,6 +105,7 @@ export default function LoginScreen() {
                         <TextInput
                             style={styles.input}
                             placeholder="email@email.com"
+                            placeholderTextColor="#666"
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -117,6 +119,7 @@ export default function LoginScreen() {
                             <TextInput
                                 style={styles.passwordInput}
                                 placeholder=""
+                                placeholderTextColor="#666"
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry={!showPassword}

@@ -1,51 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/shared/lib/supabase';
+import { useUserProfile } from '@/context/UserProfileContext';
 
 const { width } = Dimensions.get('window');
 
 export default function WelcomeModal() {
     const router = useRouter();
-    const [isChecking, setIsChecking] = useState(true);
+    const { isProfileComplete } = useUserProfile();
 
     useEffect(() => {
-        checkProfile();
-    }, []);
-
-    async function checkProfile() {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.user) {
-                // Not logged in -> go to login
-                router.replace('/auth/login');
-                return;
-            }
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('occupation, looking_for')
-                .eq('id', session.user.id)
-                .single();
-
-            const complete = !!(profile?.occupation && profile?.looking_for);
-
-            if (complete) {
-                // Already complete -> go to tabs
-                // Use replace to avoid back stack issues
-                router.replace('/(tabs)');
-            } else {
-                // Incomplete -> show modal
-                setIsChecking(false);
-            }
-        } catch (error) {
-            setIsChecking(false);
+        if (isProfileComplete === true) {
+            router.replace('/(tabs)');
         }
-    }
+    }, [isProfileComplete]);
 
-    // Protection: Show loading until we decide
-    if (isChecking) {
+    if (isProfileComplete === null) {
         return (
             <View style={[styles.container, { backgroundColor: 'white' }]}>
                 <ActivityIndicator size="large" color="#FF8C42" />

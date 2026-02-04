@@ -10,6 +10,9 @@ export interface User {
     occupation?: string | null;
     bio?: string | null;
     lookingFor?: string | null;
+    city?: string | null;
+    neighborhood?: string | null;
+    languages?: string[];
     dietaryRestrictions?: string[];
     events?: Event[];
     bookings?: Booking[];

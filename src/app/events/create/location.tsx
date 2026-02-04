@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
-import { SelectionCard } from '@/shared/ui/event-creation/SelectionCard';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { SelectionCard } from '@/components/ui/SelectionCard';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const FACILITIES = [
     'Estacionamento para visitantes',
@@ -130,75 +130,82 @@ export default function EventCreateStep3() {
 
             <WizardProgress currentStep={2} />
 
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.sectionTitle}>Informações sobre o local</Text>
-                <Text style={styles.description}>
-                    A localização exata é importante para convidados num raio de 60km te encontrarem.
-                </Text>
-
-                <TouchableOpacity
-                    style={styles.gpsButton}
-                    onPress={handleUseGPS}
-                    disabled={loadingGPS}
-                >
-                    {loadingGPS ? (
-                        <ActivityIndicator color="#FFF" />
-                    ) : (
-                        <>
-                            <IconSymbol name="location.fill" size={20} color="#FFF" />
-                            <Text style={styles.gpsButtonText}>Usar minha localização atual</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-
-                <TextInput
-                    style={styles.addressInput}
-                    placeholder="Endereço completo (Rua, Número, Bairro, Cidade)"
-                    value={data.location.address}
-                    onChangeText={(text) => updateLocation({ address: text })}
-                    multiline
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                />
-
-                {data.location.latitude && (
-                    <Text style={styles.coordenadasText}>
-                        ✅ Coordenadas salvas: {data.location.latitude.toFixed(4)}, {data.location.longitude?.toFixed(4)}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView contentContainerStyle={styles.content}>
+                    <Text style={styles.sectionTitle}>Informações sobre o local</Text>
+                    <Text style={styles.description}>
+                        A localização exata é importante para convidados num raio de 60km te encontrarem.
                     </Text>
-                )}
 
-                <View style={styles.divider} />
+                    <TouchableOpacity
+                        style={styles.gpsButton}
+                        onPress={handleUseGPS}
+                        disabled={loadingGPS}
+                    >
+                        {loadingGPS ? (
+                            <ActivityIndicator color="#FFF" />
+                        ) : (
+                            <>
+                                <IconSymbol name="location.fill" size={20} color="#FFF" />
+                                <Text style={styles.gpsButtonText}>Usar minha localização atual</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
 
-                <Text style={styles.sectionTitle}>Selecione as facilidades do local</Text>
-                <View style={styles.grid}>
-                    {FACILITIES.map((item) => (
-                        <SelectionCard
-                            key={item}
-                            label={item}
-                            selected={data.location.facilities.includes(item)}
-                            onPress={() => toggleFacility(item)}
-                            style={styles.card}
-                        />
-                    ))}
-                </View>
+                    <TextInput
+                        style={styles.addressInput}
+                        placeholder="Endereço completo (Rua, Número, Bairro, Cidade)"
+                        placeholderTextColor="#666"
+                        value={data.location.address}
+                        onChangeText={(text) => updateLocation({ address: text })}
+                        multiline
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                    />
 
-                <View style={styles.divider} />
+                    {data.location.latitude && (
+                        <Text style={styles.coordenadasText}>
+                            ✅ Coordenadas salvas: {data.location.latitude.toFixed(4)}, {data.location.longitude?.toFixed(4)}
+                        </Text>
+                    )}
 
-                <Text style={styles.sectionTitle}>Selecione as regras do seu local</Text>
-                <View style={styles.grid}>
-                    {RULES.map((item) => (
-                        <SelectionCard
-                            key={item}
-                            label={item}
-                            selected={data.location.rules.includes(item)}
-                            onPress={() => toggleRule(item)}
-                            style={styles.card}
-                        />
-                    ))}
-                </View>
+                    <View style={styles.divider} />
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
+                    <Text style={styles.sectionTitle}>Selecione as facilidades do local</Text>
+                    <View style={styles.grid}>
+                        {FACILITIES.map((item) => (
+                            <SelectionCard
+                                key={item}
+                                label={item}
+                                selected={data.location.facilities.includes(item)}
+                                onPress={() => toggleFacility(item)}
+                                style={styles.card}
+                            />
+                        ))}
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <Text style={styles.sectionTitle}>Selecione as regras do seu local</Text>
+                    <View style={styles.grid}>
+                        {RULES.map((item) => (
+                            <SelectionCard
+                                key={item}
+                                label={item}
+                                selected={data.location.rules.includes(item)}
+                                onPress={() => toggleRule(item)}
+                                style={styles.card}
+                            />
+                        ))}
+                    </View>
+
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.nextButton} onPress={handleNext}>

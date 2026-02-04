@@ -25,6 +25,7 @@ export interface EventDetails {
 export interface EventCreationState {
     eventType: string;
     cuisineTypes: string[];
+    vibe: string[];
     isServedInSequence: boolean;
     dishes: Dish[];
     location: LocationDetails;

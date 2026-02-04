@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { EventCreationState, Dish, LocationDetails, EventDetails } from '@/entities/event/model/types';
-import { eventService } from '@/shared/api/EventService';
+import { eventService } from '@/services/api/EventService';
 
 const defaultState: EventCreationState = {
     eventType: '',
     cuisineTypes: [],
+    vibe: [],
     isServedInSequence: false,
     dishes: [],
     location: {
@@ -48,6 +49,18 @@ export function useEventCreationViewModel() {
         });
     };
 
+    const toggleVibe = (type: string) => {
+        setData(prev => {
+            const hasVibe = Array.isArray(prev.vibe) ? prev.vibe.includes(type) : false;
+            return {
+                ...prev,
+                vibe: hasVibe
+                    ? prev.vibe.filter(t => t !== type)
+                    : [...(prev.vibe || []), type]
+            };
+        });
+    };
+
     const setServedInSequence = (value: boolean) => setData(prev => ({ ...prev, isServedInSequence: value }));
 
     const addDish = (dish: Dish) => setData(prev => ({ ...prev, dishes: [...prev.dishes, dish] }));
@@ -81,6 +94,7 @@ export function useEventCreationViewModel() {
         data,
         setEventType,
         toggleCuisineType,
+        toggleVibe,
         setServedInSequence,
         addDish,
         removeDish,

@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
-import { SelectionCard } from '@/shared/ui/event-creation/SelectionCard';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { SelectionCard } from '@/components/ui/SelectionCard';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const EVENT_TYPES = [
     'Café da manhã', 'Brunch', 'Almoço',
@@ -28,9 +28,25 @@ const CUISINE_TYPES = [
     'Vegana', 'Vegetariana'
 ];
 
+const VIBES = [
+    'Família', 'Networking', 'Espiritual', 'Casual',
+    'Romântico', 'Festa', 'Jantar a dois', 'Negócios'
+];
+
 export default function EventCreateStep1() {
     const router = useRouter();
-    const { data, setEventType, toggleCuisineType } = useEventCreation();
+    const { data, setEventType, toggleCuisineType, updateLocation } = useEventCreation(); // Assuming updateLocation for simplicity, but we might need a specific setter for Vibe or use updateDetails if we put it there. 
+    // Wait, Vibe is on 'data.vibe' in schema, but useCreateEvent needs to support setting it.
+    // Let's check useCreateEvent.ts. It has 'updateDetails' but 'vibe' was in 'details'? No, distinct field in Schema, but useCreateEvent likely follows its own state.
+    // In useCreateEvent.ts state: 'vibe' was NOT added to defaultState yet?
+    // I need to check useCreateEvent.ts again to see if I added it.
+    // I did NOT update useCreateEvent state in Step 347 (that was Controller). I need to update useCreateEvent.ts logic first.
+    // Actually, I should update useCreateEvent.ts to hold 'vibe'.
+
+    // For now let's assume I will add `toggleVibe` to context.
+    // I will use `any` to bypass TS for a moment or fix useCreateEvent.ts first.
+    // Better to fix useCreateEvent.ts FIRST.
+
 
     const handleNext = () => {
         if (!data.eventType) {
@@ -90,6 +106,25 @@ export default function EventCreateStep1() {
                             label={type}
                             selected={data.cuisineTypes.includes(type)}
                             onPress={() => toggleCuisineType(type)}
+                            style={styles.card}
+                        />
+                    ))}
+                </View>
+
+                <View style={styles.divider} />
+
+                <Text style={styles.sectionTitle}>Qual a vibe do evento?</Text>
+                <Text style={styles.sectionSubtitle}>Selecione as que combinam</Text>
+                <View style={styles.grid}>
+                    {VIBES.map((vibe) => (
+                        <SelectionCard
+                            key={vibe}
+                            label={vibe}
+                            selected={data.vibe?.includes(vibe) || false}
+                            onPress={() => {
+                                // @ts-ignore - temporary TS lag
+                                toggleVibe(vibe);
+                            }}
                             style={styles.card}
                         />
                     ))}

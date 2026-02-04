@@ -5,7 +5,7 @@ import 'react-native-reanimated';
 import { useEffect, useState, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
 
-import { useColorScheme } from '@/shared/lib/hooks/use-color-scheme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '@/shared/lib/supabase';
 import { View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export const unstable_settings = {
   anchor: '(tabs)',
 };
+
+import { UserProfileContext } from '@/context/UserProfileContext';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -47,47 +49,53 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Fetch Profile (Only when User ID changes)
-  useEffect(() => {
-    async function checkProfile() {
-      if (!session?.user) {
-        setProfileCheckLoading(false);
-        return;
-      }
-
-      if (session.user.id === lastUserId.current && isProfileComplete !== null) {
-        // Same user, already checked. Skip.
-        setProfileCheckLoading(false);
-        return;
-      }
-
-      setProfileCheckLoading(true);
-      lastUserId.current = session.user.id;
-
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('occupation, looking_for')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) {
-          setIsProfileComplete(false);
-        } else {
-          const complete = !!(profile?.occupation && profile?.looking_for);
-          setIsProfileComplete(complete);
-        }
-      } catch (e) {
-        setIsProfileComplete(false);
-      } finally {
-        setProfileCheckLoading(false);
-      }
+  async function checkProfile() {
+    if (!session?.user) {
+      setProfileCheckLoading(false);
+      return;
     }
 
-    if (initialized) {
+    if (session.user.id === lastUserId.current && isProfileComplete !== null) {
+      // Same user, already checked. Skip.
+      setProfileCheckLoading(false);
+      return;
+    }
+
+    setProfileCheckLoading(true);
+    lastUserId.current = session.user.id;
+
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('occupation, looking_for, city, neighborhood')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        setIsProfileComplete(false);
+      } else {
+        const complete = !!(profile?.occupation && profile?.looking_for && profile?.city && profile?.neighborhood);
+        setIsProfileComplete(complete);
+      }
+    } catch (e) {
+      setIsProfileComplete(false);
+    } finally {
+      setProfileCheckLoading(false);
+    }
+  }
+
+  const refetchProfile = async () => {
+    await checkProfile();
+  };
+
+  // Auto check on session change - but we guard with ref to avoid loops if needed.
+  // Actually, simple effect is fine if we are careful.
+  useEffect(() => {
+    if (initialized && session) {
       checkProfile();
     }
   }, [session, initialized]);
+
 
   // 3. Handle Navigation Protection
   const inAuthGroup = segments[0] === 'auth';
@@ -103,8 +111,14 @@ export default function RootLayout() {
       router.replace('/(tabs)');
     }
     // Check for incomplete profile
-    else if (session && isProfileComplete === false && segments[0] !== 'welcome') {
-      // Redirect to welcome if profile incomplete and not already there
+    else if (session && isProfileComplete === false) {
+      // Allow access to welcome screen
+      if (segments[0] === 'welcome') return;
+
+      // Allow access to profile edit screen (so they can actually fix it)
+      if (segments[0] === 'profile' && segments[1] === 'edit') return;
+
+      // Otherwise redirect to welcome
       router.replace('/welcome');
     }
   }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
@@ -124,30 +138,32 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
-        <StatusBar style="light" backgroundColor="#FF8C42" />
-        <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
-        <View style={{ flex: 1, backgroundColor: '#fff' }}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="profile/index" options={{ headerShown: false }} />
-            <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
-            <Stack.Screen
-              name="welcome"
-              options={{
-                presentation: 'transparentModal',
-                animation: 'fade',
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen name="events/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="events/create" options={{ headerShown: false }} />
-          </Stack>
+    <UserProfileContext.Provider value={{ isProfileComplete, refetchProfile }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
+          <StatusBar style="light" backgroundColor="#FF8C42" />
+          <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
+          <View style={{ flex: 1, backgroundColor: '#fff' }}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="auth" options={{ headerShown: false }} />
+              <Stack.Screen name="profile/index" options={{ headerShown: false }} />
+              <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
+              <Stack.Screen
+                name="welcome"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'fade',
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              <Stack.Screen name="events/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="events/create" options={{ headerShown: false }} />
+            </Stack>
+          </View>
         </View>
-      </View>
-    </ThemeProvider>
+      </ThemeProvider>
+    </UserProfileContext.Provider>
   );
 }

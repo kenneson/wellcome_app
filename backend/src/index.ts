@@ -304,6 +304,9 @@ const start = async () => {
                         occupation: { type: 'string' },
                         bio: { type: 'string' },
                         looking_for: { type: 'string' },
+                        city: { type: 'string' },
+                        neighborhood: { type: 'string' },
+                        languages: { type: 'array', items: { type: 'string' } },
                         dietary_restrictions: { type: 'array', items: { type: 'string' } },
                         avatar_url: { type: 'string' }
                     }

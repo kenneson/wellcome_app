@@ -14,7 +14,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function ProfileScreen() {
     const router = useRouter();

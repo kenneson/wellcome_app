@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '@/shared/constants/theme';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface WizardProgressProps {
     currentStep: number; // 0 to 3
