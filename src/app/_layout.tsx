@@ -49,13 +49,13 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function checkProfile() {
+  async function checkProfile(force = false) {
     if (!session?.user) {
       setProfileCheckLoading(false);
       return;
     }
 
-    if (session.user.id === lastUserId.current && isProfileComplete !== null) {
+    if (!force && session.user.id === lastUserId.current && isProfileComplete !== null) {
       // Same user, already checked. Skip.
       setProfileCheckLoading(false);
       return;
@@ -85,7 +85,7 @@ export default function RootLayout() {
   }
 
   const refetchProfile = async () => {
-    await checkProfile();
+    await checkProfile(true);
   };
 
   // Auto check on session change - but we guard with ref to avoid loops if needed.

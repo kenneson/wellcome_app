@@ -30,7 +30,14 @@ export class EventController {
     async create(request: FastifyRequest, reply: FastifyReply) {
         try {
             const body = createEventSchema.parse(request.body);
-            const event = await this.createEventUseCase.execute(body);
+            const event = await this.createEventUseCase.execute({
+                ...body,
+                eventType: body.eventType ?? null,
+                cuisineTypes: body.cuisineTypes ?? [],
+                vibe: body.vibe ?? [],
+                facilities: body.facilities ?? [],
+                rules: body.rules ?? []
+            });
             return reply.code(201).send(event);
         } catch (error) {
             console.error('Create Event Error:', error);
