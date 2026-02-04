@@ -7,7 +7,8 @@ import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/shared/lib/supabase';
-import { SideMenu } from '@/shared/ui/ui/SideMenu';
+import { SideMenu } from '@/components/ui/SideMenu';
+import { FilterModal, FilterCriteria } from '@/components/ui/events/FilterModal';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
@@ -22,6 +23,10 @@ export default function HomeScreen() {
   // Manual Location State
   const [modalVisible, setModalVisible] = useState(false);
   const [manualLocation, setManualLocation] = useState('');
+
+  // Filter State
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filters, setFilters] = useState<FilterCriteria>({});
 
   // Side Menu State
   const [menuVisible, setMenuVisible] = useState(false);
@@ -138,13 +143,15 @@ export default function HomeScreen() {
       let lat = null;
       let long = null;
 
-      // Try to get latch/long from somewhere if possible, or re-request GPS if not stored
-      // For now, let's try to get current position if permission granted, otherwise basic fetch
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const pos = await Location.getCurrentPositionAsync({});
-        lat = pos.coords.latitude;
-        long = pos.coords.longitude;
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({});
+          lat = pos.coords.latitude;
+          long = pos.coords.longitude;
+        }
+      } catch (e) {
+        console.log('Error getting location', e);
       }
 
       let query;
@@ -171,13 +178,21 @@ export default function HomeScreen() {
           .order('event_date', { ascending: true });
       }
 
+      // Apply Filters
+      if (filters.priceMin && filters.priceMin.trim() !== '') query = query.gte('price', parseFloat(filters.priceMin));
+      if (filters.priceMax && filters.priceMax.trim() !== '') query = query.lte('price', parseFloat(filters.priceMax));
+      if (filters.cuisine && filters.cuisine.length > 0) query = query.overlaps('cuisine_types', filters.cuisine);
+      if (filters.vibe && filters.vibe.length > 0) query = query.overlaps('vibe', filters.vibe);
+
       const { data, error } = await query;
 
       if (error) {
+        console.error('Error fetching events:', error);
       } else {
         setEvents(data || []);
       }
     } catch (error) {
+      console.error('Unexpected error:', error);
     } finally {
       setLoadingEvents(false);
     }
@@ -238,7 +253,7 @@ export default function HomeScreen() {
           <Ionicons name="menu" size={28} color="#FFF" />
         </TouchableOpacity>
         <Image
-          source={require('../../../assets/images/logo.png')} // Make sure this is white version if background is orange, or just text
+          source={require('../../../assets/images/logo.png')}
           style={styles.logoImage}
           contentFit="contain"
           tintColor="#FFF"
@@ -276,6 +291,11 @@ export default function HomeScreen() {
 
         {/* Filter Pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
+          <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]} onPress={() => setFilterModalVisible(true)}>
+            <Ionicons name="options" size={16} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={styles.filterTextActive}>Filtros</Text>
+          </TouchableOpacity>
+
           {FILTERS.map((f, i) => (
             <TouchableOpacity key={i} style={styles.filterChip}>
               <Text style={styles.filterText}>{f}</Text>
@@ -388,6 +408,16 @@ export default function HomeScreen() {
         onClose={() => setMenuVisible(false)}
         user={currentUser}
       />
+
+      <FilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={(newFilters) => {
+          setFilters(newFilters);
+          getEvents(); // Refresh
+        }}
+        initialFilters={filters}
+      />
     </SafeAreaView>
   );
 }
@@ -487,9 +517,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 8,
   },
+  filterChipActive: {
+    backgroundColor: '#FF8C42',
+    borderWidth: 0,
+  },
   filterText: {
     fontSize: 14,
     color: '#333',
+  },
+  filterTextActive: {
+    fontSize: 14,
+    color: '#FFF',
+    fontWeight: '600',
   },
   // Card
   feedCard: {

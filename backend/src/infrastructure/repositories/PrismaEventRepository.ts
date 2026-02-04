@@ -15,6 +15,11 @@ export class PrismaEventRepository implements EventRepository {
                 latitude: data.latitude,
                 longitude: data.longitude,
                 coverImageUrl: data.coverImageUrl,
+                eventType: data.eventType,
+                cuisineTypes: data.cuisineTypes,
+                vibe: data.vibe,
+                facilities: data.facilities,
+                rules: data.rules,
                 host: {
                     connect: { id: data.hostId }
                 }
@@ -24,8 +29,26 @@ export class PrismaEventRepository implements EventRepository {
         return this.mapToDomain(event);
     }
 
-    async findAll(filters?: { latitude?: number; longitude?: number; radiusInKm?: number }): Promise<Event[]> {
+    async findAll(filters?: {
+        latitude?: number;
+        longitude?: number;
+        radiusInKm?: number;
+        cuisine?: string[];
+        vibe?: string[];
+        priceMin?: number;
+        priceMax?: number;
+        eventType?: string;
+    }): Promise<Event[]> {
+        const where: any = {};
+
+        if (filters?.priceMin !== undefined) where.price = { ...where.price, gte: filters.priceMin };
+        if (filters?.priceMax !== undefined) where.price = { ...where.price, lte: filters.priceMax };
+        if (filters?.eventType) where.eventType = filters.eventType;
+        if (filters?.cuisine && filters.cuisine.length > 0) where.cuisineTypes = { hasSome: filters.cuisine };
+        if (filters?.vibe && filters.vibe.length > 0) where.vibe = { hasSome: filters.vibe };
+
         const events = await prisma.event.findMany({
+            where,
             orderBy: { eventDate: 'asc' }
         });
 
@@ -75,7 +98,7 @@ export class PrismaEventRepository implements EventRepository {
     private mapToDomain(prismaEvent: any): Event {
         return {
             ...prismaEvent,
-            price: prismaEvent.price.toNumber(),
+            price: prismaEvent.price?.toNumber() || 0,
             host: prismaEvent.host ? {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,

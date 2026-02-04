@@ -5,6 +5,11 @@ interface ListEventsInput {
     latitude?: number;
     longitude?: number;
     radiusInKm?: number;
+    cuisine?: string[];
+    vibe?: string[];
+    priceMin?: number;
+    priceMax?: number;
+    eventType?: string;
 }
 
 export class ListEventsUseCase {

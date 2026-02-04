@@ -13,7 +13,12 @@ const createEventSchema = z.object({
     latitude: z.number().nullable(),
     longitude: z.number().nullable(),
     coverImageUrl: z.string().nullable(),
-    hostId: z.string()
+    hostId: z.string(),
+    eventType: z.string().optional(),
+    cuisineTypes: z.array(z.string()).optional(),
+    vibe: z.array(z.string()).optional(),
+    facilities: z.array(z.string()).optional(),
+    rules: z.array(z.string()).optional(),
 });
 
 export class EventController {
@@ -37,11 +42,16 @@ export class EventController {
     }
     async list(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { lat, lon, radius } = request.query as { lat?: string; lon?: string; radius?: string };
+            const { lat, lon, radius, cuisine, vibe, priceMin, priceMax, eventType } = request.query as any;
             const events = await this.listEventsUseCase.execute({
                 latitude: lat ? parseFloat(lat) : undefined,
                 longitude: lon ? parseFloat(lon) : undefined,
-                radiusInKm: radius ? parseFloat(radius) : undefined
+                radiusInKm: radius ? parseFloat(radius) : undefined,
+                cuisine: cuisine ? (Array.isArray(cuisine) ? cuisine : [cuisine]) : undefined,
+                vibe: vibe ? (Array.isArray(vibe) ? vibe : [vibe]) : undefined,
+                priceMin: priceMin ? parseFloat(priceMin) : undefined,
+                priceMax: priceMax ? parseFloat(priceMax) : undefined,
+                eventType: eventType ? (Array.isArray(eventType) ? eventType[0] : eventType) : undefined
             });
             return reply.send(events);
         } catch (error) {

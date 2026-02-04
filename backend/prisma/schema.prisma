@@ -19,6 +19,9 @@ model User {
   bio                 String?
   dietaryRestrictions String[]  @map("dietary_restrictions")
   lookingFor          String?   @map("looking_for")
+  city                String?
+  neighborhood        String?
+  languages           String[]  @default([])
   bookings            Booking[]
   events              Event[]
   users               users     @relation(fields: [id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -40,6 +43,11 @@ model Event {
   latitude      Float?
   longitude     Float?
   price         Decimal?  @default(0) @db.Decimal
+  eventType     String?   @map("event_type")
+  cuisineTypes  String[]  @default([]) @map("cuisine_types")
+  vibe          String[]  @default([])
+  facilities    String[]  @default([])
+  rules         String[]  @default([])
   bookings      Booking[]
   host          User      @relation(fields: [hostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 

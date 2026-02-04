@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
-import { DishInputCard } from '@/shared/ui/event-creation/DishInputCard';
-import { Checkbox } from '@/shared/ui/ui/Checkbox';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { DishInputCard } from '@/components/ui/DishInputCard';
+import { Checkbox } from '@/components/ui/Checkbox';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function EventCreateStep2() {
     const router = useRouter();
@@ -60,55 +60,61 @@ export default function EventCreateStep2() {
 
             <WizardProgress currentStep={1} />
 
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.sectionTitle}>Adicione os pratos que serão servidos</Text>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView contentContainerStyle={styles.content}>
+                    <Text style={styles.sectionTitle}>Adicione os pratos que serão servidos</Text>
 
-                <Checkbox
-                    label="Os pratos serão servidos em uma sequência"
-                    checked={data.isServedInSequence}
-                    onChange={setServedInSequence}
-                    style={styles.checkbox}
-                />
-
-                {data.dishes.map((dish, index) => (
-                    <DishInputCard
-                        key={dish.id}
-                        index={index}
-                        dish={dish}
-                        onUpdate={(updates) => updateDish(dish.id, { ...dish, ...updates })}
-                        onRemove={() => removeDish(dish.id)}
+                    <Checkbox
+                        label="Os pratos serão servidos em uma sequência"
+                        checked={data.isServedInSequence}
+                        onChange={setServedInSequence}
+                        style={styles.checkbox}
                     />
-                ))}
 
-                <TouchableOpacity style={styles.addButton} onPress={handleAddDish}>
-                    <Text style={styles.addButtonText}>Adicionar prato</Text>
-                </TouchableOpacity>
+                    {data.dishes.map((dish, index) => (
+                        <DishInputCard
+                            key={dish.id}
+                            index={index}
+                            dish={dish}
+                            onUpdate={(updates) => updateDish(dish.id, { ...dish, ...updates })}
+                            onRemove={() => removeDish(dish.id)}
+                        />
+                    ))}
 
-                <View style={styles.divider} />
+                    <TouchableOpacity style={styles.addButton} onPress={handleAddDish}>
+                        <Text style={styles.addButtonText}>Adicionar prato</Text>
+                    </TouchableOpacity>
 
-                <Text style={styles.sectionTitle}>Possibilidade de alteração do cardápio</Text>
+                    <View style={styles.divider} />
 
-                <Checkbox
-                    label="Opções veganas e vegetarianas, caso necessário"
-                    checked={data.veganOptions}
-                    onChange={setVeganOptions}
-                    style={styles.optionCheckbox}
-                />
-                <Checkbox
-                    label="Farei substituições no menu, caso necessário (alergias alimentares, por exemplo)"
-                    checked={data.substitutions}
-                    onChange={setSubstitutions}
-                    style={styles.optionCheckbox}
-                />
-                <Checkbox
-                    label="O cardápio pode sofrer leves alterações dependendo da disponibilidade de ingredientes"
-                    checked={data.menuAlterations}
-                    onChange={setMenuAlterations}
-                    style={styles.optionCheckbox}
-                />
+                    <Text style={styles.sectionTitle}>Possibilidade de alteração do cardápio</Text>
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
+                    <Checkbox
+                        label="Opções veganas e vegetarianas, caso necessário"
+                        checked={data.veganOptions}
+                        onChange={setVeganOptions}
+                        style={styles.optionCheckbox}
+                    />
+                    <Checkbox
+                        label="Farei substituições no menu, caso necessário (alergias alimentares, por exemplo)"
+                        checked={data.substitutions}
+                        onChange={setSubstitutions}
+                        style={styles.optionCheckbox}
+                    />
+                    <Checkbox
+                        label="O cardápio pode sofrer leves alterações dependendo da disponibilidade de ingredientes"
+                        checked={data.menuAlterations}
+                        onChange={setMenuAlterations}
+                        style={styles.optionCheckbox}
+                    />
+
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.nextButton} onPress={handleNext}>

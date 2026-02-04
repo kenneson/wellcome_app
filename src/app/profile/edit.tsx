@@ -8,6 +8,8 @@ import {
     Alert,
     ScrollView,
     ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -32,9 +34,12 @@ const lookingForOptions = [
     { label: 'Ambos', value: 'ambos' },
 ];
 
+import { useUserProfile } from '@/context/UserProfileContext';
+
 export default function EditProfileScreen() {
     const router = useRouter();
     const { mandatory } = useLocalSearchParams<{ mandatory: string }>();
+    const { refetchProfile } = useUserProfile();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
@@ -45,6 +50,9 @@ export default function EditProfileScreen() {
     const [bio, setBio] = useState('');
     const [dietaryRestriction, setDietaryRestriction] = useState('');
     const [fullName, setFullName] = useState('');
+    const [city, setCity] = useState('');
+    const [neighborhood, setNeighborhood] = useState('');
+    const [languages, setLanguages] = useState('');
 
     useEffect(() => {
         getProfile();
@@ -77,8 +85,13 @@ export default function EditProfileScreen() {
                 setLookingFor(data.looking_for || '');
                 setBio(data.bio || '');
                 setAvatarUrl(data.avatar_url || null);
+                setCity(data.city || '');
+                setNeighborhood(data.neighborhood || '');
+                if (data.languages && data.languages.length > 0) {
+                    setLanguages(data.languages.join(', '));
+                }
                 if (data.dietary_restrictions && data.dietary_restrictions.length > 0) {
-                    setDietaryRestriction(data.dietary_restrictions[0]);
+                    setDietaryRestriction(data.dietary_restrictions.join(', ')); // Changed to join for multi support
                 }
             }
         } catch (error: any) {
@@ -131,8 +144,8 @@ export default function EditProfileScreen() {
 
     const saveProfile = async () => {
         if (!userId) return;
-        if (!occupation || !lookingFor) {
-            Alert.alert('Atenção', 'Por favor preencha os campos obrigatórios.');
+        if (!occupation || !lookingFor || !city || !neighborhood) {
+            Alert.alert('Atenção', 'Por favor preencha os campos obrigatórios (Ocupação, O que procura, Cidade e Bairro).');
             return;
         }
 
@@ -144,7 +157,10 @@ export default function EditProfileScreen() {
                 occupation,
                 looking_for: lookingFor,
                 bio,
-                dietary_restrictions: dietaryRestriction ? [dietaryRestriction] : [],
+                city,
+                neighborhood,
+                languages: languages.split(',').map(s => s.trim()).filter(s => s.length > 0),
+                dietary_restrictions: dietaryRestriction ? dietaryRestriction.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
                 avatar_url: avatarUrl,
                 updated_at: new Date(),
             };
@@ -156,8 +172,9 @@ export default function EditProfileScreen() {
             if (error) throw error;
 
             Alert.alert('Sucesso', 'Perfil atualizado!');
+            await refetchProfile();
             if (mandatory === 'true') {
-                router.replace('/profile');
+                router.replace('/(tabs)');
             } else {
                 router.back();
             }
@@ -190,88 +207,130 @@ export default function EditProfileScreen() {
                 <View style={{ width: 60 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
-                <View style={styles.avatarContainer}>
-                    <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
-                        {avatarUrl ? (
-                            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <Ionicons name="camera-outline" size={32} color="#999" />
-                            </View>
-                        )}
-                    </TouchableOpacity>
-                    <Text style={styles.avatarHint}>Toque para alterar a foto</Text>
-                </View>
-
-                <View style={styles.form}>
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Com o que você trabalha? (Obrigatório)</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Ex: Contador(a), Professor(a)"
-                            value={occupation}
-                            onChangeText={setOccupation}
-                        />
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Adjust offset if needed
+            >
+                <ScrollView contentContainerStyle={styles.content}>
+                    <View style={styles.avatarContainer}>
+                        <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
+                            {avatarUrl ? (
+                                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                            ) : (
+                                <View style={styles.avatarPlaceholder}>
+                                    <Ionicons name="camera-outline" size={32} color="#999" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        <Text style={styles.avatarHint}>Toque para alterar a foto</Text>
                     </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>O que você procura na Wellcome? (Obrigatório)</Text>
-                        <View style={styles.optionsRow}>
-                            {lookingForOptions.map((opt) => (
-                                <TouchableOpacity
-                                    key={opt.value}
-                                    style={[
-                                        styles.optionButton,
-                                        lookingFor === opt.value && styles.optionButtonSelected
-                                    ]}
-                                    onPress={() => setLookingFor(opt.value)}
-                                >
-                                    <Text style={[
-                                        styles.optionText,
-                                        lookingFor === opt.value && styles.optionTextSelected
-                                    ]}>{opt.label}</Text>
-                                </TouchableOpacity>
-                            ))}
+                    <View style={styles.form}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Com o que você trabalha? (Obrigatório)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Ex: Contador(a), Professor(a)"
+                                placeholderTextColor="#666"
+                                value={occupation}
+                                onChangeText={setOccupation}
+                            />
                         </View>
-                    </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Tem alguma restrição alimentar?</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Selecione ou digite"
-                            value={dietaryRestriction}
-                            onChangeText={setDietaryRestriction}
-                        />
-                    </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>O que você procura na Wellcome? (Obrigatório)</Text>
+                            <View style={styles.optionsRow}>
+                                {lookingForOptions.map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt.value}
+                                        style={[
+                                            styles.optionButton,
+                                            lookingFor === opt.value && styles.optionButtonSelected
+                                        ]}
+                                        onPress={() => setLookingFor(opt.value)}
+                                    >
+                                        <Text style={[
+                                            styles.optionText,
+                                            lookingFor === opt.value && styles.optionTextSelected
+                                        ]}>{opt.label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
 
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Conte um pouco sobre você</Text>
-                        <TextInput
-                            style={[styles.input, styles.textArea]}
-                            placeholder="Dica: Fale sobre seus hobbies, coisas que você gosta..."
-                            multiline
-                            numberOfLines={4}
-                            value={bio}
-                            onChangeText={setBio}
-                            textAlignVertical="top"
-                        />
-                    </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Cidade (Obrigatório)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Sua cidade"
+                                placeholderTextColor="#666"
+                                value={city}
+                                onChangeText={setCity}
+                            />
+                        </View>
 
-                    <TouchableOpacity
-                        style={styles.saveButton}
-                        onPress={saveProfile}
-                        disabled={saving}
-                    >
-                        {saving ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Bairro (Obrigatório)</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Seu bairro"
+                                placeholderTextColor="#666"
+                                value={neighborhood}
+                                onChangeText={setNeighborhood}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Quais idiomas você fala?</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Português, Inglês, Espanhol..."
+                                placeholderTextColor="#666"
+                                value={languages}
+                                onChangeText={setLanguages}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Tem alguma restrição alimentar?</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Selecione ou digite"
+                                placeholderTextColor="#666"
+                                value={dietaryRestriction}
+                                onChangeText={setDietaryRestriction}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Conte um pouco sobre você</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                placeholder="Dica: Fale sobre seus hobbies, coisas que você gosta..."
+                                placeholderTextColor="#666"
+                                multiline
+                                numberOfLines={4}
+                                value={bio}
+                                onChangeText={setBio}
+                                textAlignVertical="top"
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.saveButton}
+                            onPress={saveProfile}
+                            disabled={saving}
+                        >
+                            {saving ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

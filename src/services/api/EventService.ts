@@ -73,7 +73,12 @@ export class EventService {
                 latitude: data.location.latitude,
                 longitude: data.location.longitude,
                 coverImageUrl: coverImageUrl,
-                hostId: session.user.id // In real backend, extract from JWT token
+                hostId: session.user.id, // In real backend, extract from JWT token
+                eventType: data.eventType,
+                cuisineTypes: data.cuisineTypes,
+                vibe: data.vibe,
+                facilities: data.location.facilities,
+                rules: data.location.rules
             };
 
             const response = await fetch(apiUrl, {

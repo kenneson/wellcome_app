@@ -9,7 +9,7 @@ import Animated, {
     Extrapolate,
     runOnJS
 } from 'react-native-reanimated';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/shared/lib/supabase';

@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { WizardProgress } from '@/shared/ui/event-creation/WizardProgress';
-import { IconSymbol } from '@/shared/ui/ui/icon-symbol';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useEventDetailsViewModel } from '@/features/events/create/useEventDetailsViewModel';
 
 export default function EventCreateStep4() {
@@ -26,106 +26,116 @@ export default function EventCreateStep4() {
 
             <WizardProgress currentStep={3} />
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView contentContainerStyle={styles.content}>
 
-                {/* Image Picker */}
-                <TouchableOpacity style={styles.imagePicker} onPress={vm.pickImage}>
-                    {vm.data.details.coverImage ? (
-                        <Image source={{ uri: vm.data.details.coverImage }} style={styles.coverImage} />
-                    ) : (
-                        <View style={styles.imagePlaceholder}>
-                            <IconSymbol name="camera.fill" size={32} color="#FF8C42" />
-                            <Text style={styles.imageText}>Adicionar foto de capa</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
-
-                <Text style={styles.sectionTitle}>Mais informações sobre o seu evento</Text>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Título do Evento</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Ex: Jantar Italiano na Mooca"
-                        value={vm.data.details.title}
-                        onChangeText={(text) => vm.updateDetails({ title: text })}
-                    />
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Descrição do Evento</Text>
-                    <TextInput
-                        style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-                        placeholder="Conte um pouco sobre o que vai rolar..."
-                        value={vm.data.details.description}
-                        onChangeText={(text) => vm.updateDetails({ description: text })}
-                        multiline
-                        numberOfLines={4}
-                    />
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Valor por convidado</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="0,00"
-                        value={vm.data.details.pricePerGuest}
-                        onChangeText={(text) => vm.updateDetails({ pricePerGuest: text })}
-                        keyboardType="numeric"
-                    />
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Número máximo de convidados</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Selecione"
-                        value={vm.data.details.maxGuests}
-                        onChangeText={(text) => vm.updateDetails({ maxGuests: text })}
-                        keyboardType="numeric"
-                    />
-                </View>
-
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Data de realização</Text>
-                    <TouchableOpacity
-                        style={styles.dateButton}
-                        onPress={() => vm.setShowDatePicker(true)}
-                    >
-                        <Text style={styles.dateText}>{vm.formatDate(vm.data.details.date)}</Text>
-                        <IconSymbol name="calendar" size={20} color="#666" />
+                    {/* Image Picker */}
+                    <TouchableOpacity style={styles.imagePicker} onPress={vm.pickImage}>
+                        {vm.data.details.coverImage ? (
+                            <Image source={{ uri: vm.data.details.coverImage }} style={styles.coverImage} />
+                        ) : (
+                            <View style={styles.imagePlaceholder}>
+                                <IconSymbol name="camera.fill" size={32} color="#FF8C42" />
+                                <Text style={styles.imageText}>Adicionar foto de capa</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
-                    {vm.showDatePicker && (
-                        <DateTimePicker
-                            value={vm.data.details.date || new Date()}
-                            mode="date"
-                            display="default"
-                            onChange={vm.handleDateChange}
-                        />
-                    )}
-                </View>
 
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Vagas abertas até</Text>
-                    <TouchableOpacity
-                        style={styles.dateButton}
-                        onPress={() => vm.setShowDeadlinePicker(true)}
-                    >
-                        <Text style={styles.dateText}>{vm.formatDate(vm.data.details.registrationDeadline)}</Text>
-                        <IconSymbol name="calendar" size={20} color="#666" />
-                    </TouchableOpacity>
-                    {vm.showDeadlinePicker && (
-                        <DateTimePicker
-                            value={vm.data.details.registrationDeadline || new Date()}
-                            mode="date"
-                            display="default"
-                            onChange={vm.handleDeadlineChange}
-                        />
-                    )}
-                </View>
+                    <Text style={styles.sectionTitle}>Mais informações sobre o seu evento</Text>
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Título do Evento</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Ex: Jantar Italiano na Mooca"
+                            placeholderTextColor="#666"
+                            value={vm.data.details.title}
+                            onChangeText={(text) => vm.updateDetails({ title: text })}
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Descrição do Evento</Text>
+                        <TextInput
+                            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                            placeholder="Conte um pouco sobre o que vai rolar..."
+                            placeholderTextColor="#666"
+                            value={vm.data.details.description}
+                            onChangeText={(text) => vm.updateDetails({ description: text })}
+                            multiline
+                            numberOfLines={4}
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Valor por convidado</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="0,00"
+                            placeholderTextColor="#666"
+                            value={vm.data.details.pricePerGuest}
+                            onChangeText={(text) => vm.updateDetails({ pricePerGuest: text })}
+                            keyboardType="numeric"
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Número máximo de convidados</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Selecione"
+                            placeholderTextColor="#666"
+                            value={vm.data.details.maxGuests}
+                            onChangeText={(text) => vm.updateDetails({ maxGuests: text })}
+                            keyboardType="numeric"
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Data de realização</Text>
+                        <TouchableOpacity
+                            style={styles.dateButton}
+                            onPress={() => vm.setShowDatePicker(true)}
+                        >
+                            <Text style={styles.dateText}>{vm.formatDate(vm.data.details.date)}</Text>
+                            <IconSymbol name="calendar" size={20} color="#666" />
+                        </TouchableOpacity>
+                        {vm.showDatePicker && (
+                            <DateTimePicker
+                                value={vm.data.details.date || new Date()}
+                                mode="date"
+                                display="default"
+                                onChange={vm.handleDateChange}
+                            />
+                        )}
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Vagas abertas até</Text>
+                        <TouchableOpacity
+                            style={styles.dateButton}
+                            onPress={() => vm.setShowDeadlinePicker(true)}
+                        >
+                            <Text style={styles.dateText}>{vm.formatDate(vm.data.details.registrationDeadline)}</Text>
+                            <IconSymbol name="calendar" size={20} color="#666" />
+                        </TouchableOpacity>
+                        {vm.showDeadlinePicker && (
+                            <DateTimePicker
+                                value={vm.data.details.registrationDeadline || new Date()}
+                                mode="date"
+                                display="default"
+                                onChange={vm.handleDeadlineChange}
+                            />
+                        )}
+                    </View>
+
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <View style={styles.footer}>
                 <TouchableOpacity
