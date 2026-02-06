@@ -1,23 +1,37 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { CreateEventRegistrationUseCase } from '../../../application/use-cases/CreateEventRegistrationUseCase';
+import { JoinEventUseCase } from '../../../application/use-cases/JoinEventUseCase';
 import { CancelEventRegistrationUseCase } from '../../../application/use-cases/CancelEventRegistrationUseCase';
+import { ApproveRegistrationUseCase } from '../../../application/use-cases/ApproveRegistrationUseCase';
+import { RejectRegistrationUseCase } from '../../../application/use-cases/RejectRegistrationUseCase';
 import { z } from 'zod';
 
 const createRegistrationSchema = z.object({
     eventId: z.string(),
-    userId: z.string()
+    userId: z.string(),
+    answers: z.array(z.object({
+        questionId: z.string(),
+        answer: z.string()
+    })).optional()
+});
+
+const approveRejectSchema = z.object({
+    registrationId: z.string(),
+    hostId: z.string(), // In a real app this comes from auth token
+    reason: z.string().optional()
 });
 
 export class EventRegistrationController {
     constructor(
-        private createEventRegistrationUseCase: CreateEventRegistrationUseCase,
-        private cancelEventRegistrationUseCase: CancelEventRegistrationUseCase
+        private joinEventUseCase: JoinEventUseCase,
+        private cancelEventRegistrationUseCase: CancelEventRegistrationUseCase,
+        private approveRegistrationUseCase: ApproveRegistrationUseCase,
+        private rejectRegistrationUseCase: RejectRegistrationUseCase
     ) { }
 
     async create(request: FastifyRequest, reply: FastifyReply) {
         try {
             const body = createRegistrationSchema.parse(request.body);
-            const registration = await this.createEventRegistrationUseCase.execute(body);
+            const registration = await this.joinEventUseCase.execute(body);
             return reply.code(201).send(registration);
         } catch (error: any) {
             if (error instanceof z.ZodError) {
@@ -41,6 +55,29 @@ export class EventRegistrationController {
             }
             await this.cancelEventRegistrationUseCase.execute(eventId, userId);
             return reply.code(204).send();
+        } catch (error) {
+            return reply.code(500).send({ message: 'Internal server error', error });
+        }
+    }
+
+    async approve(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { registrationId, hostId } = approveRejectSchema.parse(request.body);
+            const registration = await this.approveRegistrationUseCase.execute(registrationId, hostId);
+            return reply.send(registration);
+        } catch (error) {
+            return reply.code(500).send({ message: 'Internal server error', error });
+        }
+    }
+
+    async reject(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { registrationId, hostId, reason } = approveRejectSchema.parse(request.body);
+            if (!reason) {
+                return reply.code(400).send({ message: 'Reason is required for rejection' });
+            }
+            const registration = await this.rejectRegistrationUseCase.execute(registrationId, hostId, reason);
+            return reply.send(registration);
         } catch (error) {
             return reply.code(500).send({ message: 'Internal server error', error });
         }

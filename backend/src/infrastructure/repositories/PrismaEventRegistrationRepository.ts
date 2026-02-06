@@ -44,6 +44,31 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
         });
     }
 
+    async updateStatus(id: string, status: string, rejectionReason?: string, reviewedBy?: string): Promise<EventRegistration> {
+        const data: any = { status };
+        if (rejectionReason) data.rejectionReason = rejectionReason;
+        if (reviewedBy) {
+            data.reviewedBy = reviewedBy;
+            data.reviewedAt = new Date();
+        }
+
+        const booking = await prisma.booking.update({
+            where: { id },
+            data
+        });
+
+        return this.mapToDomain(booking);
+    }
+
+    async findById(id: string): Promise<EventRegistration | null> {
+        const booking = await prisma.booking.findUnique({
+            where: { id }
+        });
+
+        if (!booking) return null;
+        return this.mapToDomain(booking);
+    }
+
     private mapToDomain(prismaBooking: any): EventRegistration {
         return {
             id: prismaBooking.id,

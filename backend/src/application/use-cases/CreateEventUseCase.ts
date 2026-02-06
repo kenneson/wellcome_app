@@ -1,9 +1,13 @@
 import { EventRepository } from '../../domain/repositories/EventRepository';
+import { EventQuestionRepository } from '../../domain/repositories/EventQuestionRepository';
 import { CreateEventDTO, Event } from '../../domain/entities/Event';
 import { prisma } from '../../infrastructure/database/prismaClient';
 
 export class CreateEventUseCase {
-    constructor(private eventRepository: EventRepository) { }
+    constructor(
+        private eventRepository: EventRepository,
+        private eventQuestionRepository: EventQuestionRepository
+    ) { }
 
     async execute(data: CreateEventDTO): Promise<Event> {
         // Business validation could go here
@@ -29,6 +33,22 @@ export class CreateEventUseCase {
             });
         }
 
-        return this.eventRepository.create(data);
+        const event = await this.eventRepository.create(data);
+
+        // Save custom questions if any
+        if (data.questions && data.questions.length > 0) {
+            await this.eventQuestionRepository.createMany(
+                data.questions.map((q, index) => ({
+                    eventId: event.id,
+                    question: q.question,
+                    questionType: q.questionType,
+                    options: q.options,
+                    required: q.required,
+                    order: index
+                }))
+            );
+        }
+
+        return event;
     }
 }

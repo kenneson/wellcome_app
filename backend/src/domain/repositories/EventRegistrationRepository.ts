@@ -6,4 +6,6 @@ export interface EventRegistrationRepository {
     findByUserId(userId: string): Promise<EventRegistration[]>;
     delete(id: string): Promise<void>;
     deleteByEventAndUser(eventId: string, userId: string): Promise<void>;
+    updateStatus(id: string, status: string, rejectionReason?: string, reviewedBy?: string): Promise<EventRegistration>;
+    findById(id: string): Promise<EventRegistration | null>;
 }

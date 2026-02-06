@@ -10,8 +10,10 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
-import { CreateEventRegistrationUseCase } from './application/use-cases/CreateEventRegistrationUseCase';
+import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
+import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
+import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
@@ -22,6 +24,7 @@ import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRe
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
+import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 
 const fastify = Fastify({
     logger: true
@@ -59,9 +62,12 @@ const start = async () => {
             staticCSP: true,
         });
 
+
+
         // Dependency Injection (Manual for now)
         const eventRepository = new PrismaEventRepository();
-        const createEventUseCase = new CreateEventUseCase(eventRepository);
+        const eventQuestionRepository = new PrismaEventQuestionRepository();
+        const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const eventController = new EventController(createEventUseCase, listEventsUseCase);
 
@@ -216,9 +222,17 @@ const start = async () => {
 
         // Event Registration Dependencies
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
-        const createEventRegistrationUseCase = new CreateEventRegistrationUseCase(eventRegistrationRepository, eventRepository);
+        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository);
         const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository);
-        const eventRegistrationController = new EventRegistrationController(createEventRegistrationUseCase, cancelEventRegistrationUseCase);
+        const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository);
+        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository);
+
+        const eventRegistrationController = new EventRegistrationController(
+            joinEventUseCase,
+            cancelEventRegistrationUseCase,
+            approveRegistrationUseCase,
+            rejectRegistrationUseCase
+        );
 
         fastify.post('/bookings', {
             schema: {
@@ -229,7 +243,17 @@ const start = async () => {
                     required: ['eventId', 'userId'],
                     properties: {
                         eventId: { type: 'string' },
-                        userId: { type: 'string' }
+                        userId: { type: 'string' },
+                        answers: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    questionId: { type: 'string' },
+                                    answer: { type: 'string' }
+                                }
+                            }
+                        }
                     }
                 },
                 response: {
@@ -255,6 +279,82 @@ const start = async () => {
                 }
             }
         }, (req, reply) => eventRegistrationController.create(req, reply));
+
+        // Approval endpoints
+        fastify.post('/bookings/approve', {
+            schema: {
+                description: 'Approve a registration',
+                tags: ['Bookings'],
+                body: {
+                    type: 'object',
+                    required: ['registrationId', 'hostId'],
+                    properties: {
+                        registrationId: { type: 'string' },
+                        hostId: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: { description: 'Registration approved' }
+                }
+            }
+        }, (req, reply) => eventRegistrationController.approve(req, reply));
+
+        fastify.post('/bookings/reject', {
+            schema: {
+                description: 'Reject a registration',
+                tags: ['Bookings'],
+                body: {
+                    type: 'object',
+                    required: ['registrationId', 'hostId', 'reason'],
+                    properties: {
+                        registrationId: { type: 'string' },
+                        hostId: { type: 'string' },
+                        reason: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: { description: 'Registration rejected' }
+                }
+            }
+        }, (req, reply) => eventRegistrationController.reject(req, reply));
+
+        // Approval endpoints
+        fastify.post('/bookings/approve', {
+            schema: {
+                description: 'Approve a registration',
+                tags: ['Bookings'],
+                body: {
+                    type: 'object',
+                    required: ['registrationId', 'hostId'],
+                    properties: {
+                        registrationId: { type: 'string' },
+                        hostId: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: { description: 'Registration approved' }
+                }
+            }
+        }, (req, reply) => eventRegistrationController.approve(req, reply));
+
+        fastify.post('/bookings/reject', {
+            schema: {
+                description: 'Reject a registration',
+                tags: ['Bookings'],
+                body: {
+                    type: 'object',
+                    required: ['registrationId', 'hostId', 'reason'],
+                    properties: {
+                        registrationId: { type: 'string' },
+                        hostId: { type: 'string' },
+                        reason: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: { description: 'Registration rejected' }
+                }
+            }
+        }, (req, reply) => eventRegistrationController.reject(req, reply));
 
         // User Dependencies
         const userRepository = new PrismaUserRepository();
