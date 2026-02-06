@@ -117,14 +117,9 @@ export default function RootLayout() {
       // Allow access to welcome screen
       if (segments[0] === 'welcome') return;
 
-      // Allow access to tabs (including profile tab)
-      if (segments[0] === '(tabs)') return;
-
-      // Allow access to profile edit screen (so they can actually fix it)
-      if (segments[0] === 'profile' && segments[1] === 'edit') return;
-
-      // Otherwise redirect to welcome
-      router.replace('/welcome');
+      // Allow access to all routes - user can complete profile later
+      // Only redirect to welcome on first login (handled by auth flow)
+      return;
     }
   }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
 

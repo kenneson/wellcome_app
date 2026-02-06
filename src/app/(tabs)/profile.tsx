@@ -17,12 +17,11 @@ import { supabase } from '@/shared/lib/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useQuery } from '@tanstack/react-query';
 import { userService } from '@/services/api/UserService';
-import { useUserProfile } from '@/context/UserProfileContext';
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { refetchProfile: ensureProfileComplete } = useUserProfile();
     const [session, setSession] = useState<any>(null);
+    const [activeTab, setActiveTab] = useState<'history' | 'upcoming'>('history');
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -40,7 +39,7 @@ export default function ProfileScreen() {
         useCallback(() => {
             if (session?.user?.id) {
                 refetch();
-                ensureProfileComplete();
+                // Note: Profile completion check is handled by _layout.tsx
             }
         }, [session?.user?.id])
     );
@@ -54,21 +53,36 @@ export default function ProfileScreen() {
         }
     }
 
-    if (isLoading) {
+    // Show loading if session is not yet loaded or query is loading
+    if (!session || isLoading) {
         return (
             <View style={[styles.container, styles.center]}>
                 <ActivityIndicator size="large" color="#FF8C42" />
+                <Text style={{ marginTop: 10, color: '#666' }}>Carregando perfil...</Text>
             </View>
         );
     }
 
+    const now = new Date();
+
+    const pastBookings = profile?.bookings?.filter((b: any) => {
+        if (!b.event?.eventDate) return false;
+        return new Date(b.event.eventDate).getTime() < now.getTime();
+    }) || [];
+
+    const upcomingBookings = profile?.bookings?.filter((b: any) => {
+        if (!b.event?.eventDate) return false;
+        return new Date(b.event.eventDate).getTime() >= now.getTime();
+    }) || [];
+
     const stats = {
         offered: profile?.events?.length || 0,
-        participated: profile?.bookings?.length || 0,
+        participated: pastBookings.length,
         averageRating: 5.0 // Placeholder
     };
 
-    const lastExperience = profile?.bookings?.[0];
+    const hasBookings = activeTab === 'history' ? pastBookings.length > 0 : upcomingBookings.length > 0;
+    const currentBookings = activeTab === 'history' ? pastBookings : upcomingBookings;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -118,7 +132,7 @@ export default function ProfileScreen() {
                     </View>
                     <View style={styles.statCard}>
                         <Text style={styles.statNumber}>{stats.participated}</Text>
-                        <Text style={styles.statLabel}>JANTARES{'\n'}PARTICIPADOS</Text>
+                        <Text style={styles.statLabel}>PARTICIPAÇÕES{'\n'}PASSADAS</Text>
                     </View>
                 </View>
 
@@ -128,13 +142,19 @@ export default function ProfileScreen() {
                     <Text style={styles.ratingLabel}>AVALIAÇÃO MÉDIA</Text>
                 </View>
 
-                {/* Tabs - Mock Visual Only */}
+                {/* Tabs */}
                 <View style={styles.tabsContainer}>
-                    <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-                        <Text style={[styles.tabText, styles.activeTabText]}>Histórico</Text>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+                        onPress={() => setActiveTab('history')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>Histórico</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.tab}>
-                        <Text style={styles.tabText}>Preferências</Text>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
+                        onPress={() => setActiveTab('upcoming')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>Agendados</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -149,30 +169,44 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
-                <Text style={styles.sectionTitle}>ÚLTIMAS EXPERIÊNCIAS</Text>
+                <Text style={styles.sectionTitle}>
+                    {activeTab === 'history' ? 'ÚLTIMAS EXPERIÊNCIAS' : 'PRÓXIMOS EVENTOS'}
+                </Text>
 
-                {/* Last Experience Card */}
-                {lastExperience ? (
-                    <View style={styles.experienceCard}>
-                        <View style={styles.expImagePlaceholder} />
-                        <View style={styles.expInfo}>
-                            <Text style={styles.expTitle}>{lastExperience.event?.title || 'Evento'}</Text>
-                            <Text style={styles.expSubtitle}>
-                                Anfitrião: {lastExperience.event?.host?.fullName?.split(' ')[0] || 'Unknown'} •
-                                {new Date(lastExperience.event?.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                            </Text>
-                            <View style={styles.expStatus}>
-                                <Ionicons name="checkmark-circle" size={14} color="#FF8C42" />
-                                <Text style={styles.expStatusText}>{lastExperience.status === 'confirmed' ? 'Confirmado' : lastExperience.status}</Text>
+                {/* Events List */}
+                {hasBookings ? (
+                    currentBookings.map((booking: any) => (
+                        <View key={booking.id} style={styles.experienceCard}>
+                            <Image
+                                source={{ uri: booking.event?.coverImageUrl }}
+                                style={styles.expImagePlaceholder}
+                                contentFit="cover"
+                            />
+                            <View style={styles.expInfo}>
+                                <Text style={styles.expTitle}>{booking.event?.title || 'Evento'}</Text>
+                                <Text style={styles.expSubtitle}>
+                                    Anfitrião: {booking.event?.host?.fullName?.split(' ')[0] || 'Unknown'} •
+                                    {new Date(booking.event?.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                </Text>
+                                <View style={styles.expStatus}>
+                                    <Ionicons name="checkmark-circle" size={14} color="#FF8C42" />
+                                    <Text style={styles.expStatusText}>{booking.status === 'confirmed' ? 'Confirmado' : booking.status}</Text>
+                                </View>
                             </View>
+                            {activeTab === 'history' && (
+                                <TouchableOpacity style={styles.rateButton}>
+                                    <Text style={styles.rateButtonText}>Avaliar</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
-                        <TouchableOpacity style={styles.rateButton}>
-                            <Text style={styles.rateButtonText}>Avaliar</Text>
-                        </TouchableOpacity>
-                    </View>
+                    ))
                 ) : (
                     <View style={styles.emptyState}>
-                        <Text style={styles.emptyStateText}>Nenhuma experiência recente.</Text>
+                        <Text style={styles.emptyStateText}>
+                            {activeTab === 'history'
+                                ? 'Nenhuma experiência recente.'
+                                : 'Nenhum evento agendado.'}
+                        </Text>
                     </View>
                 )}
 

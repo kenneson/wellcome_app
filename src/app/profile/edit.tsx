@@ -173,11 +173,8 @@ export default function EditProfileScreen() {
 
             Alert.alert('Sucesso', 'Perfil atualizado!');
             await refetchProfile();
-            if (mandatory === 'true') {
-                router.replace('/(tabs)');
-            } else {
-                router.back();
-            }
+            // Always navigate to profile tab after saving
+            router.replace('/(tabs)/profile');
         } catch (error: any) {
             Alert.alert('Erro ao salvar', error.message);
         } finally {

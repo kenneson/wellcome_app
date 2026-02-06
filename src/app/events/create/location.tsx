@@ -7,6 +7,7 @@ import { WizardProgress } from '@/components/ui/WizardProgress';
 import { SelectionCard } from '@/components/ui/SelectionCard';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 
 const FACILITIES = [
     'Estacionamento para visitantes',
@@ -30,6 +31,16 @@ export default function EventCreateStep3() {
     const router = useRouter();
     const { data, updateLocation } = useEventCreation();
     const [loadingGPS, setLoadingGPS] = useState(false);
+    const [showSearchModal, setShowSearchModal] = useState(false);
+
+    const handleSelectAddress = (result: any) => {
+        updateLocation({
+            address: result.displayName,
+            latitude: result.lat,
+            longitude: result.lon
+        });
+        setShowSearchModal(false);
+    };
 
     const handleNext = () => {
         if (!data.location.address.trim()) {
@@ -165,6 +176,24 @@ export default function EventCreateStep3() {
                         multiline
                         numberOfLines={3}
                         textAlignVertical="top"
+                    />
+
+                    <TouchableOpacity
+                        style={styles.searchButton}
+                        onPress={() => setShowSearchModal(true)}
+                    >
+                        <IconSymbol name="magnifyingglass" size={20} color="#FF8C42" />
+                        <Text style={styles.searchButtonText}>Buscar endereço / preencher automático</Text>
+                    </TouchableOpacity>
+
+                    {/* Autocomplete Modal */}
+                    <LocationAutocomplete
+                        visible={showSearchModal}
+                        onClose={() => setShowSearchModal(false)}
+                        onSelectAddress={handleSelectAddress}
+                        type="address"
+                        asModal={true}
+                        placeholder="Digite o nome da rua, número, cidade..."
                     />
 
                     {data.location.latitude && (
@@ -316,4 +345,21 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    searchButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#FF8C42',
+        borderRadius: 8,
+        marginTop: 8,
+        gap: 8,
+        backgroundColor: '#FFF0E6'
+    },
+    searchButtonText: {
+        color: '#FF8C42',
+        fontWeight: '600',
+        fontSize: 14
+    }
 });
