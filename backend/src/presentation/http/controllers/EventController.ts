@@ -3,6 +3,8 @@ import { CreateEventUseCase } from '../../../application/use-cases/CreateEventUs
 import { ListEventsUseCase } from '../../../application/use-cases/ListEventsUseCase';
 import { z } from 'zod';
 
+import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
+
 const createEventSchema = z.object({
     title: z.string(),
     description: z.string(),
@@ -19,6 +21,13 @@ const createEventSchema = z.object({
     vibe: z.array(z.string()).optional(),
     facilities: z.array(z.string()).optional(),
     rules: z.array(z.string()).optional(),
+    // Approval fields
+    accessType: z.nativeEnum(EventAccessType).optional().default(EventAccessType.OPEN),
+    requiresApproval: z.boolean().optional().default(false),
+    allowWaitlist: z.boolean().optional().default(false),
+    autoApproveIfAttended: z.boolean().optional().default(false),
+    autoApproveMinRating: z.number().nullable().optional().default(null),
+    // questions: z.array(z.any()).optional() // TODO: Define strict schema for questions
 });
 
 export class EventController {
@@ -36,7 +45,8 @@ export class EventController {
                 cuisineTypes: body.cuisineTypes ?? [],
                 vibe: body.vibe ?? [],
                 facilities: body.facilities ?? [],
-                rules: body.rules ?? []
+                rules: body.rules ?? [],
+                questions: [] // Default empty questions for now
             });
             return reply.code(201).send(event);
         } catch (error) {
