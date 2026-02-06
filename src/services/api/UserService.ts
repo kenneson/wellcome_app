@@ -2,8 +2,8 @@ import { API_URL } from '@/shared/config/api';
 
 export interface UserProfile {
     id: string;
-    fullName: string;
-    username: string;
+    fullName: string | null;
+    username: string | null;
     avatarUrl: string | null;
     bio: string | null;
     occupation: string | null;
