@@ -8,50 +8,63 @@ datasource db {
   schemas  = ["auth", "public"]
 }
 
+
 model User {
-  id                  String    @id @default(uuid()) @db.Uuid
-  updatedAt           DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
-  fullName            String?   @map("full_name")
-  username            String?   @unique
-  avatarUrl           String?   @map("avatar_url")
+  id                  String         @id @default(uuid()) @db.Uuid
+  updatedAt           DateTime?      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  fullName            String?        @map("full_name")
+  username            String?        @unique
+  avatarUrl           String?        @map("avatar_url")
   website             String?
   occupation          String?
   bio                 String?
-  dietaryRestrictions String[]  @map("dietary_restrictions")
-  lookingFor          String?   @map("looking_for")
+  dietaryRestrictions String[]       @map("dietary_restrictions")
+  lookingFor          String?        @map("looking_for")
   city                String?
   neighborhood        String?
-  languages           String[]  @default([])
+  languages           String[]       @default([])
   bookings            Booking[]
   events              Event[]
-  users               users     @relation(fields: [id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  notifications       Notification[]
+  pushTokens          PushToken[]
+  users               users          @relation(fields: [id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("profiles")
   @@schema("public")
 }
 
 model Event {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdAt     DateTime  @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
-  hostId        String    @map("host_id") @db.Uuid
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt     DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
+  hostId        String   @map("host_id") @db.Uuid
   title         String
   description   String?
-  eventDate     DateTime  @map("event_date") @db.Timestamptz(6)
+  eventDate     DateTime @map("event_date") @db.Timestamptz(6)
   location      String
-  maxGuests     Int?      @default(0) @map("max_guests")
-  coverImageUrl String?   @map("cover_image_url")
+  maxGuests     Int?     @default(0) @map("max_guests")
+  coverImageUrl String?  @map("cover_image_url")
   latitude      Float?
   longitude     Float?
-  price         Decimal?  @default(0) @db.Decimal
-  eventType     String?   @map("event_type")
-  cuisineTypes  String[]  @default([]) @map("cuisine_types")
-  vibe          String[]  @default([])
-  facilities    String[]  @default([])
-  rules         String[]  @default([])
-  bookings      Booking[]
-  host          User      @relation(fields: [hostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  price         Decimal? @default(0) @db.Decimal
+  eventType     String?  @map("event_type")
+  cuisineTypes  String[] @default([]) @map("cuisine_types")
+  vibe          String[] @default([])
+  facilities    String[] @default([])
+  rules         String[] @default([])
+  updatedAt     DateTime @default(now()) @updatedAt
 
-  updatedAt     DateTime  @default(now()) @updatedAt
+  // Novos campos para aprovação
+  accessType            EventAccessType @default(OPEN) @map("access_type")
+  requiresApproval      Boolean         @default(false) @map("requires_approval")
+  allowWaitlist         Boolean         @default(false) @map("allow_waitlist")
+  autoApproveIfAttended Boolean         @default(false) @map("auto_approve_if_attended")
+  autoApproveMinRating  Decimal?        @map("auto_approve_min_rating") @db.Decimal(2, 1)
+
+  // Relacionamentos
+  bookings  Booking[]
+  questions EventQuestion[]
+  host      User            @relation(fields: [hostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   @@map("events")
   @@schema("public")
 }
@@ -59,14 +72,107 @@ model Event {
 model Booking {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   createdAt DateTime @default(dbgenerated("timezone('utc'::text, now())")) @map("created_at") @db.Timestamptz(6)
-  eventId   String   @map("event_id") @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  status    String?  @default("confirmed")
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  guest     User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  eventId String @map("event_id") @db.Uuid
+  userId  String @map("user_id") @db.Uuid
+
+  // Status expandido - mantém String para retrocompat, mas usaremos enum
+  status RegistrationStatus @default(PENDING)
+
+  // Metadados de aprovação
+  reviewedAt      DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  reviewedBy      String?   @map("reviewed_by") @db.Uuid
+  rejectionReason String?   @map("rejection_reason")
+
+  // Dados úteis para decisão
+  attendedBefore Boolean @default(false) @map("attended_before")
+  noShowCount    Int     @default(0) @map("no_show_count")
+
+  // Relacionamentos
+  event   Event                @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  guest   User                 @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  answers RegistrationAnswer[]
+  notes   RegistrationNote[]
 
   @@unique([eventId, userId])
   @@map("event_participants")
+  @@schema("public")
+}
+
+model EventQuestion {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String       @map("event_id") @db.Uuid
+  question     String
+  questionType QuestionType @map("question_type")
+  options      String[]     @default([])
+  required     Boolean      @default(false)
+  order        Int          @default(0)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  event   Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  answers RegistrationAnswer[]
+
+  @@map("event_questions")
+  @@schema("public")
+}
+
+model RegistrationAnswer {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  registrationId String @map("registration_id") @db.Uuid
+  questionId     String @map("question_id") @db.Uuid
+  answer         String
+
+  registration Booking       @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  question     EventQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([registrationId, questionId])
+  @@map("registration_answers")
+  @@schema("public")
+}
+
+model RegistrationNote {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  registrationId String   @map("registration_id") @db.Uuid
+  note           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy      String   @map("created_by") @db.Uuid
+
+  registration Booking @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@map("registration_notes")
+  @@schema("public")
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  read      Boolean          @default(false)
+  readAt    DateTime?        @map("read_at") @db.Timestamptz(6)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+  @@schema("public")
+}
+
+model PushToken {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  token      String    @unique
+  platform   String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_tokens")
   @@schema("public")
 }
 
@@ -541,4 +647,43 @@ enum one_time_token_type {
   phone_change_token
 
   @@schema("auth")
+}
+
+// Novos enums para sistema de aprovação de inscrições
+enum EventAccessType {
+  OPEN
+  OPEN_WITH_APPROVAL
+  PRIVATE
+
+  @@schema("public")
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WAITLIST
+  CANCELLED
+
+  @@schema("public")
+}
+
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  CHECKBOX
+  RADIO
+  SELECT
+
+  @@schema("public")
+}
+
+enum NotificationType {
+  REGISTRATION_APPROVED
+  REGISTRATION_REJECTED
+  NEW_REGISTRATION_PENDING
+  EVENT_UPDATE
+  EVENT_REMINDER
+
+  @@schema("public")
 }
