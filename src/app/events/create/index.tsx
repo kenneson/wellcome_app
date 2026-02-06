@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
@@ -7,11 +7,15 @@ import { SelectionCard } from '@/components/ui/SelectionCard';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 const EVENT_TYPES = [
     'Café da manhã', 'Brunch', 'Almoço',
     'Lanche', 'Jantar', 'Degustação',
     'Pic-nic', 'Coquetel', 'Outro'
-];
+] as const;
 
 const CUISINE_TYPES = [
     'Africana', 'Alemã', 'Asiática', 'Árabe',
@@ -26,115 +30,161 @@ const CUISINE_TYPES = [
     'Peruana', 'Pizza', 'Portuguesa',
     'Sopas e Caldos', 'Tailandesa', 'Variada',
     'Vegana', 'Vegetariana'
-];
+] as const;
 
 const VIBES = [
     'Família', 'Networking', 'Espiritual', 'Casual',
     'Romântico', 'Festa', 'Jantar a dois', 'Negócios'
-];
+] as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface SelectionSectionProps {
+    title: string;
+    subtitle?: string;
+    items: readonly string[];
+    selectedItems: string | string[];
+    onSelect: (item: string) => void;
+    isMultiSelect?: boolean;
+}
+
+// ============================================================================
+// Sub-components
+// ============================================================================
+
+const SelectionSection = React.memo<SelectionSectionProps>(({
+    title,
+    subtitle,
+    items,
+    selectedItems,
+    onSelect,
+    isMultiSelect = false,
+}) => {
+    const isSelected = useCallback((item: string) => {
+        if (isMultiSelect && Array.isArray(selectedItems)) {
+            return selectedItems.includes(item);
+        }
+        return selectedItems === item;
+    }, [selectedItems, isMultiSelect]);
+
+    return (
+        <>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
+            <View style={styles.grid}>
+                {items.map((item) => (
+                    <SelectionCard
+                        key={item}
+                        label={item}
+                        selected={isSelected(item)}
+                        onPress={() => onSelect(item)}
+                        style={styles.card}
+                    />
+                ))}
+            </View>
+        </>
+    );
+});
+
+SelectionSection.displayName = 'SelectionSection';
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export default function EventCreateStep1() {
     const router = useRouter();
-    const { data, setEventType, toggleCuisineType, updateLocation } = useEventCreation(); // Assuming updateLocation for simplicity, but we might need a specific setter for Vibe or use updateDetails if we put it there. 
-    // Wait, Vibe is on 'data.vibe' in schema, but useCreateEvent needs to support setting it.
-    // Let's check useCreateEvent.ts. It has 'updateDetails' but 'vibe' was in 'details'? No, distinct field in Schema, but useCreateEvent likely follows its own state.
-    // In useCreateEvent.ts state: 'vibe' was NOT added to defaultState yet?
-    // I need to check useCreateEvent.ts again to see if I added it.
-    // I did NOT update useCreateEvent state in Step 347 (that was Controller). I need to update useCreateEvent.ts logic first.
-    // Actually, I should update useCreateEvent.ts to hold 'vibe'.
+    const { data, setEventType, toggleCuisineType, toggleVibe } = useEventCreation();
 
-    // For now let's assume I will add `toggleVibe` to context.
-    // I will use `any` to bypass TS for a moment or fix useCreateEvent.ts first.
-    // Better to fix useCreateEvent.ts FIRST.
+    // Memoize validation state
+    const canProceed = useMemo(() => {
+        return data.eventType && data.cuisineTypes.length > 0;
+    }, [data.eventType, data.cuisineTypes.length]);
 
+    // Memoize vibe array to prevent unnecessary renders
+    const selectedVibes = useMemo(() => data.vibe ?? [], [data.vibe]);
 
-    const handleNext = () => {
+    const handleNext = useCallback(() => {
         if (!data.eventType) {
-            // TODO: Show error feedback
+            Alert.alert('Atenção', 'Selecione o tipo do evento para continuar.');
             return;
         }
         if (data.cuisineTypes.length === 0) {
-            // TODO: Show error feedback
+            Alert.alert('Atenção', 'Selecione pelo menos um tipo de comida.');
             return;
         }
         router.push('/events/create/menu');
-    };
+    }, [data.eventType, data.cuisineTypes.length, router]);
 
-    const handleBack = () => {
+    const handleBack = useCallback(() => {
         if (router.canGoBack()) {
             router.back();
         } else {
             router.replace('/(tabs)');
         }
-    };
+    }, [router]);
 
     return (
         <SafeAreaView style={styles.safeArea}>
+            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                     <IconSymbol name="chevron.left" size={24} color="#000" />
                     <Text style={styles.backText}>Voltar</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Crie seu evento</Text>
-                <View style={{ width: 60 }} />
+                <View style={styles.headerSpacer} />
             </View>
 
             <WizardProgress currentStep={0} />
 
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.sectionTitle}>Qual o tipo do seu evento?</Text>
-                <View style={styles.grid}>
-                    {EVENT_TYPES.map((type) => (
-                        <SelectionCard
-                            key={type}
-                            label={type}
-                            selected={data.eventType === type}
-                            onPress={() => setEventType(type)}
-                            style={styles.card}
-                        />
-                    ))}
-                </View>
+            {/* Content */}
+            <ScrollView
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                <SelectionSection
+                    title="Qual o tipo do seu evento?"
+                    items={EVENT_TYPES}
+                    selectedItems={data.eventType}
+                    onSelect={setEventType}
+                />
 
                 <View style={styles.divider} />
 
-                <Text style={styles.sectionTitle}>Que tipo de comida será servida?</Text>
-                <Text style={styles.sectionSubtitle}>Selecione pelo menos uma</Text>
-                <View style={styles.grid}>
-                    {CUISINE_TYPES.map((type) => (
-                        <SelectionCard
-                            key={type}
-                            label={type}
-                            selected={data.cuisineTypes.includes(type)}
-                            onPress={() => toggleCuisineType(type)}
-                            style={styles.card}
-                        />
-                    ))}
-                </View>
+                <SelectionSection
+                    title="Que tipo de comida será servida?"
+                    subtitle="Selecione pelo menos uma"
+                    items={CUISINE_TYPES}
+                    selectedItems={data.cuisineTypes}
+                    onSelect={toggleCuisineType}
+                    isMultiSelect
+                />
 
                 <View style={styles.divider} />
 
-                <Text style={styles.sectionTitle}>Qual a vibe do evento?</Text>
-                <Text style={styles.sectionSubtitle}>Selecione as que combinam</Text>
-                <View style={styles.grid}>
-                    {VIBES.map((vibe) => (
-                        <SelectionCard
-                            key={vibe}
-                            label={vibe}
-                            selected={data.vibe?.includes(vibe) || false}
-                            onPress={() => {
-                                // @ts-ignore - temporary TS lag
-                                toggleVibe(vibe);
-                            }}
-                            style={styles.card}
-                        />
-                    ))}
-                </View>
+                <SelectionSection
+                    title="Qual a vibe do evento?"
+                    subtitle="Selecione as que combinam"
+                    items={VIBES}
+                    selectedItems={selectedVibes}
+                    onSelect={toggleVibe}
+                    isMultiSelect
+                />
 
-                <View style={{ height: 100 }} />
+                <View style={styles.bottomSpacer} />
             </ScrollView>
 
+            {/* Footer */}
             <View style={styles.footer}>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                <TouchableOpacity
+                    style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
+                    onPress={handleNext}
+                    activeOpacity={canProceed ? 0.8 : 1}
+                >
                     <Text style={styles.nextButtonText}>Salvar e prosseguir</Text>
                 </TouchableOpacity>
             </View>
@@ -142,11 +192,16 @@ export default function EventCreateStep1() {
     );
 }
 
+// ============================================================================
+// Styles
+// ============================================================================
+
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#fff',
     },
+    // Header
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -167,7 +222,12 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
+        color: '#000',
     },
+    headerSpacer: {
+        width: 60,
+    },
+    // Content
     content: {
         padding: 20,
     },
@@ -176,6 +236,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 8,
         marginTop: 10,
+        color: '#000',
     },
     sectionSubtitle: {
         fontSize: 14,
@@ -195,6 +256,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#eee',
         marginVertical: 24,
     },
+    bottomSpacer: {
+        height: 100,
+    },
+    // Footer
     footer: {
         padding: 20,
         borderTopWidth: 1,
@@ -206,6 +271,9 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 8,
         alignItems: 'center',
+    },
+    nextButtonDisabled: {
+        opacity: 0.6,
     },
     nextButtonText: {
         color: '#fff',

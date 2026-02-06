@@ -4,6 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
+import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
 
 export default function MyEventsScreen() {
     const router = useRouter();
@@ -61,7 +62,7 @@ export default function MyEventsScreen() {
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
             <Image
-                source={{ uri: item.cover_image_url || 'https://via.placeholder.com/150' }}
+                source={{ uri: item.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }}
                 style={styles.cardImage}
             />
             <View style={styles.cardContent}>
@@ -149,11 +150,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         padding: 12,
         alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+        ...shadows.sm,
     },
     cardImage: {
         width: 60,

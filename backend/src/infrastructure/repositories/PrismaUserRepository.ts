@@ -8,7 +8,18 @@ export class PrismaUserRepository implements UserRepository {
             where: { id },
             include: {
                 events: true,
-                bookings: true
+                bookings: {
+                    include: {
+                        event: {
+                            include: {
+                                host: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                }
             }
         });
 

@@ -15,55 +15,35 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useQuery } from '@tanstack/react-query';
+import { userService } from '@/services/api/UserService';
+import { useUserProfile } from '@/context/UserProfileContext';
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
-    const [profile, setProfile] = useState<any>(null);
-    const [stats, setStats] = useState({ offered: 0, participated: 0, averageRating: 0 }); // Mock stats for now
+    const { refetchProfile: ensureProfileComplete } = useUserProfile();
+    const [session, setSession] = useState<any>(null);
 
-    // Reload profile when screen comes into focus (e.g. back from edit)
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+    }, []);
+
+    const { data: profile, isLoading, refetch } = useQuery({
+        queryKey: ['profile', session?.user?.id],
+        queryFn: () => userService.getProfile(session!.user!.id),
+        enabled: !!session?.user?.id,
+    });
+
     useFocusEffect(
         useCallback(() => {
-            getProfile();
-        }, [])
+            if (session?.user?.id) {
+                refetch();
+                ensureProfileComplete();
+            }
+        }, [session?.user?.id])
     );
-
-    async function getProfile() {
-        setLoading(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.replace('/auth/login');
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-
-            if (error && error.code !== 'PGRST116') { // PGRST116 is no rows found
-            }
-
-            if (data) {
-                setProfile({
-                    ...data,
-                    email: session.user.email
-                });
-                // Mock stats
-                setStats({
-                    offered: 12,
-                    participated: 5,
-                    averageRating: 4.9
-                });
-            }
-        } catch (error: any) {
-        } finally {
-            setLoading(false);
-        }
-    }
 
     async function handleSignOut() {
         try {
@@ -74,13 +54,21 @@ export default function ProfileScreen() {
         }
     }
 
-    if (loading && !profile) {
+    if (isLoading) {
         return (
             <View style={[styles.container, styles.center]}>
                 <ActivityIndicator size="large" color="#FF8C42" />
             </View>
         );
     }
+
+    const stats = {
+        offered: profile?.events?.length || 0,
+        participated: profile?.bookings?.length || 0,
+        averageRating: 5.0 // Placeholder
+    };
+
+    const lastExperience = profile?.bookings?.[0];
 
     return (
         <SafeAreaView style={styles.container}>
@@ -96,8 +84,8 @@ export default function ProfileScreen() {
                 {/* Profile Info */}
                 <View style={styles.profileSection}>
                     <View style={styles.avatarContainer}>
-                        {profile?.avatar_url ? (
-                            <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+                        {profile?.avatarUrl ? (
+                            <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
                         ) : (
                             <View style={styles.avatarPlaceholder}>
                                 <IconSymbol name="person.fill" size={40} color="#fff" />
@@ -109,7 +97,7 @@ export default function ProfileScreen() {
                     </View>
 
                     <View style={styles.nameRow}>
-                        <Text style={styles.name}>{profile?.full_name || 'Usuário'}</Text>
+                        <Text style={styles.name}>{profile?.fullName || 'Usuário'}</Text>
                         <Ionicons name="checkmark-circle" size={20} color="#FF8C42" />
                     </View>
 
@@ -150,23 +138,43 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
 
+                <TouchableOpacity style={styles.manageEventsCard} onPress={() => router.push('/profile/my-events')}>
+                    <View style={styles.manageIconContainer}>
+                        <Ionicons name="calendar" size={24} color="#FF8C42" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.manageTitle}>Meus Eventos Criados</Text>
+                        <Text style={styles.manageSubtitle}>Gerenciar, editar ou cancelar</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </TouchableOpacity>
+
                 <Text style={styles.sectionTitle}>ÚLTIMAS EXPERIÊNCIAS</Text>
 
-                {/* Mock Experience Card */}
-                <View style={styles.experienceCard}>
-                    <View style={styles.expImagePlaceholder} />
-                    <View style={styles.expInfo}>
-                        <Text style={styles.expTitle}>Noite de Risoto</Text>
-                        <Text style={styles.expSubtitle}>Anfitrião: João B. • 14 Out</Text>
-                        <View style={styles.expStatus}>
-                            <Ionicons name="checkmark-circle" size={14} color="#FF8C42" />
-                            <Text style={styles.expStatusText}>Concluído</Text>
+                {/* Last Experience Card */}
+                {lastExperience ? (
+                    <View style={styles.experienceCard}>
+                        <View style={styles.expImagePlaceholder} />
+                        <View style={styles.expInfo}>
+                            <Text style={styles.expTitle}>{lastExperience.event?.title || 'Evento'}</Text>
+                            <Text style={styles.expSubtitle}>
+                                Anfitrião: {lastExperience.event?.host?.fullName?.split(' ')[0] || 'Unknown'} •
+                                {new Date(lastExperience.event?.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            </Text>
+                            <View style={styles.expStatus}>
+                                <Ionicons name="checkmark-circle" size={14} color="#FF8C42" />
+                                <Text style={styles.expStatusText}>{lastExperience.status === 'confirmed' ? 'Confirmado' : lastExperience.status}</Text>
+                            </View>
                         </View>
+                        <TouchableOpacity style={styles.rateButton}>
+                            <Text style={styles.rateButtonText}>Avaliar</Text>
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.rateButton}>
-                        <Text style={styles.rateButtonText}>Avaliar</Text>
-                    </TouchableOpacity>
-                </View>
+                ) : (
+                    <View style={styles.emptyState}>
+                        <Text style={styles.emptyStateText}>Nenhuma experiência recente.</Text>
+                    </View>
+                )}
 
                 <Text style={styles.sectionTitle}>CONFIGURAÇÕES</Text>
 
@@ -446,5 +454,48 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
         fontWeight: '500',
+    },
+    manageEventsCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    manageIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#FFF3E0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    manageTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    manageSubtitle: {
+        fontSize: 12,
+        color: '#666',
+    },
+    emptyState: {
+        padding: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        marginBottom: 24,
+    },
+    emptyStateText: {
+        color: '#999',
+        fontSize: 14,
     },
 });

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/shared/lib/supabase';
 import { SideMenu } from '@/components/ui/SideMenu';
 import { FilterModal, FilterCriteria } from '@/components/ui/events/FilterModal';
+import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
@@ -314,7 +315,7 @@ export default function HomeScreen() {
             <TouchableOpacity key={event.id} style={styles.feedCard} onPress={() => router.push(`/events/${event.id}`)}>
               {/* Image & Rating */}
               <View>
-                <Image source={{ uri: event.cover_image_url || 'https://via.placeholder.com/400x200' }} style={styles.cardImage} />
+                <Image source={{ uri: event.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }} style={styles.cardImage} />
                 <View style={styles.ratingBadge}>
                   <Ionicons name="star" size={12} color="#FF8C42" />
                   <Text style={styles.ratingText}>4,5</Text>
