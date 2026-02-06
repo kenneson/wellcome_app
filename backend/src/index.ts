@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 // Explicitly load .env from backend root
 dotenv.config({ path: path.join(__dirname, '../.env') });
 import Fastify from 'fastify';
+import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
@@ -28,6 +29,12 @@ const fastify = Fastify({
 
 const start = async () => {
     try {
+        await fastify.register(fastifyCors, {
+            origin: true, // Allow all origins
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            credentials: true
+        });
+
         await fastify.register(fastifySwagger, {
             openapi: {
                 info: {
@@ -273,6 +280,16 @@ const start = async () => {
                             id: { type: 'string' },
                             email: { type: 'string' },
                             name: { type: 'string' },
+                            fullName: { type: 'string', nullable: true },
+                            username: { type: 'string', nullable: true },
+                            bio: { type: 'string', nullable: true },
+                            website: { type: 'string', nullable: true },
+                            occupation: { type: 'string', nullable: true },
+                            lookingFor: { type: 'string', nullable: true },
+                            city: { type: 'string', nullable: true },
+                            neighborhood: { type: 'string', nullable: true },
+                            languages: { type: 'array', items: { type: 'string' } },
+                            dietaryRestrictions: { type: 'array', items: { type: 'string' } },
                             avatarUrl: { type: 'string', nullable: true },
                             events: { type: 'array', items: { type: 'object', additionalProperties: true } },
                             bookings: { type: 'array', items: { type: 'object', additionalProperties: true } }

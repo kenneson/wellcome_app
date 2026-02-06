@@ -9,6 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/shared/lib/supabase';
 import { SideMenu } from '@/components/ui/SideMenu';
 import { FilterModal, FilterCriteria } from '@/components/ui/events/FilterModal';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
+import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
@@ -21,8 +23,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Manual Location State
-  const [modalVisible, setModalVisible] = useState(false);
-  const [manualLocation, setManualLocation] = useState('');
+  // const [modalVisible, setModalVisible] = useState(false); // Removed in favor of showLocationModal
+  // const [manualLocation, setManualLocation] = useState(''); // Removed
 
   // Filter State
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -82,7 +84,7 @@ export default function HomeScreen() {
       if (status !== 'granted') {
         // If permission denied, open modal to ask user to type
         Alert.alert('Preciso da sua localização', 'Não conseguimos acesso ao GPS. Por favor, digite sua cidade manualmente.');
-        setModalVisible(true);
+        setShowLocationModal(true);
         setLoadingLocation(false);
         return;
       }
@@ -113,26 +115,58 @@ export default function HomeScreen() {
       }
     } catch (error) {
       // On error (e.g. PC without GPS), ask for manual
-      setModalVisible(true);
+      setShowLocationModal(true);
     } finally {
       setLoadingLocation(false);
     }
   }
 
-  const handleManualSubmit = async () => {
-    if (!manualLocation.trim()) return;
-    setLocation(manualLocation);
-    await AsyncStorage.setItem(STORAGE_LOCATION_KEY, manualLocation);
-    setModalVisible(false);
-  };
+  // Location Selection
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   const openLocationModal = () => {
-    setManualLocation(location || '');
-    setModalVisible(true);
+    setShowLocationModal(true);
+  };
+
+  const handleSelectCity = async (municipality: any, coords?: { lat: number; lon: number }) => {
+    const cityName = municipality.fullName;
+    setLocation(cityName);
+    await AsyncStorage.setItem(STORAGE_LOCATION_KEY, cityName);
+
+    setShowLocationModal(false);
+
+    if (coords) {
+      // Refresh events with new coordinates
+      setLoadingEvents(true);
+      try {
+        const { data, error } = await supabase
+          .rpc('get_events_nearby', {
+            lat: coords.lat,
+            long: coords.lon,
+            radius_km: 60
+          })
+          .select(`
+                *,
+                host:profiles(full_name, avatar_url),
+                event_participants(count)
+            `);
+
+        if (!error && data) {
+          setEvents(data);
+        }
+      } catch (e) {
+        console.error('Error refreshing events:', e);
+      } finally {
+        setLoadingEvents(false);
+      }
+    } else {
+      // Fallback if no coords (weird, but safe)
+      getEvents();
+    }
   };
 
   const useGPS = async () => {
-    setModalVisible(false);
+    setShowLocationModal(false);
     await getLocation();
   };
 
@@ -258,7 +292,7 @@ export default function HomeScreen() {
           contentFit="contain"
           tintColor="#FFF"
         />
-        <TouchableOpacity onPress={() => router.push('/profile')}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
           <Ionicons name="person-circle-outline" size={30} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -314,7 +348,7 @@ export default function HomeScreen() {
             <TouchableOpacity key={event.id} style={styles.feedCard} onPress={() => router.push(`/events/${event.id}`)}>
               {/* Image & Rating */}
               <View>
-                <Image source={{ uri: event.cover_image_url || 'https://via.placeholder.com/400x200' }} style={styles.cardImage} />
+                <Image source={{ uri: event.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }} style={styles.cardImage} />
                 <View style={styles.ratingBadge}>
                   <Ionicons name="star" size={12} color="#FF8C42" />
                   <Text style={styles.ratingText}>4,5</Text>
@@ -363,44 +397,16 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Manual Location Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Onde você está?</Text>
-            <Text style={styles.modalSubtitle}>Para mostrarmos os melhores eventos perto de você.</Text>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Ex: Florianópolis, SC"
-                value={manualLocation}
-                onChangeText={setManualLocation}
-                autoFocus
-              />
-            </View>
-
-            <TouchableOpacity style={styles.useGpsButton} onPress={useGPS}>
-              <Ionicons name="navigate-circle-outline" size={20} color="#FF8C42" />
-              <Text style={styles.useGpsText}>Usar localização atual (GPS)</Text>
-            </TouchableOpacity>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleManualSubmit}>
-                <Text style={styles.saveButtonText}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Location Autocomplete Modal */}
+      <LocationAutocomplete
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onSelectMunicipality={handleSelectCity}
+        type="municipality"
+        asModal={true}
+        value={location || ''}
+        placeholder="Digite sua cidade (ex: São Paulo)"
+      />
 
       {/* Side Menu */}
       <SideMenu

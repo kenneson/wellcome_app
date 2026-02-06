@@ -18,6 +18,16 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'chevron.left': 'chevron-left',
+  'person.fill': 'person',
+  'person': 'person-outline',
+  'calendar': 'event',
+  'plus.circle': 'add-circle',
+  'bell': 'notifications',
+  'gear': 'settings',
+  'rectangle.portrait.and.arrow.right': 'logout',
+  'checkmark.circle': 'check-circle',
+  'magnifyingglass': 'search',
 } as IconMapping;
 
 /**
@@ -37,5 +47,14 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={MAPPING[name]}
+      style={style}
+      accessible={false}
+      importantForAccessibility="no"
+    />
+  );
 }

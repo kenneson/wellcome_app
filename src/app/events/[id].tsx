@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
+import { DEFAULT_PLACEHOLDER_IMAGE, DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 
 export default function EventDetailsScreen() {
     const { id } = useLocalSearchParams();
@@ -134,7 +135,7 @@ export default function EventDetailsScreen() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Hero Image */}
                 <Image
-                    source={{ uri: event.cover_image_url || 'https://via.placeholder.com/400x200' }}
+                    source={{ uri: event.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }}
                     style={styles.coverImage}
                 />
 
@@ -147,7 +148,7 @@ export default function EventDetailsScreen() {
 
                     <View style={styles.hostRow}>
                         <Image
-                            source={{ uri: event.host?.avatar_url || 'https://via.placeholder.com/40' }}
+                            source={{ uri: event.host?.avatar_url || DEFAULT_AVATAR_PLACEHOLDER }}
                             style={styles.hostAvatar}
                         />
                         <View>

@@ -15,6 +15,8 @@ export const unstable_settings = {
 };
 
 import { UserProfileContext } from '@/context/UserProfileContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/shared/lib/react-query';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -115,11 +117,9 @@ export default function RootLayout() {
       // Allow access to welcome screen
       if (segments[0] === 'welcome') return;
 
-      // Allow access to profile edit screen (so they can actually fix it)
-      if (segments[0] === 'profile' && segments[1] === 'edit') return;
-
-      // Otherwise redirect to welcome
-      router.replace('/welcome');
+      // Allow access to all routes - user can complete profile later
+      // Only redirect to welcome on first login (handled by auth flow)
+      return;
     }
   }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
 
@@ -138,32 +138,34 @@ export default function RootLayout() {
   }
 
   return (
-    <UserProfileContext.Provider value={{ isProfileComplete, refetchProfile }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
-          <StatusBar style="light" backgroundColor="#FF8C42" />
-          <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
-          <View style={{ flex: 1, backgroundColor: '#fff' }}>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="auth" options={{ headerShown: false }} />
-              <Stack.Screen name="profile/index" options={{ headerShown: false }} />
-              <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
-              <Stack.Screen
-                name="welcome"
-                options={{
-                  presentation: 'transparentModal',
-                  animation: 'fade',
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              <Stack.Screen name="events/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="events/create" options={{ headerShown: false }} />
-            </Stack>
+    <QueryClientProvider client={queryClient}>
+      <UserProfileContext.Provider value={{ isProfileComplete, refetchProfile }}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
+            <StatusBar style="light" backgroundColor="#FF8C42" />
+            <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
+            <View style={{ flex: 1, backgroundColor: '#fff' }}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="auth" options={{ headerShown: false }} />
+                <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="welcome"
+                  options={{
+                    presentation: 'transparentModal',
+                    animation: 'fade',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                <Stack.Screen name="events/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="events/create" options={{ headerShown: false }} />
+              </Stack>
+            </View>
           </View>
-        </View>
-      </ThemeProvider>
-    </UserProfileContext.Provider>
+        </ThemeProvider>
+      </UserProfileContext.Provider>
+    </QueryClientProvider>
   );
 }
