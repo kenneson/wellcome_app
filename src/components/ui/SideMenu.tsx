@@ -111,7 +111,7 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                     <MenuItem
                         icon="person"
                         label="Meu Perfil"
-                        onPress={() => handleNavigation('/profile')}
+                        onPress={() => handleNavigation('/(tabs)/profile')}
                     />
                     <MenuItem
                         icon="calendar"

@@ -259,7 +259,7 @@ export default function HomeScreen() {
           contentFit="contain"
           tintColor="#FFF"
         />
-        <TouchableOpacity onPress={() => router.push('/profile')}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
           <Ionicons name="person-circle-outline" size={30} color="#FFF" />
         </TouchableOpacity>
       </View>
