@@ -16,7 +16,16 @@ export interface Event {
     rules: string[];
     hostId: string;
     host?: import('./User').User;
-    bookings?: import('./Booking').Booking[];
+    bookings?: import('./EventRegistration').EventRegistration[]; // Updated reference
+    questions?: import('./EventQuestion').EventQuestion[]; // New relationship
+
+    // Approval fields
+    accessType: import('../value-objects/EventAccessType').EventAccessType;
+    requiresApproval: boolean;
+    allowWaitlist: boolean;
+    autoApproveIfAttended: boolean;
+    autoApproveMinRating: number | null;
+
     createdAt: Date;
     updatedAt: Date;
 }

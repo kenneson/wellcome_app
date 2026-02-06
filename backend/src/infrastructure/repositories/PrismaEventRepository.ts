@@ -99,6 +99,11 @@ export class PrismaEventRepository implements EventRepository {
         return {
             ...prismaEvent,
             price: prismaEvent.price?.toNumber() || 0,
+            accessType: prismaEvent.accessType,
+            requiresApproval: prismaEvent.requiresApproval,
+            allowWaitlist: prismaEvent.allowWaitlist,
+            autoApproveIfAttended: prismaEvent.autoApproveIfAttended,
+            autoApproveMinRating: prismaEvent.autoApproveMinRating?.toNumber() || null,
             host: prismaEvent.host ? {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,
@@ -107,8 +112,17 @@ export class PrismaEventRepository implements EventRepository {
                 // map other user fields if needed
             } : undefined,
             bookings: prismaEvent.bookings ? prismaEvent.bookings.map((b: any) => ({
-                ...b,
-                userId: b.userId // Ensure userId is mapped if database field differs (it was mapped in PrismaBookingRepository but here we get raw object)
+                id: b.id,
+                eventId: b.eventId,
+                userId: b.userId,
+                status: b.status,
+                reviewedAt: b.reviewedAt,
+                reviewedBy: b.reviewedBy,
+                rejectionReason: b.rejectionReason,
+                attendedBefore: b.attendedBefore,
+                noShowCount: b.noShowCount,
+                createdAt: b.createdAt,
+                updatedAt: b.updatedAt
             })) : []
         };
     }

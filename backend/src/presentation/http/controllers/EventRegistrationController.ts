@@ -1,24 +1,24 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { CreateBookingUseCase } from '../../../application/use-cases/CreateBookingUseCase';
-import { CancelBookingUseCase } from '../../../application/use-cases/CancelBookingUseCase';
+import { CreateEventRegistrationUseCase } from '../../../application/use-cases/CreateEventRegistrationUseCase';
+import { CancelEventRegistrationUseCase } from '../../../application/use-cases/CancelEventRegistrationUseCase';
 import { z } from 'zod';
 
-const createBookingSchema = z.object({
+const createRegistrationSchema = z.object({
     eventId: z.string(),
     userId: z.string()
 });
 
-export class BookingController {
+export class EventRegistrationController {
     constructor(
-        private createBookingUseCase: CreateBookingUseCase,
-        private cancelBookingUseCase: CancelBookingUseCase
+        private createEventRegistrationUseCase: CreateEventRegistrationUseCase,
+        private cancelEventRegistrationUseCase: CancelEventRegistrationUseCase
     ) { }
 
     async create(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const body = createBookingSchema.parse(request.body);
-            const booking = await this.createBookingUseCase.execute(body);
-            return reply.code(201).send(booking);
+            const body = createRegistrationSchema.parse(request.body);
+            const registration = await this.createEventRegistrationUseCase.execute(body);
+            return reply.code(201).send(registration);
         } catch (error: any) {
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
@@ -26,7 +26,7 @@ export class BookingController {
             if (error.message === 'Event not found') {
                 return reply.code(404).send({ message: error.message });
             }
-            if (error.message === 'Event is full' || error.message === 'User already booked for this event') {
+            if (error.message === 'Event is full' || error.message === 'User already registered for this event') {
                 return reply.code(409).send({ message: error.message });
             }
             return reply.code(500).send({ message: 'Internal server error', error });
@@ -39,7 +39,7 @@ export class BookingController {
             if (!eventId || !userId) {
                 return reply.code(400).send({ message: 'eventId and userId are required' });
             }
-            await this.cancelBookingUseCase.execute(eventId, userId);
+            await this.cancelEventRegistrationUseCase.execute(eventId, userId);
             return reply.code(204).send();
         } catch (error) {
             return reply.code(500).send({ message: 'Internal server error', error });

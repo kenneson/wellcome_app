@@ -10,16 +10,16 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
-import { CreateBookingUseCase } from './application/use-cases/CreateBookingUseCase';
-import { CancelBookingUseCase } from './application/use-cases/CancelBookingUseCase';
+import { CreateEventRegistrationUseCase } from './application/use-cases/CreateEventRegistrationUseCase';
+import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
 import { EventController } from './presentation/http/controllers/EventController';
-import { BookingController } from './presentation/http/controllers/BookingController';
+import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
 import { UserController } from './presentation/http/controllers/UserController';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
-import { PrismaBookingRepository } from './infrastructure/repositories/PrismaBookingRepository';
+import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 
@@ -214,11 +214,11 @@ const start = async () => {
             return { hello: 'Wellcome API' };
         });
 
-        // Booking Dependencies
-        const bookingRepository = new PrismaBookingRepository();
-        const createBookingUseCase = new CreateBookingUseCase(bookingRepository, eventRepository);
-        const cancelBookingUseCase = new CancelBookingUseCase(bookingRepository);
-        const bookingController = new BookingController(createBookingUseCase, cancelBookingUseCase);
+        // Event Registration Dependencies
+        const eventRegistrationRepository = new PrismaEventRegistrationRepository();
+        const createEventRegistrationUseCase = new CreateEventRegistrationUseCase(eventRegistrationRepository, eventRepository);
+        const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository);
+        const eventRegistrationController = new EventRegistrationController(createEventRegistrationUseCase, cancelEventRegistrationUseCase);
 
         fastify.post('/bookings', {
             schema: {
@@ -226,10 +226,10 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'guestId'],
+                    required: ['eventId', 'userId'],
                     properties: {
                         eventId: { type: 'string' },
-                        guestId: { type: 'string' }
+                        userId: { type: 'string' }
                     }
                 },
                 response: {
@@ -239,7 +239,7 @@ const start = async () => {
                         properties: {
                             id: { type: 'string' },
                             eventId: { type: 'string' },
-                            guestId: { type: 'string' },
+                            userId: { type: 'string' },
                             status: { type: 'string' },
                             createdAt: { type: 'string' },
                             updatedAt: { type: 'string' }
@@ -254,7 +254,7 @@ const start = async () => {
                     }
                 }
             }
-        }, (req, reply) => bookingController.create(req, reply));
+        }, (req, reply) => eventRegistrationController.create(req, reply));
 
         // User Dependencies
         const userRepository = new PrismaUserRepository();
@@ -350,17 +350,17 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'guestId'],
+                    required: ['eventId', 'userId'],
                     properties: {
                         eventId: { type: 'string' },
-                        guestId: { type: 'string' }
+                        userId: { type: 'string' }
                     }
                 },
                 response: {
                     204: { description: 'Booking cancelled' }
                 }
             }
-        }, (req, reply) => bookingController.delete(req, reply));
+        }, (req, reply) => eventRegistrationController.delete(req, reply));
 
         fastify.get('/events/:id', {
             schema: {
