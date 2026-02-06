@@ -25,6 +25,10 @@ export class PrismaUserRepository implements UserRepository {
 
         if (!user) return null;
 
+        console.log('DEBUG: Prisma User found:', Object.keys(user));
+        console.log('DEBUG: Prisma User full_name:', (user as any).full_name);
+        console.log('DEBUG: Prisma User fullName:', (user as any).fullName);
+
         return this.mapToDomain(user);
     }
 
@@ -52,17 +56,20 @@ export class PrismaUserRepository implements UserRepository {
     private mapToDomain(prismaUser: any): User {
         return {
             id: prismaUser.id,
-            fullName: prismaUser.fullName,
-            username: prismaUser.username,
-            website: prismaUser.website,
-            avatarUrl: prismaUser.avatarUrl,
-            occupation: prismaUser.occupation,
-            bio: prismaUser.bio,
-            lookingFor: prismaUser.lookingFor,
-            dietaryRestrictions: prismaUser.dietaryRestrictions,
-            events: prismaUser.events,
-            bookings: prismaUser.bookings,
-            updatedAt: prismaUser.updatedAt
+            fullName: prismaUser.fullName ?? prismaUser.full_name ?? null,
+            username: prismaUser.username ?? null,
+            website: prismaUser.website ?? null,
+            avatarUrl: prismaUser.avatarUrl ?? prismaUser.avatar_url ?? null,
+            occupation: prismaUser.occupation ?? null,
+            bio: prismaUser.bio ?? null,
+            lookingFor: prismaUser.lookingFor ?? prismaUser.looking_for ?? null,
+            city: prismaUser.city ?? null,
+            neighborhood: prismaUser.neighborhood ?? null,
+            languages: prismaUser.languages ?? [],
+            dietaryRestrictions: prismaUser.dietaryRestrictions ?? prismaUser.dietary_restrictions ?? [],
+            events: prismaUser.events ?? [],
+            bookings: prismaUser.bookings ?? [],
+            updatedAt: prismaUser.updatedAt ?? prismaUser.updated_at ?? null
         };
     }
 }
