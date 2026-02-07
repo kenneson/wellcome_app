@@ -1,5 +1,6 @@
 import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
 import { EventRegistration } from '../../domain/entities/EventRegistration';
+import { notificationService } from '../services/NotificationService';
 
 export class ApproveRegistrationUseCase {
     constructor(private eventRegistrationRepository: EventRegistrationRepository) { }
@@ -8,12 +9,20 @@ export class ApproveRegistrationUseCase {
         // TODO: Validate if hostId owns the event associated with the registration
 
         // For now, simple update
-        await this.eventRegistrationRepository.updateStatus(registrationId, 'APPROVED'); // Need to add updateStatus method to Repo
+        // Update status (now returns populated user and event)
+        const updatedRegistration = await this.eventRegistrationRepository.updateStatus(registrationId, 'APPROVED');
 
-        // Return updated registration
-        // return this.eventRegistrationRepository.findById(registrationId);
+        // Send Push Notification
+        if (updatedRegistration.user?.expoPushToken) {
+            const eventTitle = updatedRegistration.event?.title || 'Evento';
+            await notificationService.sendPushBlocking(
+                updatedRegistration.user.expoPushToken,
+                'Inscrição Aprovada! 🥳',
+                `Sua presença em "${eventTitle}" foi confirmada.`,
+                { eventId: updatedRegistration.eventId }
+            );
+        }
 
-        // Placeholder return
-        return {} as EventRegistration;
+        return updatedRegistration;
     }
 }

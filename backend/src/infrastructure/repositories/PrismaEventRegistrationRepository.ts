@@ -54,7 +54,11 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
 
         const booking = await prisma.booking.update({
             where: { id },
-            data
+            data,
+            include: {
+                guest: true,
+                event: true
+            }
         });
 
         return this.mapToDomain(booking);
@@ -62,7 +66,11 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
 
     async findById(id: string): Promise<EventRegistration | null> {
         const booking = await prisma.booking.findUnique({
-            where: { id }
+            where: { id },
+            include: {
+                guest: true, // Include guest for push token if needed later
+                event: true
+            }
         });
 
         if (!booking) return null;
@@ -80,6 +88,21 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             rejectionReason: prismaBooking.rejectionReason,
             attendedBefore: prismaBooking.attendedBefore,
             noShowCount: prismaBooking.noShowCount,
+            user: prismaBooking.guest ? {
+                id: prismaBooking.guest.id,
+                fullName: prismaBooking.guest.fullName,
+                avatarUrl: prismaBooking.guest.avatarUrl,
+                expoPushToken: prismaBooking.guest.expoPushToken,
+                updatedAt: prismaBooking.guest.updatedAt
+            } : undefined,
+            event: prismaBooking.event ? {
+                id: prismaBooking.event.id,
+                hostId: prismaBooking.event.hostId,
+                title: prismaBooking.event.title,
+                eventDate: prismaBooking.event.eventDate,
+                location: prismaBooking.event.location,
+                updatedAt: prismaBooking.event.updatedAt
+            } as any : undefined, // Casting as any to avoid mapping full event for now
             createdAt: prismaBooking.createdAt,
             updatedAt: prismaBooking.updatedAt
         };

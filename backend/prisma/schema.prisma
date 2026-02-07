@@ -24,6 +24,7 @@ model User {
   neighborhood        String?
   languages           String[]       @default([])
   bookings            Booking[]
+  expoPushToken       String?        @map("expo_push_token")
   events              Event[]
   notifications       Notification[]
   pushTokens          PushToken[]

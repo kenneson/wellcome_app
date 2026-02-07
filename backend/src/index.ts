@@ -318,43 +318,7 @@ const start = async () => {
             }
         }, (req, reply) => eventRegistrationController.reject(req, reply));
 
-        // Approval endpoints
-        fastify.post('/bookings/approve', {
-            schema: {
-                description: 'Approve a registration',
-                tags: ['Bookings'],
-                body: {
-                    type: 'object',
-                    required: ['registrationId', 'hostId'],
-                    properties: {
-                        registrationId: { type: 'string' },
-                        hostId: { type: 'string' }
-                    }
-                },
-                response: {
-                    200: { description: 'Registration approved' }
-                }
-            }
-        }, (req, reply) => eventRegistrationController.approve(req, reply));
 
-        fastify.post('/bookings/reject', {
-            schema: {
-                description: 'Reject a registration',
-                tags: ['Bookings'],
-                body: {
-                    type: 'object',
-                    required: ['registrationId', 'hostId', 'reason'],
-                    properties: {
-                        registrationId: { type: 'string' },
-                        hostId: { type: 'string' },
-                        reason: { type: 'string' }
-                    }
-                },
-                response: {
-                    200: { description: 'Registration rejected' }
-                }
-            }
-        }, (req, reply) => eventRegistrationController.reject(req, reply));
 
         // User Dependencies
         const userRepository = new PrismaUserRepository();

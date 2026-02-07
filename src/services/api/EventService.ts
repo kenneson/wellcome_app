@@ -1,5 +1,6 @@
 import { supabase } from '@/shared/lib/supabase';
 import { EventCreationState } from '@/entities/event/model/types';
+import { Event } from '@/entities/event/types';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { API_URL } from '@/shared/config/api';
@@ -49,7 +50,7 @@ export class EventService {
         return { latitude: null, longitude: null };
     }
 
-    async submitEvent(data: EventCreationState): Promise<void> {
+    async submitEvent(data: EventCreationState): Promise<Event> {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Usuário não autenticado');
@@ -78,7 +79,9 @@ export class EventService {
                 cuisineTypes: data.cuisineTypes,
                 vibe: data.vibe,
                 facilities: data.location.facilities,
-                rules: data.location.rules
+                rules: data.location.rules,
+                accessType: data.details.accessType,
+                questions: data.details.questions
             };
 
             const response = await fetch(apiUrl, {
@@ -94,9 +97,28 @@ export class EventService {
                 throw new Error(errorData.message || 'Falha ao criar evento');
             }
 
+            return await response.json();
+
         } catch (error) {
             throw error;
         }
+    }
+
+    async getEventById(id: string): Promise<Event> {
+        const response = await fetch(`${API_URL}/events/${id}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch event');
+        }
+        return response.json();
+    }
+
+    async listEvents(filters?: any): Promise<Event[]> {
+        const queryParams = new URLSearchParams(filters).toString();
+        const response = await fetch(`${API_URL}/events?${queryParams}`);
+        if (!response.ok) {
+            throw new Error('Failed to list events');
+        }
+        return response.json();
     }
 }
 

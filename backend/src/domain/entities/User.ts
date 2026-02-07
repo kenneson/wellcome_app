@@ -16,5 +16,6 @@ export interface User {
     dietaryRestrictions?: string[];
     events?: Event[];
     bookings?: EventRegistration[];
+    expoPushToken?: string | null;
     updatedAt: Date;
 }

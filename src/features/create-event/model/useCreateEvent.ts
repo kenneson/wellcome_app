@@ -22,7 +22,9 @@ const defaultState: EventCreationState = {
         registrationDeadline: null,
         title: '',
         description: '',
-        coverImage: null
+        coverImage: null,
+        accessType: 'OPEN',
+        questions: []
     },
     veganOptions: false,
     substitutions: false,
@@ -82,6 +84,33 @@ export function useEventCreationViewModel() {
         details: { ...prev.details, ...updates }
     }));
 
+    // New methods for settings
+    const setAccessType = (type: 'OPEN' | 'OPEN_WITH_APPROVAL' | 'PRIVATE' | 'INVITE_ONLY') =>
+        updateDetails({ accessType: type });
+
+    const addQuestion = (question: { question: string; type: 'TEXT' | 'SELECT' | 'MULTI_SELECT'; required: boolean }) => {
+        setData(prev => ({
+            ...prev,
+            details: {
+                ...prev.details,
+                questions: [
+                    ...(prev.details.questions || []),
+                    { ...question, options: [] } // Initialize options as empty for now to match strict type if needed, or simplified
+                ]
+            }
+        }));
+    };
+
+    const removeQuestion = (index: number) => {
+        setData(prev => ({
+            ...prev,
+            details: {
+                ...prev.details,
+                questions: (prev.details.questions || []).filter((_, i) => i !== index)
+            }
+        }));
+    };
+
     const setVeganOptions = (value: boolean) => setData(prev => ({ ...prev, veganOptions: value }));
     const setSubstitutions = (value: boolean) => setData(prev => ({ ...prev, substitutions: value }));
     const setMenuAlterations = (value: boolean) => setData(prev => ({ ...prev, menuAlterations: value }));
@@ -104,6 +133,9 @@ export function useEventCreationViewModel() {
         setVeganOptions,
         setSubstitutions,
         setMenuAlterations,
-        submitEvent
+        submitEvent,
+        setAccessType,
+        addQuestion,
+        removeQuestion
     };
 }
