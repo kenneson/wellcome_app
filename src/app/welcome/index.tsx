@@ -21,7 +21,7 @@ import { StatusBar } from 'expo-status-bar';
 export default function WelcomeScreen() {
     const router = useRouter();
     const { refetchProfile } = useUserProfile();
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(0); // 0 = Welcome, 1 = Bio, 2 = Location
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -36,7 +36,9 @@ export default function WelcomeScreen() {
     };
 
     const handleNext = () => {
-        if (step === 1) {
+        if (step === 0) {
+            setStep(1);
+        } else if (step === 1) {
             if (!formData.occupation.trim() || !formData.looking_for.trim()) {
                 Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
                 return;
@@ -94,6 +96,21 @@ export default function WelcomeScreen() {
                             Para começar, precisamos conhecer um pouco mais sobre você.
                         </Text>
                     </View>
+
+                    {step === 0 && (
+                        <View style={styles.welcomeSection}>
+                            <View style={styles.iconContainer}>
+                                <Ionicons name="people" size={64} color="#FF8C42" />
+                            </View>
+                            <Text style={styles.welcomeTitle}>Olá! Que bom ter você aqui.</Text>
+                            <Text style={styles.welcomeText}>
+                                O Wellcome é uma comunidade de pessoas reais. Para garantir a melhor experiência para todos, precisamos que você complete seu perfil.
+                            </Text>
+                            <Text style={styles.welcomeText}>
+                                É rapidinho! Vamos lá?
+                            </Text>
+                        </View>
+                    )}
 
                     {step === 1 && (
                         <View style={styles.formSection}>
@@ -169,7 +186,7 @@ export default function WelcomeScreen() {
                                 <ActivityIndicator color="#fff" />
                             ) : (
                                 <Text style={styles.nextButtonText}>
-                                    {step === 1 ? 'Próximo' : 'Concluir'}
+                                    {step === 0 ? 'Completar Perfil' : (step === 1 ? 'Próximo' : 'Concluir')}
                                 </Text>
                             )}
                             {!loading && <Ionicons name="arrow-forward" size={20} color="#fff" />}
@@ -189,10 +206,12 @@ const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         padding: 24,
+        justifyContent: 'center', // Center content for welcome screen
     },
     header: {
         marginTop: 40,
-        marginBottom: 40,
+        marginBottom: 20,
+        display: 'none', // Hide default header, use custom welcome section
     },
     title: {
         fontSize: 28,
@@ -205,26 +224,58 @@ const styles = StyleSheet.create({
         color: '#666',
         lineHeight: 24,
     },
+    welcomeSection: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    iconContainer: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#FFF3E0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    welcomeTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: 16,
+    },
+    welcomeText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 16,
+        paddingHorizontal: 20,
+    },
     formSection: {
         flex: 1,
+        width: '100%',
+        paddingTop: 40,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: '600',
+        fontSize: 24,
+        fontWeight: 'bold',
         color: '#333',
-        marginBottom: 24,
+        marginBottom: 32,
     },
     inputGroup: {
-        marginBottom: 20,
+        marginBottom: 24,
     },
     label: {
         fontSize: 14,
-        fontWeight: '500',
-        color: '#333',
+        fontWeight: '600',
+        color: '#666',
         marginBottom: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#fff',
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
@@ -236,8 +287,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 40,
         gap: 16,
+        paddingBottom: 20,
     },
     backButton: {
         paddingVertical: 16,
@@ -258,6 +310,11 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         gap: 8,
         minWidth: 140,
+        elevation: 2,
+        shadowColor: "#FF8C42",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
     },
     nextButtonText: {
         fontSize: 16,
