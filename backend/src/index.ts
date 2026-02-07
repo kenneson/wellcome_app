@@ -320,6 +320,36 @@ const start = async () => {
 
 
 
+        // Notification Test Endpoint
+        fastify.post('/notifications/test', {
+            schema: {
+                description: 'Send a test push notification',
+                tags: ['General'],
+                body: {
+                    type: 'object',
+                    required: ['token', 'title', 'body'],
+                    properties: {
+                        token: { type: 'string' },
+                        title: { type: 'string' },
+                        body: { type: 'string' },
+                        data: { type: 'object', additionalProperties: true }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Notification sent',
+                        type: 'object',
+                        properties: { success: { type: 'boolean' } }
+                    }
+                }
+            }
+        }, async (req, reply) => {
+            const { token, title, body, data } = req.body as any;
+            const { notificationService } = require('./application/services/NotificationService');
+            await notificationService.sendPushBlocking(token, title, body, data);
+            return { success: true };
+        });
+
         // User Dependencies
         const userRepository = new PrismaUserRepository();
         const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);

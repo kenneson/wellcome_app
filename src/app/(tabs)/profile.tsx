@@ -83,6 +83,49 @@ export default function ProfileScreen() {
         );
     }
 
+    async function handleTestNotification() {
+        if (processing) return;
+        setProcessing(true);
+        try {
+            // Get token from storage or context if available, but for now we rely on what's in DB or re-fetch
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('expo_push_token')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile?.expo_push_token) {
+                Alert.alert('Erro', 'Token de notificação não encontrado. Verifique as permissões.');
+                return;
+            }
+
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: profile.expo_push_token,
+                    title: 'Olá!',
+                    body: 'Esta é uma notificação de teste do Wellcome.',
+                    data: { test: true }
+                })
+            });
+
+            if (response.ok) {
+                Alert.alert('Sucesso', 'Notificação enviada! Verifique seu dispositivo.');
+            } else {
+                Alert.alert('Erro', 'Falha ao enviar notificação.');
+            }
+        } catch (error) {
+            Alert.alert('Erro', 'Erro de conexão.');
+            console.error(error);
+        } finally {
+            setProcessing(false);
+        }
+    }
+
     // Show loading if session is not yet loaded or query is loading
     if (!session || isLoading) {
         return (
@@ -276,6 +319,11 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={[styles.menuItem, { marginTop: 20 }]} onPress={handleSignOut}>
                     <Text style={[styles.menuText, { color: '#FF3B30' }]}>Sair da conta</Text>
                     <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.menuItem, { marginTop: 20, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, borderBottomWidth: 0 }]} onPress={handleTestNotification}>
+                    <Text style={[styles.menuText, { color: '#666', fontSize: 14 }]}>Testar Notificação Push</Text>
+                    <Ionicons name="paper-plane-outline" size={18} color="#666" />
                 </TouchableOpacity>
 
                 <View style={{ height: 40 }} />
