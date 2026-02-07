@@ -17,11 +17,15 @@ import { supabase } from '@/shared/lib/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useQuery } from '@tanstack/react-query';
 import { userService } from '@/services/api/UserService';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { registrationService } from '@/services/api/RegistrationService';
 
 export default function ProfileScreen() {
     const router = useRouter();
     const [session, setSession] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'history' | 'upcoming'>('history');
+    // ... existing useState
+    const [processing, setProcessing] = useState(false);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,7 +43,6 @@ export default function ProfileScreen() {
         useCallback(() => {
             if (session?.user?.id) {
                 refetch();
-                // Note: Profile completion check is handled by _layout.tsx
             }
         }, [session?.user?.id])
     );
@@ -51,6 +54,33 @@ export default function ProfileScreen() {
         } catch (error) {
             Alert.alert('Erro', 'Ocorreu um erro inesperado.');
         }
+    }
+
+    async function handleCancelBooking(eventId: string) {
+        if (processing) return;
+        Alert.alert(
+            'Cancelar Solicitação',
+            'Tem certeza que deseja cancelar sua solicitação de inscrição?',
+            [
+                { text: 'Não', style: 'cancel' },
+                {
+                    text: 'Sim, cancelar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setProcessing(true);
+                        try {
+                            await registrationService.cancelBooking(eventId, session.user.id);
+                            refetch(); // Refresh list
+                            Alert.alert('Sucesso', 'Solicitação cancelada.');
+                        } catch (error) {
+                            Alert.alert('Erro', 'Não foi possível cancelar.');
+                        } finally {
+                            setProcessing(false);
+                        }
+                    }
+                }
+            ]
+        );
     }
 
     // Show loading if session is not yet loaded or query is loading
@@ -188,14 +218,21 @@ export default function ProfileScreen() {
                                     Anfitrião: {booking.event?.host?.fullName?.split(' ')[0] || 'Unknown'} •
                                     {new Date(booking.event?.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                                 </Text>
-                                <View style={styles.expStatus}>
-                                    <Ionicons name="checkmark-circle" size={14} color="#FF8C42" />
-                                    <Text style={styles.expStatusText}>{booking.status === 'confirmed' ? 'Confirmado' : booking.status}</Text>
+                                <View style={{ marginTop: 4 }}>
+                                    <StatusBadge status={booking.status} />
                                 </View>
                             </View>
                             {activeTab === 'history' && (
                                 <TouchableOpacity style={styles.rateButton}>
                                     <Text style={styles.rateButtonText}>Avaliar</Text>
+                                </TouchableOpacity>
+                            )}
+                            {activeTab === 'upcoming' && booking.status === 'pending' && (
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={() => handleCancelBooking(booking.event?.id)}
+                                >
+                                    <Text style={styles.cancelButtonText}>Cancelar</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -220,7 +257,7 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/notifications' as any)}>
                     <View style={[styles.menuIconCircle, { backgroundColor: '#E3F2FD' }]}>
                         <Ionicons name="notifications-outline" size={20} color="#2196F3" />
                     </View>
@@ -531,5 +568,19 @@ const styles = StyleSheet.create({
     emptyStateText: {
         color: '#999',
         fontSize: 14,
+    },
+    cancelButton: {
+        backgroundColor: '#FFF5F5',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#FF3B30',
+        marginLeft: 8,
+    },
+    cancelButtonText: {
+        color: '#FF3B30',
+        fontSize: 12,
+        fontWeight: '600',
     },
 });
