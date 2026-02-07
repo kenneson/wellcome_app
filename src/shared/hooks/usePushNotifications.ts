@@ -50,6 +50,10 @@ async function registerForPushNotificationsAsync() {
     // Check for projectId in case it's needed (common in Managed Workflow)
     const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
 
+    if (!projectId) {
+        console.warn('Project ID not found in app.json (extra.eas.projectId). Push notifications may fail in Expo Go.');
+    }
+
     try {
         const pushTokenString = (await Notifications.getExpoPushTokenAsync({
             projectId,
@@ -57,8 +61,16 @@ async function registerForPushNotificationsAsync() {
 
         console.log('Expo Push Token (Hooks):', pushTokenString);
         return pushTokenString;
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error getting push token:', error);
+
+        if (error.message.includes('No "projectId" found')) {
+            Alert.alert(
+                'Configuração Necessária',
+                'Para testar notificações no Expo Go, você precisa vincular o projeto ao EAS.\n\nPor favor, rode "eas init" no terminal.'
+            );
+        }
+
         return null;
     }
 }
