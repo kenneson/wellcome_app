@@ -1,9 +1,11 @@
 import { createContext, useContext } from 'react';
 
-export const UserProfileContext = createContext<{
+type UserProfileContextType = {
     isProfileComplete: boolean | null;
     refetchProfile: () => Promise<void>;
-}>({
+};
+
+export const UserProfileContext = createContext<UserProfileContextType>({
     isProfileComplete: null,
     refetchProfile: async () => { },
 });

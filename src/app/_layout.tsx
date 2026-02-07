@@ -121,8 +121,8 @@ export default function RootLayout() {
       // Allow access to welcome screen
       if (segments[0] === 'welcome') return;
 
-      // Allow access to all routes - user can complete profile later
-      // Only redirect to welcome on first login (handled by auth flow)
+      // Force redirect to welcome/onboarding
+      router.replace('/welcome');
       return;
     }
   }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
