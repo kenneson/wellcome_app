@@ -17,6 +17,7 @@ export const unstable_settings = {
 import { UserProfileContext } from '@/context/UserProfileContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/shared/lib/react-query';
+import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -29,6 +30,9 @@ export default function RootLayout() {
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
   const [profileCheckLoading, setProfileCheckLoading] = useState(true);
   const lastUserId = useRef<string | null>(null);
+
+  // Initialize Push Notifications
+  usePushNotifications(session?.user?.id);
 
   // 1. Handle Session
   useEffect(() => {
@@ -150,6 +154,7 @@ export default function RootLayout() {
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
+                <Stack.Screen name="profile/notifications" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen
                   name="welcome"
                   options={{
