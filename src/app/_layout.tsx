@@ -74,7 +74,7 @@ export default function RootLayout() {
       console.log('Checking profile for user:', session.user.id);
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('occupation, looking_for, city, neighborhood')
+        .select('full_name, occupation, looking_for, city, neighborhood')
         .eq('id', session.user.id)
         .maybeSingle(); // Use maybeSingle to avoid error when no row exists
 
@@ -87,7 +87,8 @@ export default function RootLayout() {
         setIsProfileComplete(false);
       } else {
         console.log('Profile data:', profile);
-        const complete = !!(profile.occupation && profile.looking_for && profile.city && profile.neighborhood);
+        // full_name, occupation, city, neighborhood are REQUIRED
+        const complete = !!(profile.full_name && profile.occupation && profile.city && profile.neighborhood);
         console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
       }
