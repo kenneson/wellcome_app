@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet,
     View,
@@ -9,20 +9,30 @@ import {
     ScrollView,
     KeyboardAvoidingView,
     Platform,
-    ActivityIndicator
+    ActivityIndicator,
+    Animated,
+    Dimensions
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { supabase } from '@/shared/lib/supabase';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
+
+const STEPS = [
+    { id: 0, title: 'Bem-vindo', icon: 'hand-left' },
+    { id: 1, title: 'Sobre você', icon: 'person' },
+    { id: 2, title: 'Localização', icon: 'location' },
+];
 
 export default function WelcomeScreen() {
-    const router = useRouter();
     const { refetchProfile } = useUserProfile();
-    const [step, setStep] = useState(0); // 0 = Welcome, 1 = Bio, 2 = Location
+    const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [fadeAnim] = useState(new Animated.Value(1));
 
     const [formData, setFormData] = useState({
         occupation: '',
@@ -35,173 +45,266 @@ export default function WelcomeScreen() {
         setFormData(prev => ({ ...prev, [key]: value }));
     };
 
+    const animateTransition = (nextStep: number) => {
+        Animated.sequence([
+            Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+        ]).start();
+        setTimeout(() => setStep(nextStep), 150);
+    };
+
     const handleNext = () => {
         if (step === 0) {
-            setStep(1);
+            animateTransition(1);
         } else if (step === 1) {
-            if (!formData.occupation.trim() || !formData.looking_for.trim()) {
-                Alert.alert('Atenção', 'Por favor, preencha todos os campos.');
+            if (!formData.occupation.trim()) {
+                Alert.alert('Atenção', 'Por favor, informe sua ocupação.');
                 return;
             }
-            setStep(2);
+            if (!formData.looking_for.trim()) {
+                Alert.alert('Atenção', 'Por favor, nos conte o que você busca.');
+                return;
+            }
+            animateTransition(2);
         } else {
             handleSubmit();
         }
     };
 
+    const handleBack = () => {
+        if (step > 0) {
+            animateTransition(step - 1);
+        }
+    };
+
     const handleSubmit = async () => {
-        if (!formData.city.trim() || !formData.neighborhood.trim()) {
-            Alert.alert('Atenção', 'Por favor, informe sua cidade e bairro.');
+        if (!formData.city.trim()) {
+            Alert.alert('Atenção', 'Por favor, informe sua cidade.');
+            return;
+        }
+        if (!formData.neighborhood.trim()) {
+            Alert.alert('Atenção', 'Por favor, informe seu bairro.');
             return;
         }
 
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
+            if (!session) {
+                Alert.alert('Erro', 'Sessão expirada. Por favor, faça login novamente.');
+                return;
+            }
 
-            console.log('Updating profile for:', session.user.id);
+            console.log('Saving profile for:', session.user.id);
             console.log('Data:', formData);
 
+            // Use UPSERT to create or update the profile
             const { error } = await supabase
                 .from('profiles')
-                .update({
-                    occupation: formData.occupation,
-                    looking_for: formData.looking_for,
-                    city: formData.city,
-                    neighborhood: formData.neighborhood,
+                .upsert({
+                    id: session.user.id,
+                    email: session.user.email,
+                    occupation: formData.occupation.trim(),
+                    looking_for: formData.looking_for.trim(),
+                    city: formData.city.trim(),
+                    neighborhood: formData.neighborhood.trim(),
                     updated_at: new Date().toISOString()
-                })
-                .eq('id', session.user.id);
+                }, {
+                    onConflict: 'id'
+                });
 
             if (error) {
-                console.error('Error updating profile:', error);
+                console.error('Error saving profile:', error);
                 throw error;
             }
 
-            console.log('Profile updated successfully. Refetching...');
+            console.log('Profile saved successfully!');
             await refetchProfile();
-            console.log('Refetch done.');
-            // The layout will automatically redirect to (tabs) once isProfileComplete becomes true
+            // Layout will automatically redirect to (tabs) once isProfileComplete becomes true
         } catch (error: any) {
-            console.error('Catch Error:', error);
-            Alert.alert('Erro', error.message || 'Falha ao salvar perfil.');
+            console.error('Profile save error:', error);
+            Alert.alert('Erro ao salvar', error.message || 'Não foi possível salvar seu perfil. Tente novamente.');
         } finally {
             setLoading(false);
         }
     };
+
+    const renderProgressIndicator = () => (
+        <View style={styles.progressContainer}>
+            {STEPS.map((s, index) => (
+                <View key={s.id} style={styles.progressItem}>
+                    <View style={[
+                        styles.progressDot,
+                        step >= s.id && styles.progressDotActive
+                    ]}>
+                        {step > s.id ? (
+                            <Ionicons name="checkmark" size={14} color="#fff" />
+                        ) : (
+                            <Ionicons name={s.icon as any} size={14} color={step >= s.id ? '#fff' : '#ccc'} />
+                        )}
+                    </View>
+                    {index < STEPS.length - 1 && (
+                        <View style={[
+                            styles.progressLine,
+                            step > s.id && styles.progressLineActive
+                        ]} />
+                    )}
+                </View>
+            ))}
+        </View>
+    );
+
+    const renderWelcomeStep = () => (
+        <View style={styles.welcomeSection}>
+            <View style={styles.iconContainer}>
+                <LinearGradient
+                    colors={['#FF8C42', '#FFB67A']}
+                    style={styles.iconGradient}
+                >
+                    <Ionicons name="people" size={56} color="#fff" />
+                </LinearGradient>
+            </View>
+            <Text style={styles.welcomeTitle}>Olá! 👋</Text>
+            <Text style={styles.welcomeSubtitle}>Bem-vindo ao Wellcome</Text>
+            <Text style={styles.welcomeText}>
+                Somos uma comunidade de pessoas reais que adoram compartilhar experiências gastronômicas.
+            </Text>
+            <Text style={styles.welcomeText}>
+                Para começar, precisamos de algumas informações rápidas sobre você. Leva menos de 1 minuto!
+            </Text>
+        </View>
+    );
+
+    const renderBioStep = () => (
+        <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>Conte-nos sobre você</Text>
+            <Text style={styles.sectionSubtitle}>Essas informações ajudam outros membros a te conhecer melhor</Text>
+
+            <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                    <Ionicons name="briefcase-outline" size={18} color="#FF8C42" />
+                    <Text style={styles.label}>O que você faz?</Text>
+                </View>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: Designer, Chef, Estudante..."
+                    placeholderTextColor="#999"
+                    value={formData.occupation}
+                    onChangeText={(t) => updateForm('occupation', t)}
+                    autoCapitalize="words"
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                    <Ionicons name="search-outline" size={18} color="#FF8C42" />
+                    <Text style={styles.label}>O que você busca aqui?</Text>
+                </View>
+                <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Ex: Conhecer pessoas, novas experiências gastronômicas, eventos..."
+                    placeholderTextColor="#999"
+                    value={formData.looking_for}
+                    onChangeText={(t) => updateForm('looking_for', t)}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                />
+            </View>
+        </View>
+    );
+
+    const renderLocationStep = () => (
+        <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>Onde você está?</Text>
+            <Text style={styles.sectionSubtitle}>Isso nos ajuda a mostrar eventos perto de você</Text>
+
+            <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                    <Ionicons name="business-outline" size={18} color="#FF8C42" />
+                    <Text style={styles.label}>Cidade</Text>
+                </View>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: São Paulo"
+                    placeholderTextColor="#999"
+                    value={formData.city}
+                    onChangeText={(t) => updateForm('city', t)}
+                    autoCapitalize="words"
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                    <Ionicons name="location-outline" size={18} color="#FF8C42" />
+                    <Text style={styles.label}>Bairro</Text>
+                </View>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: Pinheiros"
+                    placeholderTextColor="#999"
+                    value={formData.neighborhood}
+                    onChangeText={(t) => updateForm('neighborhood', t)}
+                    autoCapitalize="words"
+                />
+            </View>
+        </View>
+    );
 
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="dark" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
+                style={styles.keyboardView}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Bem-vindo ao Wellcome!</Text>
-                        <Text style={styles.subtitle}>
-                            Para começar, precisamos conhecer um pouco mais sobre você.
-                        </Text>
-                    </View>
+                {step > 0 && renderProgressIndicator()}
 
-                    {step === 0 && (
-                        <View style={styles.welcomeSection}>
-                            <View style={styles.iconContainer}>
-                                <Ionicons name="people" size={64} color="#FF8C42" />
-                            </View>
-                            <Text style={styles.welcomeTitle}>Olá! Que bom ter você aqui.</Text>
-                            <Text style={styles.welcomeText}>
-                                O Wellcome é uma comunidade de pessoas reais. Para garantir a melhor experiência para todos, precisamos que você complete seu perfil.
-                            </Text>
-                            <Text style={styles.welcomeText}>
-                                É rapidinho! Vamos lá?
-                            </Text>
-                        </View>
-                    )}
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+                        {step === 0 && renderWelcomeStep()}
+                        {step === 1 && renderBioStep()}
+                        {step === 2 && renderLocationStep()}
+                    </Animated.View>
+                </ScrollView>
 
-                    {step === 1 && (
-                        <View style={styles.formSection}>
-                            <Text style={styles.sectionTitle}>Sobre Você</Text>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>O que você faz? (Profissão/Ocupação)</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Ex: Designer, Chef, Estudante..."
-                                    value={formData.occupation}
-                                    onChangeText={(t) => updateForm('occupation', t)}
-                                />
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>O que você busca no app?</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Ex: Conhecer pessoas, novas experiências gastronômicas..."
-                                    value={formData.looking_for}
-                                    onChangeText={(t) => updateForm('looking_for', t)}
-                                    multiline
-                                    numberOfLines={3}
-                                />
-                            </View>
-                        </View>
-                    )}
-
-                    {step === 2 && (
-                        <View style={styles.formSection}>
-                            <Text style={styles.sectionTitle}>Localização</Text>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Cidade</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Ex: São Paulo"
-                                    value={formData.city}
-                                    onChangeText={(t) => updateForm('city', t)}
-                                />
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Bairro</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Ex: Pinheiros"
-                                    value={formData.neighborhood}
-                                    onChangeText={(t) => updateForm('neighborhood', t)}
-                                />
-                            </View>
-                        </View>
-                    )}
-
-                    <View style={styles.footer}>
-                        {step === 2 && (
-                            <TouchableOpacity
-                                style={styles.backButton}
-                                onPress={() => setStep(1)}
-                                disabled={loading}
-                            >
-                                <Text style={styles.backButtonText}>Voltar</Text>
-                            </TouchableOpacity>
-                        )}
-
+                <View style={styles.footer}>
+                    {step > 0 && (
                         <TouchableOpacity
-                            style={styles.nextButton}
-                            onPress={handleNext}
+                            style={styles.backButton}
+                            onPress={handleBack}
                             disabled={loading}
                         >
-                            {loading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.nextButtonText}>
-                                    {step === 0 ? 'Completar Perfil' : (step === 1 ? 'Próximo' : 'Concluir')}
-                                </Text>
-                            )}
-                            {!loading && <Ionicons name="arrow-forward" size={20} color="#fff" />}
+                            <Ionicons name="chevron-back" size={20} color="#666" />
+                            <Text style={styles.backButtonText}>Voltar</Text>
                         </TouchableOpacity>
-                    </View>
-                </ScrollView>
+                    )}
+
+                    <TouchableOpacity
+                        style={[
+                            styles.nextButton,
+                            step === 0 && styles.nextButtonFull,
+                            loading && styles.nextButtonDisabled
+                        ]}
+                        onPress={handleNext}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <>
+                                <Text style={styles.nextButtonText}>
+                                    {step === 0 ? 'Vamos começar!' : (step === 2 ? 'Concluir' : 'Continuar')}
+                                </Text>
+                                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -212,118 +315,173 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#fff',
     },
+    keyboardView: {
+        flex: 1,
+    },
     scrollContent: {
         flexGrow: 1,
-        padding: 24,
-        justifyContent: 'center', // Center content for welcome screen
+        paddingHorizontal: 24,
     },
-    header: {
-        marginTop: 40,
-        marginBottom: 20,
-        display: 'none', // Hide default header, use custom welcome section
+    content: {
+        flex: 1,
+        justifyContent: 'center',
     },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#FF8C42',
-        marginBottom: 12,
+    progressContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 20,
+        paddingHorizontal: 40,
     },
-    subtitle: {
-        fontSize: 16,
-        color: '#666',
-        lineHeight: 24,
+    progressItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    progressDot: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#E8E8E8',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    progressDotActive: {
+        backgroundColor: '#FF8C42',
+    },
+    progressLine: {
+        width: 50,
+        height: 3,
+        backgroundColor: '#E8E8E8',
+        marginHorizontal: 4,
+    },
+    progressLineActive: {
+        backgroundColor: '#FF8C42',
     },
     welcomeSection: {
         alignItems: 'center',
-        paddingVertical: 40,
+        paddingVertical: 20,
     },
     iconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#FFF3E0',
+        marginBottom: 24,
+    },
+    iconGradient: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 32,
+        shadowColor: '#FF8C42',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
     },
     welcomeTitle: {
-        fontSize: 24,
+        fontSize: 32,
         fontWeight: 'bold',
         color: '#333',
-        textAlign: 'center',
-        marginBottom: 16,
+        marginBottom: 8,
+    },
+    welcomeSubtitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#FF8C42',
+        marginBottom: 24,
     },
     welcomeText: {
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
         lineHeight: 24,
-        marginBottom: 16,
-        paddingHorizontal: 20,
+        marginBottom: 12,
+        paddingHorizontal: 16,
     },
     formSection: {
         flex: 1,
-        width: '100%',
-        paddingTop: 40,
+        paddingTop: 20,
     },
     sectionTitle: {
-        fontSize: 24,
+        fontSize: 26,
         fontWeight: 'bold',
         color: '#333',
+        marginBottom: 8,
+    },
+    sectionSubtitle: {
+        fontSize: 15,
+        color: '#888',
         marginBottom: 32,
     },
     inputGroup: {
         marginBottom: 24,
     },
+    labelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        gap: 8,
+    },
     label: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '600',
-        color: '#666',
-        marginBottom: 8,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        color: '#444',
     },
     input: {
-        backgroundColor: '#fff',
+        backgroundColor: '#F8F8F8',
         borderRadius: 12,
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
         fontSize: 16,
         color: '#333',
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: '#EBEBEB',
+    },
+    textArea: {
+        minHeight: 100,
+        paddingTop: 14,
     },
     footer: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 40,
-        gap: 16,
-        paddingBottom: 20,
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+        backgroundColor: '#fff',
     },
     backButton: {
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 8,
+        gap: 4,
     },
     backButtonText: {
         fontSize: 16,
         color: '#666',
-        fontWeight: '600',
+        fontWeight: '500',
     },
     nextButton: {
         backgroundColor: '#FF8C42',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 32,
+        paddingVertical: 14,
+        paddingHorizontal: 28,
         borderRadius: 30,
         gap: 8,
-        minWidth: 140,
-        elevation: 2,
-        shadowColor: "#FF8C42",
+        shadowColor: '#FF8C42',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+    nextButtonFull: {
+        flex: 1,
+        marginLeft: 0,
+    },
+    nextButtonDisabled: {
+        opacity: 0.7,
     },
     nextButtonText: {
         fontSize: 16,

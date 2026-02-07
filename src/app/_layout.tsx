@@ -76,14 +76,18 @@ export default function RootLayout() {
         .from('profiles')
         .select('occupation, looking_for, city, neighborhood')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid error when no row exists
 
       if (error) {
         console.error('Error fetching profile:', error);
         setIsProfileComplete(false);
+      } else if (!profile) {
+        // No profile row exists - treat as incomplete
+        console.log('No profile found for user');
+        setIsProfileComplete(false);
       } else {
         console.log('Profile data:', profile);
-        const complete = !!(profile?.occupation && profile?.looking_for && profile?.city && profile?.neighborhood);
+        const complete = !!(profile.occupation && profile.looking_for && profile.city && profile.neighborhood);
         console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
       }
