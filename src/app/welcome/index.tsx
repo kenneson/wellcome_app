@@ -60,6 +60,9 @@ export default function WelcomeScreen() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
+            console.log('Updating profile for:', session.user.id);
+            console.log('Data:', formData);
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
@@ -71,11 +74,17 @@ export default function WelcomeScreen() {
                 })
                 .eq('id', session.user.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Error updating profile:', error);
+                throw error;
+            }
 
+            console.log('Profile updated successfully. Refetching...');
             await refetchProfile();
+            console.log('Refetch done.');
             // The layout will automatically redirect to (tabs) once isProfileComplete becomes true
         } catch (error: any) {
+            console.error('Catch Error:', error);
             Alert.alert('Erro', error.message || 'Falha ao salvar perfil.');
         } finally {
             setLoading(false);

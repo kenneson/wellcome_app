@@ -71,6 +71,7 @@ export default function RootLayout() {
     lastUserId.current = session.user.id;
 
     try {
+      console.log('Checking profile for user:', session.user.id);
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('occupation, looking_for, city, neighborhood')
@@ -78,12 +79,16 @@ export default function RootLayout() {
         .single();
 
       if (error) {
+        console.error('Error fetching profile:', error);
         setIsProfileComplete(false);
       } else {
+        console.log('Profile data:', profile);
         const complete = !!(profile?.occupation && profile?.looking_for && profile?.city && profile?.neighborhood);
+        console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
       }
     } catch (e) {
+      console.error('Exception checking profile:', e);
       setIsProfileComplete(false);
     } finally {
       setProfileCheckLoading(false);
@@ -124,6 +129,10 @@ export default function RootLayout() {
       // Force redirect to welcome/onboarding
       router.replace('/welcome');
       return;
+    }
+    // Redirect to tabs if on welcome screen but profile is complete
+    else if (session && isProfileComplete === true && segments[0] === 'welcome') {
+      router.replace('/(tabs)');
     }
   }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
 
