@@ -44,6 +44,7 @@ export default function WelcomeScreen() {
 
     const [formData, setFormData] = useState({
         full_name: '',
+        username: '',
         bio: '',
         occupation: '',
         looking_for: '',
@@ -94,6 +95,10 @@ export default function WelcomeScreen() {
                 Alert.alert('Atenção', 'Por favor, informe seu nome.');
                 return;
             }
+            if (!formData.username.trim() || formData.username.length < 3) {
+                Alert.alert('Atenção', 'Por favor, informe um username com pelo menos 3 caracteres.');
+                return;
+            }
             animateTransition(2);
         } else if (step === 2) {
             if (!formData.occupation.trim()) {
@@ -140,6 +145,7 @@ export default function WelcomeScreen() {
                     id: session.user.id,
                     email: googleData.email,
                     full_name: formData.full_name.trim(),
+                    username: formData.username.trim(),
                     avatar_url: googleData.avatarUrl,
                     bio: formData.bio.trim() || null,
                     occupation: formData.occupation.trim(),
@@ -232,6 +238,21 @@ export default function WelcomeScreen() {
                     onChangeText={(t) => updateForm('full_name', t)}
                     autoCapitalize="words"
                     autoFocus
+                />
+            </View>
+
+            <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
+                    <Ionicons name="at-outline" size={18} color="#FF8C42" />
+                    <Text style={styles.label}>Username (único)</Text>
+                </View>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Ex: joaosilva"
+                    placeholderTextColor="#999"
+                    value={formData.username}
+                    onChangeText={(t) => updateForm('username', t.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    autoCapitalize="none"
                 />
             </View>
 

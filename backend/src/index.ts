@@ -67,6 +67,8 @@ const start = async () => {
         // Dependency Injection (Manual for now)
         const eventRepository = new PrismaEventRepository();
         const eventQuestionRepository = new PrismaEventQuestionRepository();
+        const { notificationService } = require('./application/services/NotificationService'); // Import service
+
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const eventController = new EventController(createEventUseCase, listEventsUseCase);
@@ -146,7 +148,20 @@ const start = async () => {
                         latitude: { type: 'number', nullable: true },
                         longitude: { type: 'number', nullable: true },
                         coverImageUrl: { type: 'string', nullable: true },
-                        hostId: { type: 'string' }
+                        hostId: { type: 'string' },
+                        questions: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                required: ['question', 'questionType'],
+                                properties: {
+                                    question: { type: 'string' },
+                                    questionType: { type: 'string' },
+                                    required: { type: 'boolean' },
+                                    options: { type: 'array', items: { type: 'string' } }
+                                }
+                            }
+                        }
                     }
                 },
                 response: {
@@ -222,7 +237,7 @@ const start = async () => {
 
         // Event Registration Dependencies
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
-        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository);
+        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, notificationService);
         const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository);
         const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository);
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository);
@@ -280,6 +295,61 @@ const start = async () => {
             }
         }, (req, reply) => eventRegistrationController.create(req, reply));
 
+        // Get registrations for an event (for host to manage)
+        fastify.get('/bookings/event/:eventId', {
+            schema: {
+                description: 'Get all registrations for an event',
+                tags: ['Bookings'],
+                params: {
+                    type: 'object',
+                    properties: {
+                        eventId: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'List of registrations',
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string' },
+                                eventId: { type: 'string' },
+                                userId: { type: 'string' },
+                                status: { type: 'string' },
+                                user: {
+                                    type: 'object',
+                                    properties: {
+                                        id: { type: 'string' },
+                                        fullName: { type: 'string' },
+                                        avatarUrl: { type: 'string' },
+                                        occupation: { type: 'string' }
+                                    }
+                                },
+                                createdAt: { type: 'string' }
+                            }
+                        }
+                    },
+                    500: {
+                        description: 'Internal server error',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, async (req, reply) => {
+            const { eventId } = req.params as { eventId: string };
+            try {
+                const registrations = await eventRegistrationRepository.findByEventIdWithUser(eventId);
+                return reply.send(registrations);
+            } catch (error) {
+                console.error('Error fetching registrations:', error);
+                return reply.code(500).send({ message: 'Internal server error' });
+            }
+        });
+
         // Approval endpoints
         fastify.post('/bookings/approve', {
             schema: {
@@ -320,8 +390,14 @@ const start = async () => {
 
 
 
-        // Notification Test Endpoint
-        fastify.post('/notifications/test', {
+        interface NotificationTestBody {
+            token: string;
+            title: string;
+            body: string;
+            data?: Record<string, any>;
+        }
+
+        fastify.post<{ Body: NotificationTestBody }>('/notifications/test', {
             schema: {
                 description: 'Send a test push notification',
                 tags: ['General'],
@@ -344,7 +420,7 @@ const start = async () => {
                 }
             }
         }, async (req, reply) => {
-            const { token, title, body, data } = req.body as any;
+            const { token, title, body, data } = req.body;
             const { notificationService } = require('./application/services/NotificationService');
             await notificationService.sendPushBlocking(token, title, body, data);
             return { success: true };

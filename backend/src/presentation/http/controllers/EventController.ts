@@ -27,7 +27,12 @@ const createEventSchema = z.object({
     allowWaitlist: z.boolean().optional().default(false),
     autoApproveIfAttended: z.boolean().optional().default(false),
     autoApproveMinRating: z.number().nullable().optional().default(null),
-    // questions: z.array(z.any()).optional() // TODO: Define strict schema for questions
+    questions: z.array(z.object({
+        question: z.string(),
+        questionType: z.string(),
+        required: z.boolean(),
+        options: z.array(z.string()).optional()
+    })).optional()
 });
 
 export class EventController {
@@ -41,12 +46,15 @@ export class EventController {
             const body = createEventSchema.parse(request.body);
             const event = await this.createEventUseCase.execute({
                 ...body,
-                eventType: body.eventType ?? null,
+                eventType: body.eventType ?? '', // Use empty string if null, assuming schema expects string
                 cuisineTypes: body.cuisineTypes ?? [],
                 vibe: body.vibe ?? [],
                 facilities: body.facilities ?? [],
                 rules: body.rules ?? [],
-                questions: [] // Default empty questions for now
+                questions: body.questions?.map((q, index) => ({
+                    ...q,
+                    order: index
+                })) ?? []
             });
             return reply.code(201).send(event);
         } catch (error) {

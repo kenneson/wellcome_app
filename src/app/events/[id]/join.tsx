@@ -82,22 +82,38 @@ export default function JoinEventScreen() {
                 answer: answers[qId]
             }));
 
-            await registrationService.createBooking({
+            const registration = await registrationService.createBooking({
                 eventId: event.id,
                 userId: session.user.id,
                 answers: formattedAnswers
             });
 
-            Alert.alert(
-                'Solicitação Enviada',
-                event.access_type === 'OPEN'
-                    ? 'Sua presença foi confirmada!'
-                    : 'Sua inscrição foi enviada para aprovação do anfitrião.',
-                [{ text: 'OK', onPress: () => router.push(`/(tabs)`) }] // Go to dashboard or back to event details? Dashboard seems safer to see status
-            );
+            // Handle specific statuses
+            if (registration.status === 'PENDING') {
+                Alert.alert(
+                    'Solicitação Enviada',
+                    'Sua inscrição foi enviada e aguarda aprovação do anfitrião. Você será notificado assim que houver uma resposta.',
+                    [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
+                );
+            } else {
+                Alert.alert(
+                    'Inscrição Confirmada!',
+                    'Sua presença foi confirmada no evento!',
+                    [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
+                );
+            }
 
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Falha ao solicitar inscrição.');
+            // Handle 409 specifically if message matches
+            if (error.message && (error.message.includes('already registered') || error.message.includes('409'))) {
+                Alert.alert(
+                    'JÃ¡ Solicitado',
+                    'Você já enviou uma solicitação para este evento.',
+                    [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
+                );
+            } else {
+                Alert.alert('Erro', error.message || 'Falha ao solicitar inscrição.');
+            }
         } finally {
             setSubmitting(false);
         }

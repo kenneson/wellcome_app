@@ -40,7 +40,24 @@ export class RegistrationService {
         }
     }
 
-    async approveBooking(registrationId: string, hostId: string) {
+    // Get all registrations for an event (used by host to manage)
+    async getRegistrations(eventId: string) {
+        const response = await fetch(`${API_URL}/bookings/event/${eventId}`);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch registrations');
+        }
+
+        return response.json();
+    }
+
+    // Approve a registration (called by host)
+    async approveRegistration(registrationId: string) {
+        // Get current user session to get hostId
+        const { data: { session } } = await supabase.auth.getSession();
+        const hostId = session?.user?.id;
+
         const response = await fetch(`${API_URL}/bookings/approve`, {
             method: 'POST',
             headers: {
@@ -51,13 +68,18 @@ export class RegistrationService {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to approve booking');
+            throw new Error(error.message || 'Failed to approve registration');
         }
 
         return response.json();
     }
 
-    async rejectBooking(registrationId: string, hostId: string, reason: string) {
+    // Reject a registration (called by host)
+    async rejectRegistration(registrationId: string, reason: string = 'Rejeitado pelo anfitrião') {
+        // Get current user session to get hostId
+        const { data: { session } } = await supabase.auth.getSession();
+        const hostId = session?.user?.id;
+
         const response = await fetch(`${API_URL}/bookings/reject`, {
             method: 'POST',
             headers: {
@@ -68,11 +90,21 @@ export class RegistrationService {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to reject booking');
+            throw new Error(error.message || 'Failed to reject registration');
         }
 
         return response.json();
     }
+
+    // Old methods kept for backwards compatibility
+    async approveBooking(registrationId: string, hostId: string) {
+        return this.approveRegistration(registrationId);
+    }
+
+    async rejectBooking(registrationId: string, hostId: string, reason: string) {
+        return this.rejectRegistration(registrationId, reason);
+    }
 }
 
 export const registrationService = new RegistrationService();
+

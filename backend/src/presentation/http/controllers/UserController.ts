@@ -11,13 +11,18 @@ export class UserController {
     async getProfile(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as { id: string };
         try {
+            console.log('Fetching profile for user:', id);
             const user = await this.getUserProfileUseCase.execute(id);
             if (!user) {
+                console.log('User not found:', id);
                 return reply.code(404).send({ message: 'User not found' });
             }
+            console.log('User found:', user.id, user.fullName);
             return reply.send(user);
-        } catch (error) {
-            return reply.code(500).send({ message: 'Internal server error', error });
+        } catch (error: any) {
+            console.error('Error in getProfile:', error);
+            console.error('Error stack:', error?.stack);
+            return reply.code(500).send({ message: 'Internal server error', error: error?.message });
         }
     }
 

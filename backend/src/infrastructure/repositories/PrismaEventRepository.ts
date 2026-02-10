@@ -108,6 +108,7 @@ export class PrismaEventRepository implements EventRepository {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,
                 avatarUrl: prismaEvent.host.avatarUrl,
+                expoPushToken: prismaEvent.host.expoPushToken, // Map push token for notifications
                 updatedAt: prismaEvent.host.updatedAt
                 // map other user fields if needed
             } : undefined,

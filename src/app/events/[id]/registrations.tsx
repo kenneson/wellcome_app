@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
+import { RegistrationStatus } from '@/entities/event/types';
 
 export default function EventRegistrationsScreen() {
     const { id } = useLocalSearchParams();
@@ -14,7 +15,18 @@ export default function EventRegistrationsScreen() {
     const [registrations, setRegistrations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'rejected'>('pending');
+    const [activeTab, setActiveTab] = useState<RegistrationStatus>(RegistrationStatus.PENDING);
+
+    // Helper to open links
+    const openLink = (url: string) => {
+        if (!url) return;
+        // Add protocol if missing
+        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+        Linking.canOpenURL(fullUrl).then(supported => {
+            if (supported) Linking.openURL(fullUrl);
+            else Alert.alert('Erro', 'Não foi possível abrir o link: ' + url);
+        });
+    };
 
     useEffect(() => {
         if (id) fetchRegistrations();
@@ -24,8 +36,11 @@ export default function EventRegistrationsScreen() {
         try {
             setLoading(true);
             const data = await registrationService.getRegistrations(id as string);
+            console.log('📋 Registrations fetched:', data);
+            console.log('📋 Number of registrations:', data?.length);
             setRegistrations(data);
         } catch (error) {
+            console.error('❌ Error fetching registrations:', error);
             Alert.alert('Erro', 'Não foi possível carregar as inscrições.');
         } finally {
             setLoading(false);
@@ -37,7 +52,7 @@ export default function EventRegistrationsScreen() {
         try {
             await registrationService.approveRegistration(registrationId);
             setRegistrations(prev => prev.map(r =>
-                r.id === registrationId ? { ...r, status: 'confirmed' } : r
+                r.id === registrationId ? { ...r, status: RegistrationStatus.APPROVED } : r
             ));
             Alert.alert('Sucesso', 'Inscrição aprovada.');
         } catch (error) {
@@ -52,7 +67,7 @@ export default function EventRegistrationsScreen() {
         try {
             await registrationService.rejectRegistration(registrationId);
             setRegistrations(prev => prev.map(r =>
-                r.id === registrationId ? { ...r, status: 'rejected' } : r
+                r.id === registrationId ? { ...r, status: RegistrationStatus.REJECTED } : r
             ));
             Alert.alert('Sucesso', 'Inscrição rejeitada.');
         } catch (error) {
@@ -72,10 +87,50 @@ export default function EventRegistrationsScreen() {
                     style={styles.avatar}
                 />
                 <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.user?.fullName}</Text>
-                    <Text style={styles.userBio} numberOfLines={1}>{item.user?.occupation || 'Sem ocupação'}</Text>
+                    <View style={styles.headerTop}>
+                        <View style={styles.nameContainer}>
+                            <Text style={styles.userName}>{item.user?.fullName}</Text>
+                            <Text style={styles.userOccupation}>{item.user?.occupation || 'Sem ocupação definida'}</Text>
+                        </View>
+                        <StatusBadge status={item.status} />
+                    </View>
+
+                    {item.user?.bio && (
+                        <Text style={styles.userBio} numberOfLines={3}>{item.user.bio}</Text>
+                    )}
+
+                    <View style={styles.detailsContainer}>
+                        {(item.user?.city || item.user?.neighborhood) && (
+                            <View style={styles.detailRow}>
+                                <Ionicons name="location-outline" size={14} color="#666" style={styles.detailIcon} />
+                                <Text style={styles.detailText}>
+                                    {[item.user.city, item.user.neighborhood].filter(Boolean).join(', ')}
+                                </Text>
+                            </View>
+                        )}
+
+                        {item.user?.lookingFor && (
+                            <View style={styles.detailRow}>
+                                <Ionicons name="search-outline" size={14} color="#666" style={styles.detailIcon} />
+                                <Text style={styles.detailText}>Procurando: {item.user.lookingFor}</Text>
+                            </View>
+                        )}
+
+                        {item.user?.languages && item.user.languages.length > 0 && (
+                            <View style={styles.detailRow}>
+                                <Ionicons name="chatbubble-outline" size={14} color="#666" style={styles.detailIcon} />
+                                <Text style={styles.detailText}>{item.user.languages.join(', ')}</Text>
+                            </View>
+                        )}
+
+                        {item.user?.website && (
+                            <TouchableOpacity onPress={() => openLink(item.user.website)} style={styles.detailRow}>
+                                <Ionicons name="link-outline" size={14} color="#007AFF" style={styles.detailIcon} />
+                                <Text style={[styles.detailText, { color: '#007AFF' }]}>{item.user.website}</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
-                <StatusBadge status={item.status} />
             </View>
 
             {item.answers && item.answers.length > 0 && (
@@ -90,7 +145,7 @@ export default function EventRegistrationsScreen() {
                 </View>
             )}
 
-            {item.status === 'pending' && (
+            {item.status === RegistrationStatus.PENDING && (
                 <View style={styles.actions}>
                     <TouchableOpacity
                         style={[styles.actionButton, styles.rejectButton]}
@@ -138,22 +193,22 @@ export default function EventRegistrationsScreen() {
 
             <View style={styles.tabs}>
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
-                    onPress={() => setActiveTab('pending')}
+                    style={[styles.tab, activeTab === RegistrationStatus.PENDING && styles.activeTab]}
+                    onPress={() => setActiveTab(RegistrationStatus.PENDING)}
                 >
-                    <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>Pendentes</Text>
+                    <Text style={[styles.tabText, activeTab === RegistrationStatus.PENDING && styles.activeTabText]}>Pendentes</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === 'confirmed' && styles.activeTab]}
-                    onPress={() => setActiveTab('confirmed')}
+                    style={[styles.tab, activeTab === RegistrationStatus.APPROVED && styles.activeTab]}
+                    onPress={() => setActiveTab(RegistrationStatus.APPROVED)}
                 >
-                    <Text style={[styles.tabText, activeTab === 'confirmed' && styles.activeTabText]}>Confirmados</Text>
+                    <Text style={[styles.tabText, activeTab === RegistrationStatus.APPROVED && styles.activeTabText]}>Confirmados</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === 'rejected' && styles.activeTab]}
-                    onPress={() => setActiveTab('rejected')}
+                    style={[styles.tab, activeTab === RegistrationStatus.REJECTED && styles.activeTab]}
+                    onPress={() => setActiveTab(RegistrationStatus.REJECTED)}
                 >
-                    <Text style={[styles.tabText, activeTab === 'rejected' && styles.activeTabText]}>Rejeitados</Text>
+                    <Text style={[styles.tabText, activeTab === RegistrationStatus.REJECTED && styles.activeTabText]}>Rejeitados</Text>
                 </TouchableOpacity>
             </View>
 
@@ -237,26 +292,61 @@ const styles = StyleSheet.create({
     },
     cardHeader: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginBottom: 12,
     },
     avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         marginRight: 12,
     },
     userInfo: {
         flex: 1,
     },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 4,
+    },
+    nameContainer: {
+        flex: 1,
+        marginRight: 8,
+    },
     userName: {
         fontSize: 16,
         fontWeight: 'bold',
         color: '#333',
+        marginBottom: 2,
+    },
+    userOccupation: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
     },
     userBio: {
-        fontSize: 12,
+        fontSize: 14,
+        color: '#444',
+        marginTop: 6,
+        lineHeight: 20,
+    },
+    detailsContainer: {
+        marginTop: 8,
+        gap: 4,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    detailIcon: {
+        marginRight: 6,
+        width: 16,
+    },
+    detailText: {
+        fontSize: 13,
         color: '#666',
+        flex: 1,
     },
     answersContainer: {
         marginTop: 12,

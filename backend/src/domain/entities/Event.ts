@@ -30,4 +30,12 @@ export interface Event {
     updatedAt: Date;
 }
 
-export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt'>;
+export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'questions'> & {
+    questions?: {
+        question: string;
+        questionType: string;
+        options?: string[];
+        required: boolean;
+        order: number;
+    }[];
+};

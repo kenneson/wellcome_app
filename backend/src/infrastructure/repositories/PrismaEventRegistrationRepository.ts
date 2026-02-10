@@ -24,6 +24,20 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
         return bookings.map(b => this.mapToDomain(b));
     }
 
+    // Find registrations with user data for host management screen
+    async findByEventIdWithUser(eventId: string): Promise<EventRegistration[]> {
+        const bookings = await prisma.booking.findMany({
+            where: { eventId },
+            include: {
+                guest: true
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        return bookings.map(b => this.mapToDomain(b));
+    }
+
     async findByUserId(userId: string): Promise<EventRegistration[]> {
         const bookings = await prisma.booking.findMany({
             where: { userId: userId }
@@ -92,6 +106,14 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 id: prismaBooking.guest.id,
                 fullName: prismaBooking.guest.fullName,
                 avatarUrl: prismaBooking.guest.avatarUrl,
+                occupation: prismaBooking.guest.occupation,
+                bio: prismaBooking.guest.bio,
+                website: prismaBooking.guest.website,
+                lookingFor: prismaBooking.guest.lookingFor,
+                city: prismaBooking.guest.city,
+                neighborhood: prismaBooking.guest.neighborhood,
+                languages: prismaBooking.guest.languages,
+                dietaryRestrictions: prismaBooking.guest.dietaryRestrictions,
                 expoPushToken: prismaBooking.guest.expoPushToken,
                 updatedAt: prismaBooking.guest.updatedAt
             } : undefined,

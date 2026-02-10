@@ -2,6 +2,7 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { EventQuestionRepository } from '../../domain/repositories/EventQuestionRepository';
 import { CreateEventDTO, Event } from '../../domain/entities/Event';
 import { prisma } from '../../infrastructure/database/prismaClient';
+import { QuestionType } from '../../domain/value-objects/QuestionType';
 
 export class CreateEventUseCase {
     constructor(
@@ -19,17 +20,14 @@ export class CreateEventUseCase {
         // Since we are moving fast, we can auto-create the user if they don't exist
         const host = await prisma.user.findUnique({ where: { id: data.hostId } });
         if (!host) {
-            console.log(`Host ${data.hostId} not found, creating placeholder user...`);
+            // In a real scenario, we might want to throw an error if the user doesn't exist,
+            // or rely on a trigger. For now, we create a placeholder profile.
             await prisma.user.create({
                 data: {
                     id: data.hostId,
-                    // Lint error said 'fullName' does not exist but 'name' is required? 
-                    // Let's suspect mismatch between schema and client. 
-                    // We will cast to any to bypass the mismatch for now since we verified schema has fullName.
-                    // This is likely due to stale client generation.
                     fullName: `User ${data.hostId.substring(0, 5)}`,
                     username: `user_${data.hostId.substring(0, 5)}`
-                } as any
+                }
             });
         }
 
@@ -41,8 +39,8 @@ export class CreateEventUseCase {
                 data.questions.map((q, index) => ({
                     eventId: event.id,
                     question: q.question,
-                    questionType: q.questionType,
-                    options: q.options,
+                    questionType: q.questionType as QuestionType,
+                    options: q.options || [],
                     required: q.required,
                     order: index
                 }))
