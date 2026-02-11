@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
 import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
+import { eventService } from '@/services/api/EventService';
 
 export default function MyEventsScreen() {
     const router = useRouter();
@@ -47,8 +48,7 @@ export default function MyEventsScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const { error } = await supabase.from('events').delete().eq('id', id);
-                            if (error) throw error;
+                            await eventService.deleteEvent(id);
                             setEvents(prev => prev.filter(e => e.id !== id));
                         } catch (e: any) {
                             Alert.alert('Erro ao excluir', e.message);
@@ -75,7 +75,7 @@ export default function MyEventsScreen() {
                 </Text>
             </View>
             <View style={styles.cardActions}>
-                <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Editar', 'Funcionalidade de edição em breve!')}>
+                <TouchableOpacity style={styles.actionButton} onPress={() => router.push(`/events/${item.id}/edit`)}>
                     <Ionicons name="pencil-outline" size={20} color="#666" />
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(item.id)}>

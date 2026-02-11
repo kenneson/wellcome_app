@@ -1,14 +1,15 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, View } from 'react-native';
 
 interface SelectionCardProps {
     label: string;
+    description?: string;
     selected: boolean;
     onPress: () => void;
     style?: ViewStyle;
 }
 
-export function SelectionCard({ label, selected, onPress, style }: SelectionCardProps) {
+export function SelectionCard({ label, description, selected, onPress, style }: SelectionCardProps) {
     return (
         <TouchableOpacity
             style={[
@@ -19,42 +20,63 @@ export function SelectionCard({ label, selected, onPress, style }: SelectionCard
             onPress={onPress}
             activeOpacity={0.7}
         >
-            <Text style={[
-                styles.text,
-                selected ? styles.textSelected : styles.textUnselected
-            ]}>
-                {label}
-            </Text>
+            <View style={styles.content}>
+                <Text style={[
+                    styles.text,
+                    selected ? styles.textSelected : styles.textUnselected
+                ]}>
+                    {label}
+                </Text>
+                {description && (
+                    <Text style={[
+                        styles.description,
+                        selected ? styles.descriptionSelected : styles.descriptionUnselected
+                    ]}>
+                        {description}
+                    </Text>
+                )}
+            </View>
         </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        paddingVertical: 10,
+        paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 20, // Rounded pill shape
+        borderRadius: 12,
         borderWidth: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
         minWidth: 80,
+    },
+    content: {
+        alignItems: 'flex-start',
     },
     unselected: {
         backgroundColor: '#fff',
         borderColor: '#E0E0E0',
     },
     selected: {
-        backgroundColor: '#FFF0E5', // Light orange background for selected
+        backgroundColor: '#FFF0E5',
         borderColor: '#FF8C42',
     },
     text: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+    description: {
+        fontSize: 13,
     },
     textUnselected: {
         color: '#333',
     },
     textSelected: {
         color: '#FF8C42',
+    },
+    descriptionUnselected: {
+        color: '#666',
+    },
+    descriptionSelected: {
+        color: '#E67A35',
     },
 });

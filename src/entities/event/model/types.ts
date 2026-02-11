@@ -20,6 +20,8 @@ export interface EventDetails {
     title: string;
     description: string;
     coverImage: string | null;
+    accessType: 'OPEN' | 'OPEN_WITH_APPROVAL' | 'PRIVATE' | 'INVITE_ONLY';
+    questions: { question: string; type: 'TEXT' | 'SELECT' | 'MULTI_SELECT'; options?: string[]; required: boolean }[];
 }
 
 export interface EventCreationState {

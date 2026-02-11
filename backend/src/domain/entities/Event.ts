@@ -16,9 +16,36 @@ export interface Event {
     rules: string[];
     hostId: string;
     host?: import('./User').User;
-    bookings?: import('./Booking').Booking[];
+    bookings?: import('./EventRegistration').EventRegistration[]; // Updated reference
+    questions?: import('./EventQuestion').EventQuestion[]; // New relationship
+
+    // Approval fields
+    accessType: import('../value-objects/EventAccessType').EventAccessType;
+    requiresApproval: boolean;
+    allowWaitlist: boolean;
+    autoApproveIfAttended: boolean;
+    autoApproveMinRating: number | null;
+
     createdAt: Date;
     updatedAt: Date;
 }
 
-export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt'>;
+export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'questions'> & {
+    questions?: {
+        question: string;
+        questionType: string;
+        options?: string[];
+        required: boolean;
+        order: number;
+    }[];
+};
+
+export type UpdateEventDTO = Partial<Omit<Event, 'id' | 'hostId' | 'createdAt' | 'updatedAt' | 'host' | 'bookings' | 'questions'>> & {
+    questions?: {
+        question: string;
+        questionType: string;
+        options?: string[];
+        required: boolean;
+        order?: number;
+    }[];
+};

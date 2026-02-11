@@ -68,7 +68,29 @@ export class PrismaUserRepository implements UserRepository {
             languages: prismaUser.languages ?? [],
             dietaryRestrictions: prismaUser.dietaryRestrictions ?? prismaUser.dietary_restrictions ?? [],
             events: prismaUser.events ?? [],
-            bookings: prismaUser.bookings ?? [],
+            bookings: prismaUser.bookings ? prismaUser.bookings.map((b: any) => ({
+                id: b.id,
+                eventId: b.eventId,
+                userId: b.userId,
+                status: b.status,
+                reviewedAt: b.reviewedAt,
+                reviewedBy: b.reviewedBy,
+                rejectionReason: b.rejectionReason,
+                attendedBefore: b.attendedBefore,
+                noShowCount: b.noShowCount,
+                event: b.event ? {
+                    // Start partial event mapping (recursive if needed, but keep simple for User profile)
+                    id: b.event.id,
+                    title: b.event.title,
+                    eventDate: b.event.eventDate,
+                    location: b.event.location,
+                    coverImageUrl: b.event.coverImageUrl,
+                    hostId: b.event.hostId,
+                    host: b.event.host
+                } : undefined,
+                createdAt: b.createdAt,
+                updatedAt: b.updatedAt
+            })) : [],
             updatedAt: prismaUser.updatedAt ?? prismaUser.updated_at ?? null
         };
     }

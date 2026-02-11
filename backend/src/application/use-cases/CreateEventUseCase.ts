@@ -1,34 +1,43 @@
 import { EventRepository } from '../../domain/repositories/EventRepository';
+import { EventQuestionRepository } from '../../domain/repositories/EventQuestionRepository';
+import { UserRepository } from '../../domain/repositories/UserRepository';
 import { CreateEventDTO, Event } from '../../domain/entities/Event';
-import { prisma } from '../../infrastructure/database/prismaClient';
+import { QuestionType } from '../../domain/value-objects/QuestionType';
 
 export class CreateEventUseCase {
-    constructor(private eventRepository: EventRepository) { }
+    constructor(
+        private eventRepository: EventRepository,
+        private eventQuestionRepository: EventQuestionRepository,
+        private userRepository: UserRepository
+    ) { }
 
     async execute(data: CreateEventDTO): Promise<Event> {
-        // Business validation could go here
         if (data.maxGuests < 1) {
             throw new Error('Event must have at least 1 guest');
         }
 
-        // Validate if host exists to prevent Foreign Key Constraint error
-        // Since we are moving fast, we can auto-create the user if they don't exist
-        const host = await prisma.user.findUnique({ where: { id: data.hostId } });
+        // Validate host exists
+        const host = await this.userRepository.findById(data.hostId);
         if (!host) {
-            console.log(`Host ${data.hostId} not found, creating placeholder user...`);
-            await prisma.user.create({
-                data: {
-                    id: data.hostId,
-                    // Lint error said 'fullName' does not exist but 'name' is required? 
-                    // Let's suspect mismatch between schema and client. 
-                    // We will cast to any to bypass the mismatch for now since we verified schema has fullName.
-                    // This is likely due to stale client generation.
-                    fullName: `User ${data.hostId.substring(0, 5)}`,
-                    username: `user_${data.hostId.substring(0, 5)}`
-                } as any
-            });
+            throw new Error('Host user not found');
         }
 
-        return this.eventRepository.create(data);
+        const event = await this.eventRepository.create(data);
+
+        // Save custom questions if any
+        if (data.questions && data.questions.length > 0) {
+            await this.eventQuestionRepository.createMany(
+                data.questions.map((q, index) => ({
+                    eventId: event.id,
+                    question: q.question,
+                    questionType: q.questionType as QuestionType,
+                    options: q.options || [],
+                    required: q.required,
+                    order: index
+                }))
+            );
+        }
+
+        return event;
     }
 }

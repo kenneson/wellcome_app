@@ -1,5 +1,5 @@
 import { Event } from './Event';
-import { Booking } from './Booking';
+import { EventRegistration } from './EventRegistration';
 
 export interface User {
     id: string;
@@ -15,6 +15,7 @@ export interface User {
     languages?: string[];
     dietaryRestrictions?: string[];
     events?: Event[];
-    bookings?: Booking[];
+    bookings?: EventRegistration[];
+    expoPushToken?: string | null;
     updatedAt: Date;
 }

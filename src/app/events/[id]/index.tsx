@@ -14,10 +14,11 @@ export default function EventDetailsScreen() {
     const [joining, setJoining] = useState(false);
     const [isParticipant, setIsParticipant] = useState(false);
     const [isHost, setIsHost] = useState(false);
+    const [participationStatus, setParticipationStatus] = useState<string | null>(null);
     const [participantCount, setParticipantCount] = useState(0);
 
     useEffect(() => {
-        fetchEventDetails();
+        if (id) fetchEventDetails();
     }, [id]);
 
     async function fetchEventDetails() {
@@ -45,14 +46,23 @@ export default function EventDetailsScreen() {
             // Fetch all participants
             const { data: participants, error: pError } = await supabase
                 .from('event_participants')
-                .select('user_id')
+                .select('user_id, status')
                 .eq('event_id', id);
 
             if (pError) throw pError;
 
             // Check if I am in the list
-            const AmIIn = participants.find((p: any) => p.user_id === currentUserId);
-            setIsParticipant(!!AmIIn);
+            const myParticipation = participants.find((p: any) => p.user_id === currentUserId);
+            setIsParticipant(!!myParticipation);
+            if (myParticipation) {
+                setParticipationStatus(myParticipation.status);
+            }
+
+            // Count only approved or all? Usually count only approved for capacity
+            // Assuming the view/table returns all, we might want to filter for count if 'limit' matters
+            // For now, let's count all or just approved?
+            // If backend logic counts bookings for limit, we should stick to that. 
+            // Usually pending spots are reserved or not? Let's treat count as is for now.
             setParticipantCount(participants.length);
 
         } catch (error) {
@@ -65,32 +75,8 @@ export default function EventDetailsScreen() {
 
     async function handleJoin() {
         if (!event) return;
-        setJoining(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                Alert.alert('Login necessário', 'Você precisa estar logado para participar.');
-                return;
-            }
-
-            const { error } = await supabase
-                .from('event_participants')
-                .insert({
-                    event_id: event.id,
-                    user_id: session.user.id
-                });
-
-            if (error) throw error;
-
-            setIsParticipant(true);
-            setParticipantCount(prev => prev + 1);
-            Alert.alert('Bem-vindo!', 'Sua presença foi confirmada.');
-
-        } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Falha ao participar do evento.');
-        } finally {
-            setJoining(false);
-        }
+        // Navigate to the join screen to handle questions and confirmation
+        router.push(`/events/${id}/join`);
     }
 
     async function handleLeave() {
@@ -108,6 +94,7 @@ export default function EventDetailsScreen() {
             if (error) throw error;
 
             setIsParticipant(false);
+            setParticipationStatus(null);
             setParticipantCount(prev => prev - 1);
 
         } catch (error) {
@@ -128,7 +115,7 @@ export default function EventDetailsScreen() {
     if (!event) return null;
 
     const isFull = participantCount >= (event.max_guests || 0);
-    const canJoin = !isFull && !isParticipant && !isHost;
+    // const canJoin = !isFull && !isParticipant && !isHost; 
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -187,15 +174,24 @@ export default function EventDetailsScreen() {
 
             <View style={styles.footer}>
                 {isHost ? (
-                    <TouchableOpacity style={[styles.button, styles.disabledButton]} disabled>
-                        <Text style={styles.buttonText}>Você é o anfitrião</Text>
+                    <TouchableOpacity
+                        style={[styles.button, styles.manageButton]}
+                        onPress={() => router.push(`/events/${id}/registrations`)}
+                    >
+                        <Text style={styles.buttonText}>Gerenciar Inscrições</Text>
                     </TouchableOpacity>
                 ) : isParticipant ? (
-                    <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={handleLeave} disabled={joining}>
+                    <TouchableOpacity
+                        style={[styles.button, styles.secondaryButton, participationStatus === 'PENDING' && styles.pendingButton]}
+                        onPress={handleLeave}
+                        disabled={joining}
+                    >
                         {joining ? (
-                            <ActivityIndicator color="#FF8C42" />
+                            <ActivityIndicator color={participationStatus === 'PENDING' ? "#666" : "#FF8C42"} />
                         ) : (
-                            <Text style={styles.secondaryButtonText}>Cancelar Presença</Text>
+                            <Text style={[styles.secondaryButtonText, participationStatus === 'PENDING' && styles.pendingButtonText]}>
+                                {participationStatus === 'PENDING' ? 'Solicitação Enviada (Cancelar)' : 'Cancelar Presença'}
+                            </Text>
                         )}
                     </TouchableOpacity>
                 ) : isFull ? (
@@ -337,5 +333,15 @@ const styles = StyleSheet.create({
         color: '#FF8C42',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    manageButton: {
+        backgroundColor: '#333',
+    },
+    pendingButton: {
+        borderColor: '#999',
+        backgroundColor: '#f5f5f5',
+    },
+    pendingButtonText: {
+        color: '#666',
     },
 });

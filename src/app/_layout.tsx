@@ -17,6 +17,7 @@ export const unstable_settings = {
 import { UserProfileContext } from '@/context/UserProfileContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/shared/lib/react-query';
+import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -29,6 +30,9 @@ export default function RootLayout() {
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
   const [profileCheckLoading, setProfileCheckLoading] = useState(true);
   const lastUserId = useRef<string | null>(null);
+
+  // Initialize Push Notifications
+  usePushNotifications(session?.user?.id);
 
   // 1. Handle Session
   useEffect(() => {
@@ -67,19 +71,29 @@ export default function RootLayout() {
     lastUserId.current = session.user.id;
 
     try {
+      console.log('Checking profile for user:', session.user.id);
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('occupation, looking_for, city, neighborhood')
+        .select('full_name, occupation, looking_for, city, neighborhood')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid error when no row exists
 
       if (error) {
+        console.error('Error fetching profile:', error);
+        setIsProfileComplete(false);
+      } else if (!profile) {
+        // No profile row exists - treat as incomplete
+        console.log('No profile found for user');
         setIsProfileComplete(false);
       } else {
-        const complete = !!(profile?.occupation && profile?.looking_for && profile?.city && profile?.neighborhood);
+        console.log('Profile data:', profile);
+        // full_name, occupation, city, neighborhood are REQUIRED
+        const complete = !!(profile.full_name && profile.occupation && profile.city && profile.neighborhood);
+        console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
       }
     } catch (e) {
+      console.error('Exception checking profile:', e);
       setIsProfileComplete(false);
     } finally {
       setProfileCheckLoading(false);
@@ -117,9 +131,13 @@ export default function RootLayout() {
       // Allow access to welcome screen
       if (segments[0] === 'welcome') return;
 
-      // Allow access to all routes - user can complete profile later
-      // Only redirect to welcome on first login (handled by auth flow)
+      // Force redirect to welcome/onboarding
+      router.replace('/welcome');
       return;
+    }
+    // Redirect to tabs if on welcome screen but profile is complete
+    else if (session && isProfileComplete === true && segments[0] === 'welcome') {
+      router.replace('/(tabs)');
     }
   }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
 
@@ -150,6 +168,7 @@ export default function RootLayout() {
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
+                <Stack.Screen name="profile/notifications" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen
                   name="welcome"
                   options={{

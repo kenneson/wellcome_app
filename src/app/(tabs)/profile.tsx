@@ -17,11 +17,15 @@ import { supabase } from '@/shared/lib/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useQuery } from '@tanstack/react-query';
 import { userService } from '@/services/api/UserService';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { registrationService } from '@/services/api/RegistrationService';
 
 export default function ProfileScreen() {
     const router = useRouter();
     const [session, setSession] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'history' | 'upcoming'>('history');
+    // ... existing useState
+    const [processing, setProcessing] = useState(false);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,9 +33,44 @@ export default function ProfileScreen() {
         });
     }, []);
 
-    const { data: profile, isLoading, refetch } = useQuery({
+    const { data: profile, isLoading, refetch, error } = useQuery({
         queryKey: ['profile', session?.user?.id],
-        queryFn: () => userService.getProfile(session!.user!.id),
+        queryFn: async () => {
+            try {
+                // Try backend API first
+                const result = await userService.getProfile(session!.user!.id);
+                console.log('Profile from backend:', result);
+                return result;
+            } catch (e) {
+                console.log('Backend failed, falling back to Supabase:', e);
+                // Fallback to direct Supabase query
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session!.user!.id)
+                    .single();
+
+                if (error) throw error;
+                console.log('Profile from Supabase:', data);
+
+                // Map snake_case to camelCase
+                return {
+                    id: data.id,
+                    fullName: data.full_name,
+                    username: data.username,
+                    avatarUrl: data.avatar_url,
+                    bio: data.bio,
+                    occupation: data.occupation,
+                    lookingFor: data.looking_for,
+                    city: data.city,
+                    neighborhood: data.neighborhood,
+                    languages: data.languages || [],
+                    dietaryRestrictions: data.dietary_restrictions || [],
+                    events: [],
+                    bookings: []
+                };
+            }
+        },
         enabled: !!session?.user?.id,
     });
 
@@ -39,7 +78,6 @@ export default function ProfileScreen() {
         useCallback(() => {
             if (session?.user?.id) {
                 refetch();
-                // Note: Profile completion check is handled by _layout.tsx
             }
         }, [session?.user?.id])
     );
@@ -50,6 +88,76 @@ export default function ProfileScreen() {
             if (error) Alert.alert('Erro ao sair', error.message);
         } catch (error) {
             Alert.alert('Erro', 'Ocorreu um erro inesperado.');
+        }
+    }
+
+    async function handleCancelBooking(eventId: string) {
+        if (processing) return;
+        Alert.alert(
+            'Cancelar Solicitação',
+            'Tem certeza que deseja cancelar sua solicitação de inscrição?',
+            [
+                { text: 'Não', style: 'cancel' },
+                {
+                    text: 'Sim, cancelar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setProcessing(true);
+                        try {
+                            await registrationService.cancelBooking(eventId, session.user.id);
+                            refetch(); // Refresh list
+                            Alert.alert('Sucesso', 'Solicitação cancelada.');
+                        } catch (error) {
+                            Alert.alert('Erro', 'Não foi possível cancelar.');
+                        } finally {
+                            setProcessing(false);
+                        }
+                    }
+                }
+            ]
+        );
+    }
+
+    async function handleTestNotification() {
+        if (processing) return;
+        setProcessing(true);
+        try {
+            // Get token from storage or context if available, but for now we rely on what's in DB or re-fetch
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('expo_push_token')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!profile?.expo_push_token) {
+                Alert.alert('Erro', 'Token de notificação não encontrado. Verifique as permissões.');
+                return;
+            }
+
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: profile.expo_push_token,
+                    title: 'Olá!',
+                    body: 'Esta é uma notificação de teste do Wellcome.',
+                    data: { test: true }
+                })
+            });
+
+            if (response.ok) {
+                Alert.alert('Sucesso', 'Notificação enviada! Verifique seu dispositivo.');
+            } else {
+                Alert.alert('Erro', 'Falha ao enviar notificação.');
+            }
+        } catch (error) {
+            Alert.alert('Erro', 'Erro de conexão.');
+            console.error(error);
+        } finally {
+            setProcessing(false);
         }
     }
 
@@ -188,14 +296,21 @@ export default function ProfileScreen() {
                                     Anfitrião: {booking.event?.host?.fullName?.split(' ')[0] || 'Unknown'} •
                                     {new Date(booking.event?.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                                 </Text>
-                                <View style={styles.expStatus}>
-                                    <Ionicons name="checkmark-circle" size={14} color="#FF8C42" />
-                                    <Text style={styles.expStatusText}>{booking.status === 'confirmed' ? 'Confirmado' : booking.status}</Text>
+                                <View style={{ marginTop: 4 }}>
+                                    <StatusBadge status={booking.status} />
                                 </View>
                             </View>
                             {activeTab === 'history' && (
                                 <TouchableOpacity style={styles.rateButton}>
                                     <Text style={styles.rateButtonText}>Avaliar</Text>
+                                </TouchableOpacity>
+                            )}
+                            {activeTab === 'upcoming' && booking.status === 'pending' && (
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={() => handleCancelBooking(booking.event?.id)}
+                                >
+                                    <Text style={styles.cancelButtonText}>Cancelar</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -220,7 +335,7 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/notifications' as any)}>
                     <View style={[styles.menuIconCircle, { backgroundColor: '#E3F2FD' }]}>
                         <Ionicons name="notifications-outline" size={20} color="#2196F3" />
                     </View>
@@ -239,6 +354,11 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={[styles.menuItem, { marginTop: 20 }]} onPress={handleSignOut}>
                     <Text style={[styles.menuText, { color: '#FF3B30' }]}>Sair da conta</Text>
                     <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.menuItem, { marginTop: 20, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, borderBottomWidth: 0 }]} onPress={handleTestNotification}>
+                    <Text style={[styles.menuText, { color: '#666', fontSize: 14 }]}>Testar Notificação Push</Text>
+                    <Ionicons name="paper-plane-outline" size={18} color="#666" />
                 </TouchableOpacity>
 
                 <View style={{ height: 40 }} />
@@ -531,5 +651,19 @@ const styles = StyleSheet.create({
     emptyStateText: {
         color: '#999',
         fontSize: 14,
+    },
+    cancelButton: {
+        backgroundColor: '#FFF5F5',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#FF3B30',
+        marginLeft: 8,
+    },
+    cancelButtonText: {
+        color: '#FF3B30',
+        fontSize: 12,
+        fontWeight: '600',
     },
 });
