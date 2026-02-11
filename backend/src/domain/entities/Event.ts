@@ -39,3 +39,13 @@ export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'que
         order: number;
     }[];
 };
+
+export type UpdateEventDTO = Partial<Omit<Event, 'id' | 'hostId' | 'createdAt' | 'updatedAt' | 'host' | 'bookings' | 'questions'>> & {
+    questions?: {
+        question: string;
+        questionType: string;
+        options?: string[];
+        required: boolean;
+        order?: number;
+    }[];
+};

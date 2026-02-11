@@ -1,5 +1,5 @@
 import { EventRepository } from '../../domain/repositories/EventRepository';
-import { CreateEventDTO, Event } from '../../domain/entities/Event';
+import { CreateEventDTO, UpdateEventDTO, Event } from '../../domain/entities/Event';
 import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRepository implements EventRepository {
@@ -71,7 +71,7 @@ export class PrismaEventRepository implements EventRepository {
     }
 
     private getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-        const R = 6371; // Radius of the earth in km
+        const R = 6371;
         const dLat = this.deg2rad(lat2 - lat1);
         const dLon = this.deg2rad(lon2 - lon1);
         const a =
@@ -79,8 +79,7 @@ export class PrismaEventRepository implements EventRepository {
             Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const d = R * c; // Distance in km
-        return d;
+        return R * c;
     }
 
     private deg2rad(deg: number) {
@@ -93,6 +92,44 @@ export class PrismaEventRepository implements EventRepository {
             include: { bookings: true, host: true }
         });
         return event ? this.mapToDomain(event) : null;
+    }
+
+    async update(id: string, data: UpdateEventDTO): Promise<Event> {
+        const { questions, ...eventData } = data;
+        const updateData: any = {};
+
+        if (eventData.title !== undefined) updateData.title = eventData.title;
+        if (eventData.description !== undefined) updateData.description = eventData.description;
+        if (eventData.price !== undefined) updateData.price = eventData.price;
+        if (eventData.maxGuests !== undefined) updateData.maxGuests = eventData.maxGuests;
+        if (eventData.eventDate !== undefined) updateData.eventDate = eventData.eventDate;
+        if (eventData.location !== undefined) updateData.location = eventData.location;
+        if (eventData.latitude !== undefined) updateData.latitude = eventData.latitude;
+        if (eventData.longitude !== undefined) updateData.longitude = eventData.longitude;
+        if (eventData.coverImageUrl !== undefined) updateData.coverImageUrl = eventData.coverImageUrl;
+        if (eventData.eventType !== undefined) updateData.eventType = eventData.eventType;
+        if (eventData.cuisineTypes !== undefined) updateData.cuisineTypes = eventData.cuisineTypes;
+        if (eventData.vibe !== undefined) updateData.vibe = eventData.vibe;
+        if (eventData.facilities !== undefined) updateData.facilities = eventData.facilities;
+        if (eventData.rules !== undefined) updateData.rules = eventData.rules;
+        if (eventData.accessType !== undefined) updateData.accessType = eventData.accessType;
+        if (eventData.requiresApproval !== undefined) updateData.requiresApproval = eventData.requiresApproval;
+        if (eventData.allowWaitlist !== undefined) updateData.allowWaitlist = eventData.allowWaitlist;
+        if (eventData.autoApproveIfAttended !== undefined) updateData.autoApproveIfAttended = eventData.autoApproveIfAttended;
+        if (eventData.autoApproveMinRating !== undefined) updateData.autoApproveMinRating = eventData.autoApproveMinRating;
+
+        const event = await prisma.event.update({
+            where: { id },
+            data: updateData,
+            include: { bookings: true, host: true }
+        });
+
+        return this.mapToDomain(event);
+    }
+
+    async delete(id: string): Promise<void> {
+        await prisma.eventQuestion.deleteMany({ where: { eventId: id } });
+        await prisma.event.delete({ where: { id } });
     }
 
     private mapToDomain(prismaEvent: any): Event {
@@ -108,9 +145,8 @@ export class PrismaEventRepository implements EventRepository {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,
                 avatarUrl: prismaEvent.host.avatarUrl,
-                expoPushToken: prismaEvent.host.expoPushToken, // Map push token for notifications
+                expoPushToken: prismaEvent.host.expoPushToken,
                 updatedAt: prismaEvent.host.updatedAt
-                // map other user fields if needed
             } : undefined,
             bookings: prismaEvent.bookings ? prismaEvent.bookings.map((b: any) => ({
                 id: b.id,

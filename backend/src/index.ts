@@ -10,6 +10,8 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
+import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
+import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
@@ -67,11 +69,14 @@ const start = async () => {
         // Dependency Injection (Manual for now)
         const eventRepository = new PrismaEventRepository();
         const eventQuestionRepository = new PrismaEventQuestionRepository();
+        const userRepository = new PrismaUserRepository();
         const { notificationService } = require('./application/services/NotificationService'); // Import service
 
-        const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository);
+        const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
-        const eventController = new EventController(createEventUseCase, listEventsUseCase);
+        const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository);
+        const deleteEventUseCase = new DeleteEventUseCase(eventRepository);
+        const eventController = new EventController(createEventUseCase, listEventsUseCase, updateEventUseCase, deleteEventUseCase);
 
         // Auth Dependencies
         const loginUseCase = new LoginUseCase();
@@ -427,7 +432,7 @@ const start = async () => {
         });
 
         // User Dependencies
-        const userRepository = new PrismaUserRepository();
+        // userRepository moved up for CreateEventUseCase
         const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
         const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
@@ -561,6 +566,114 @@ const start = async () => {
                 }
             }
         }, (req, reply) => eventController.getById(req, reply));
+
+        // Update Event
+        fastify.put('/events/:id', {
+            schema: {
+                description: 'Update an event',
+                tags: ['Events'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                },
+                body: {
+                    type: 'object',
+                    required: ['hostId'],
+                    properties: {
+                        hostId: { type: 'string' },
+                        title: { type: 'string' },
+                        description: { type: 'string', nullable: true },
+                        price: { type: 'number' },
+                        maxGuests: { type: 'integer' },
+                        eventDate: { type: 'string', format: 'date-time' },
+                        location: { type: 'string' },
+                        latitude: { type: 'number', nullable: true },
+                        longitude: { type: 'number', nullable: true },
+                        coverImageUrl: { type: 'string', nullable: true },
+                        eventType: { type: 'string', nullable: true },
+                        cuisineTypes: { type: 'array', items: { type: 'string' } },
+                        vibe: { type: 'array', items: { type: 'string' } },
+                        facilities: { type: 'array', items: { type: 'string' } },
+                        rules: { type: 'array', items: { type: 'string' } },
+                        accessType: { type: 'string' },
+                        requiresApproval: { type: 'boolean' },
+                        allowWaitlist: { type: 'boolean' },
+                        autoApproveIfAttended: { type: 'boolean' },
+                        autoApproveMinRating: { type: 'number', nullable: true },
+                        questions: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    question: { type: 'string' },
+                                    questionType: { type: 'string' },
+                                    required: { type: 'boolean' },
+                                    options: { type: 'array', items: { type: 'string' } }
+                                }
+                            }
+                        }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Event updated successfully',
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            description: { type: 'string', nullable: true },
+                            price: { type: 'number' },
+                            maxGuests: { type: 'integer' },
+                            eventDate: { type: 'string' },
+                            location: { type: 'string' },
+                            hostId: { type: 'string' }
+                        }
+                    },
+                    403: {
+                        description: 'Not authorized',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
+                    },
+                    404: {
+                        description: 'Event not found',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
+                    }
+                }
+            }
+        }, (req, reply) => eventController.update(req, reply));
+
+        // Delete Event
+        fastify.delete('/events/:id', {
+            schema: {
+                description: 'Delete an event',
+                tags: ['Events'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                },
+                body: {
+                    type: 'object',
+                    required: ['hostId'],
+                    properties: {
+                        hostId: { type: 'string' }
+                    }
+                },
+                response: {
+                    204: { description: 'Event deleted successfully' },
+                    403: {
+                        description: 'Not authorized',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
+                    },
+                    404: {
+                        description: 'Event not found',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
+                    }
+                }
+            }
+        }, (req, reply) => eventController.delete(req, reply));
 
         const address = await fastify.listen({ port: 3000, host: '0.0.0.0' });
 

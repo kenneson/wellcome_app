@@ -120,6 +120,76 @@ export class EventService {
         }
         return response.json();
     }
+
+    async updateEvent(id: string, data: Partial<EventCreationState>): Promise<Event> {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Usuário não autenticado');
+
+        // Reuse logic from submitEvent to map Frontend State -> Backend DTO
+        const details = data.details;
+        const location = data.location;
+
+        const payload = {
+            title: details?.title,
+            description: details?.description,
+            price: details?.pricePerGuest ? parseFloat(details.pricePerGuest.replace('R$', '').replace('.', '').replace(',', '.') || '0') : undefined,
+            maxGuests: details?.maxGuests ? parseInt(details.maxGuests) : undefined,
+            eventDate: details?.date ? details.date.toISOString() : undefined,
+            location: location?.address,
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+            coverImageUrl: details?.coverImage,
+            hostId: session.user.id,
+            eventType: data.eventType,
+            cuisineTypes: data.cuisineTypes,
+            vibe: data.vibe,
+            facilities: location?.facilities,
+            rules: location?.rules,
+            accessType: details?.accessType,
+            questions: details?.questions
+        };
+
+        // Remove undefined keys to allow partial updates if backend supports it
+        // But PUT usually expects full resource or PATCH expects partial.
+        // Our backend UpdateEventDTO allows partials (all fields optional).
+        // So we should clean undefined.
+        const cleanPayload = Object.fromEntries(Object.entries(payload).filter(([_, v]) => v !== undefined));
+
+        const response = await fetch(`${API_URL}/events/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(cleanPayload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao atualizar evento');
+        }
+
+        return await response.json();
+    }
+
+    async deleteEvent(id: string): Promise<void> {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Usuário não autenticado');
+
+        const response = await fetch(`${API_URL}/events/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostId: session.user.id
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao excluir evento');
+        }
+    }
 }
 
 export const eventService = new EventService();

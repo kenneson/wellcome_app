@@ -119,6 +119,38 @@ export function useEventCreationViewModel() {
         await eventService.submitEvent(data);
     };
 
+    const loadEvent = (event: any) => {
+        // Map backend event to state
+        setData(prev => ({
+            ...prev,
+            eventType: event.event_type || '', // Handle snake_case from DB
+            cuisineTypes: event.cuisine_types || [],
+            vibe: event.vibe || [],
+            location: {
+                address: event.location,
+                latitude: event.latitude,
+                longitude: event.longitude,
+                facilities: event.facilities || [],
+                rules: event.rules || [],
+            },
+            details: {
+                pricePerGuest: event.price?.toString() || '',
+                maxGuests: event.max_guests?.toString() || '',
+                date: event.event_date ? new Date(event.event_date) : null,
+                registrationDeadline: null, // Not in DB yet?
+                title: event.title,
+                description: event.description,
+                coverImage: event.cover_image_url,
+                accessType: event.access_type || 'OPEN',
+                questions: event.questions || []
+            },
+            // Defaulting others for now as they might not be in DB or mapped differently
+            veganOptions: false,
+            substitutions: false,
+            menuAlterations: false,
+        }));
+    };
+
     return {
         data,
         setEventType,
@@ -136,6 +168,7 @@ export function useEventCreationViewModel() {
         submitEvent,
         setAccessType,
         addQuestion,
-        removeQuestion
+        removeQuestion,
+        loadEvent
     };
 }

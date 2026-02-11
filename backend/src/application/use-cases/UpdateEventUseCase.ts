@@ -1,34 +1,30 @@
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { EventQuestionRepository } from '../../domain/repositories/EventQuestionRepository';
-import { UserRepository } from '../../domain/repositories/UserRepository';
-import { CreateEventDTO, Event } from '../../domain/entities/Event';
+import { Event, UpdateEventDTO } from '../../domain/entities/Event';
 import { QuestionType } from '../../domain/value-objects/QuestionType';
 
-export class CreateEventUseCase {
+export class UpdateEventUseCase {
     constructor(
         private eventRepository: EventRepository,
-        private eventQuestionRepository: EventQuestionRepository,
-        private userRepository: UserRepository
+        private eventQuestionRepository: EventQuestionRepository
     ) { }
 
-    async execute(data: CreateEventDTO): Promise<Event> {
-        if (data.maxGuests < 1) {
-            throw new Error('Event must have at least 1 guest');
+    async execute(eventId: string, hostId: string, data: UpdateEventDTO): Promise<Event> {
+        const event = await this.eventRepository.findById(eventId);
+        if (!event) {
+            throw new Error('Event not found');
         }
 
-        // Validate host exists
-        const host = await this.userRepository.findById(data.hostId);
-        if (!host) {
-            throw new Error('Host user not found');
+        if (event.hostId !== hostId) {
+            throw new Error('Only the host can update this event');
         }
 
-        const event = await this.eventRepository.create(data);
-
-        // Save custom questions if any
+        // Update questions if provided
         if (data.questions && data.questions.length > 0) {
+            await this.eventQuestionRepository.deleteByEventId(eventId);
             await this.eventQuestionRepository.createMany(
                 data.questions.map((q, index) => ({
-                    eventId: event.id,
+                    eventId,
                     question: q.question,
                     questionType: q.questionType as QuestionType,
                     options: q.options || [],
@@ -38,6 +34,7 @@ export class CreateEventUseCase {
             );
         }
 
-        return event;
+        const { questions, ...eventData } = data;
+        return this.eventRepository.update(eventId, eventData);
     }
 }

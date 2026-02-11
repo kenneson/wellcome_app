@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { SelectionCard } from '@/components/ui/SelectionCard';
+import { SelectionSection } from '@/components/ui/SelectionSection';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -41,54 +42,8 @@ const VIBES = [
 // Types
 // ============================================================================
 
-interface SelectionSectionProps {
-    title: string;
-    subtitle?: string;
-    items: readonly string[];
-    selectedItems: string | string[];
-    onSelect: (item: string) => void;
-    isMultiSelect?: boolean;
-}
-
-// ============================================================================
-// Sub-components
-// ============================================================================
-
-const SelectionSection = React.memo<SelectionSectionProps>(({
-    title,
-    subtitle,
-    items,
-    selectedItems,
-    onSelect,
-    isMultiSelect = false,
-}) => {
-    const isSelected = useCallback((item: string) => {
-        if (isMultiSelect && Array.isArray(selectedItems)) {
-            return selectedItems.includes(item);
-        }
-        return selectedItems === item;
-    }, [selectedItems, isMultiSelect]);
-
-    return (
-        <>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
-            <View style={styles.grid}>
-                {items.map((item) => (
-                    <SelectionCard
-                        key={item}
-                        label={item}
-                        selected={isSelected(item)}
-                        onPress={() => onSelect(item)}
-                        style={styles.card}
-                    />
-                ))}
-            </View>
-        </>
-    );
-});
-
-SelectionSection.displayName = 'SelectionSection';
+// Local types removed as they are now in shared component or inferred
+// SelectionSection moved to @/components/ui/SelectionSection
 
 // ============================================================================
 // Main Component
