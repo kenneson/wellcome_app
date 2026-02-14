@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Better to use environment variables, but for now we'll use placeholders
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://cmkknuvydqetzmdpzzqv.supabase.co';
+export const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://cmkknuvydqetzmdpzzqv.supabase.co';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_NcU_Jp3xZY6SKd-x5uY0gg_AXXWZvM2';
 
 const ExpoStorage = {

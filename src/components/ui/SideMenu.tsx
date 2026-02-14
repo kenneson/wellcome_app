@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -14,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/shared/lib/supabase';
 import { DEFAULT_AVATAR_PLACEHOLDER, createShadow } from '@/shared/lib/styles';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 
 const { width } = Dimensions.get('window');
 const MENU_WIDTH = Math.min(width * 0.75, 280);
@@ -86,8 +88,10 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                 <View style={styles.header}>
                     <View style={styles.userInfo}>
                         <Image
-                            source={{ uri: user?.avatar_url || DEFAULT_AVATAR_PLACEHOLDER }}
+                            source={{ uri: getOptimizedImageUrl(user?.avatar_url, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
                             style={styles.avatar}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
                         />
                         <View style={styles.userText}>
                             <Text style={styles.userName} numberOfLines={1}>

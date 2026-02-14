@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +9,7 @@ import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
 import { RegistrationStatus } from '@/entities/event/types';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 
 export default function EventRegistrationsScreen() {
     const { id } = useLocalSearchParams();
@@ -83,8 +85,10 @@ export default function EventRegistrationsScreen() {
         <View style={styles.card}>
             <View style={styles.cardHeader}>
                 <Image
-                    source={{ uri: item.user?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }}
+                    source={{ uri: getOptimizedImageUrl(item.user?.avatarUrl, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
                     style={styles.avatar}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
                 />
                 <View style={styles.userInfo}>
                     <View style={styles.headerTop}>

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Dimensions } from '@/shared/constants/theme';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { formatPrice, formatEventDate, formatSpotsAvailable } from '@/utils/formatters';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 
 interface EnhancedEventCardProps {
   event: {
@@ -40,6 +41,7 @@ interface EnhancedEventCardProps {
 export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
   // Support both snake_case (from Supabase) and camelCase (from API)
   const coverImageUrl = event.cover_image_url || event.coverImageUrl;
+  const optimizedCoverImage = getOptimizedImageUrl(coverImageUrl, { width: 600 });
   const eventDate = event.event_date || event.eventDate;
   const endTime = event.end_time || event.endTime;
   const maxGuests = event.max_guests || event.maxGuests || 0;
@@ -85,10 +87,11 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
       {/* Image with badges */}
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: coverImageUrl || DEFAULT_PLACEHOLDER_IMAGE }}
+          source={{ uri: optimizedCoverImage || DEFAULT_PLACEHOLDER_IMAGE }}
           style={styles.image}
           contentFit="cover"
           transition={200}
+          cachePolicy="memory-disk"
           placeholder={DEFAULT_PLACEHOLDER_IMAGE}
           accessible={true}
           accessibilityLabel={`Imagem do evento ${event.title}`}
