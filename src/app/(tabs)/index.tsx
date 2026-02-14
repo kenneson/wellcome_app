@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, StatusBar, RefreshControl, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
@@ -11,11 +11,16 @@ import { SideMenu } from '@/components/ui/SideMenu';
 import { FilterModal, FilterCriteria } from '@/components/ui/events/FilterModal';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
+import { Colors, Spacing, Dimensions, BorderRadius } from '@/shared/constants/theme';
+import { formatPrice, formatEventDate, formatSpotsAvailable } from '@/utils/formatters';
+import { QuickStats } from '@/components/ui/QuickStats';
+import { EnhancedEventCard } from '@/components/ui/EnhancedEventCard';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [location, setLocation] = useState<string | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
@@ -258,16 +263,33 @@ export default function HomeScreen() {
     </View>
   );
 
-  const getSpotsLabel = (event: any) => {
-    // @ts-ignore
-    const taken = event.event_participants?.[0]?.count || 0;
-    const total = event.max_guests || 0;
-    const remaining = total - taken;
+  // Calculate quick stats from events
+  const getQuickStats = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    if (remaining <= 0) return 'Esgotado';
-    if (remaining === 1) return '1 disponível';
-    return `${remaining} disponíveis`;
+    const eventsToday = events.filter(e => {
+      const eventDate = new Date(e.event_date);
+      return eventDate >= today && eventDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    }).length;
+
+    const eventsThisWeek = events.filter(e => {
+      const eventDate = new Date(e.event_date);
+      return eventDate >= today && eventDate < weekFromNow;
+    }).length;
+
+    // Count unique hosts from recent events
+    const uniqueHosts = new Set(events.map(e => e.host_id)).size;
+
+    return {
+      eventsToday,
+      eventsThisWeek,
+      newHosts: uniqueHosts,
+    };
   };
+
+  const quickStats = getQuickStats();
 
   // MOCK DATA for UI
   const CATEGORIES = [
@@ -283,115 +305,156 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header Customizado */}
       <View style={styles.mainHeader}>
-        <TouchableOpacity onPress={() => setMenuVisible(true)}>
-          <Ionicons name="menu" size={28} color="#FFF" />
+        <TouchableOpacity 
+          onPress={() => setMenuVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir menu de navegação"
+          accessibilityHint="Toque para ver opções de navegação e configurações"
+          style={styles.headerButton}
+        >
+          <Ionicons name="menu" size={Dimensions.icon.xlarge} color="#FFF" />
         </TouchableOpacity>
         <Image
           source={require('../../../assets/images/logo.png')}
           style={styles.logoImage}
           contentFit="contain"
           tintColor="#FFF"
+          accessible={true}
+          accessibilityLabel="Logo Wellcome"
         />
-        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+        <TouchableOpacity 
+          onPress={() => router.push('/(tabs)/profile')}
+          accessibilityRole="button"
+          accessibilityLabel="Ir para perfil"
+          accessibilityHint="Toque para ver seu perfil e configurações"
+          style={styles.headerButton}
+        >
           <Ionicons name="person-circle-outline" size={30} color="#FFF" />
         </TouchableOpacity>
       </View>
 
       {/* Location Search Bar */}
-      <TouchableOpacity style={styles.searchBar} onPress={openLocationModal}>
-        <Ionicons name="location-outline" size={20} color="#666" />
+      <TouchableOpacity 
+        style={styles.searchBar} 
+        onPress={openLocationModal}
+        accessibilityRole="button"
+        accessibilityLabel={`Localização atual: ${location || 'não definida'}`}
+        accessibilityHint="Toque para alterar sua localização"
+      >
+        <Ionicons name="location-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
         <Text style={styles.searchText} numberOfLines={1}>
-          {loadingLocation ? 'Buscando...' : location || 'Definir localização'}
+          {loadingLocation ? 'Buscando localização...' : location || 'Definir localização'}
         </Text>
-        <Ionicons name="search-outline" size={20} color="#666" />
+        {loadingLocation ? (
+          <ActivityIndicator size="small" color={Colors.light.primary} />
+        ) : (
+          <Ionicons name="search-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
+        )}
       </TouchableOpacity>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF8C42']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.primary]} />}
       >
+        {/* Quick Stats */}
+        <QuickStats 
+          eventsToday={quickStats.eventsToday}
+          eventsThisWeek={quickStats.eventsThisWeek}
+          newHosts={quickStats.newHosts}
+        />
+
+        {/* Section Header */}
+        <Text style={styles.sectionTitle}>Explorar por categoria</Text>
+
         {/* Categories Carousel */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.categoriesContainer}
+          accessibilityLabel="Categorias de eventos"
+        >
           {CATEGORIES.map(cat => (
-            <View key={cat.id} style={styles.categoryCard}>
-              <Image source={{ uri: cat.image }} style={styles.categoryImage} />
+            <TouchableOpacity 
+              key={cat.id} 
+              style={styles.categoryCard}
+              accessibilityRole="button"
+              accessibilityLabel={`Categoria ${cat.name}`}
+              accessibilityHint="Toque para filtrar eventos por esta categoria"
+              activeOpacity={0.8}
+            >
+              <Image 
+                source={{ uri: cat.image }} 
+                style={styles.categoryImage}
+                accessible={true}
+                accessibilityLabel={`Imagem da categoria ${cat.name}`}
+              />
               <View style={styles.categoryOverlay} />
               <Text style={styles.categoryText}>{cat.name}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
-        <Text style={styles.sectionTitle}>Eventos disponíveis agora:</Text>
+        {/* Section Header */}
+        <Text style={styles.sectionTitle}>Eventos próximos a você</Text>
 
         {/* Filter Pills */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
-          <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]} onPress={() => setFilterModalVisible(true)}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.filtersContainer}
+          accessibilityLabel="Filtros de eventos"
+        >
+          <TouchableOpacity 
+            style={[styles.filterChip, styles.filterChipActive]} 
+            onPress={() => setFilterModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir filtros avançados"
+            accessibilityHint="Toque para filtrar eventos por preço, culinária e clima"
+          >
             <Ionicons name="options" size={16} color="#FFF" style={{ marginRight: 6 }} />
             <Text style={styles.filterTextActive}>Filtros</Text>
           </TouchableOpacity>
 
           {FILTERS.map((f, i) => (
-            <TouchableOpacity key={i} style={styles.filterChip}>
+            <TouchableOpacity 
+              key={i} 
+              style={styles.filterChip}
+              accessibilityRole="button"
+              accessibilityLabel={`Filtrar por ${f}`}
+              accessibilityHint={`Toque para abrir opções de ${f}`}
+            >
               <Text style={styles.filterText}>{f}</Text>
-              <Ionicons name="chevron-down" size={12} color="#666" style={{ marginLeft: 4 }} />
+              <Ionicons name="chevron-down" size={12} color={Colors.light.textSecondary} style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         {/* Events List */}
         {loadingEvents ? (
-          <ActivityIndicator size="large" color="#FF8C42" style={{ marginTop: 20 }} />
+          <View style={styles.loadingContainer} accessible={true} accessibilityLabel="Carregando eventos">
+            <ActivityIndicator size="large" color={Colors.light.primary} />
+            <Text style={styles.loadingText}>Carregando eventos...</Text>
+          </View>
         ) : events.length === 0 ? (
           renderEmptyState()
         ) : (
           events.map((event) => (
-            <TouchableOpacity key={event.id} style={styles.feedCard} onPress={() => router.push(`/events/${event.id}`)}>
-              {/* Image & Rating */}
-              <View>
-                <Image source={{ uri: event.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }} style={styles.cardImage} />
-                <View style={styles.ratingBadge}>
-                  <Ionicons name="star" size={12} color="#FF8C42" />
-                  <Text style={styles.ratingText}>4,5</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{event.title}</Text>
-
-                <View style={styles.hostRow}>
-                  <Text style={styles.hostName}>{event.host?.full_name}</Text>
-                  <Ionicons name="checkmark-circle" size={14} color="#FF8C42" style={{ marginLeft: 4 }} />
-                </View>
-
-                <Text style={styles.cardLocation}>{event.location}</Text>
-
-                {/* Date Row */}
-                <Text style={styles.cardContext}>
-                  {new Date(event.event_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} - às {new Date(event.event_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-
-                {/* Footer: Spots + Price */}
-                <View style={styles.cardFooter}>
-                  <Text style={styles.spotsText}>
-                    {event.max_guests} lugares • {getSpotsLabel(event)}
-                  </Text>
-                  <View style={styles.priceContainer}>
-                    <Text style={styles.priceText}>
-                      {event.price && Number(event.price) > 0 ? `R$ ${parseFloat(event.price).toFixed(2).replace('.', ',')}` : 'Grátis'}
-                    </Text>
-                    <Text style={styles.priceSub}>por convidado</Text>
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
+            <EnhancedEventCard
+              key={event.id}
+              event={event}
+              onPress={() => router.push(`/events/${event.id}`)}
+            />
           ))
         )}
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: 30 + insets.bottom }]}
         onPress={() => router.push('/events/create')}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Criar novo evento"
+        accessibilityHint="Toque para criar um novo evento gastronômico"
       >
         <Ionicons name="add" size={32} color="#FFF" />
       </TouchableOpacity>
@@ -431,30 +494,35 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff', // Status bar handles orange top
+    backgroundColor: Colors.light.background,
   },
   mainHeader: {
-    backgroundColor: '#FF8C42',
+    backgroundColor: Colors.light.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  headerButton: {
+    minWidth: Dimensions.touchTarget.min,
+    minHeight: Dimensions.touchTarget.min,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoImage: {
-    width: 100,
-    height: 30,
+    width: Dimensions.logo.width,
+    height: Dimensions.logo.height,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    margin: 16,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: Colors.light.card,
+    margin: Spacing.lg,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
-    borderColor: '#eee',
-    // Shadow
+    borderColor: Colors.light.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -463,23 +531,32 @@ const styles = StyleSheet.create({
   },
   searchText: {
     flex: 1,
-    marginLeft: 8,
-    color: '#333',
+    marginLeft: Spacing.sm,
+    color: Colors.light.text,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    color: Colors.light.textSecondary,
+    fontSize: 14,
   },
   scrollContent: {
     paddingBottom: 90,
   },
   // Categories
   categoriesContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
     flexDirection: 'row',
   },
   categoryCard: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-    marginRight: 10,
+    width: Dimensions.categoryCard.width,
+    height: Dimensions.categoryCard.height,
+    borderRadius: BorderRadius.md,
+    marginRight: Spacing.md,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -502,140 +579,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: 'bold',
-    color: '#000',
-    marginLeft: 16,
-    marginBottom: 12,
+    color: Colors.light.text,
+    marginLeft: Spacing.lg,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
+    letterSpacing: -0.5,
   },
   // Filters
   filtersContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
     flexDirection: 'row',
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 8,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    marginRight: Spacing.sm,
+    minHeight: Dimensions.touchTarget.min,
+    justifyContent: 'center',
   },
   filterChipActive: {
-    backgroundColor: '#FF8C42',
+    backgroundColor: Colors.light.primary,
     borderWidth: 0,
   },
   filterText: {
     fontSize: 14,
-    color: '#333',
+    color: Colors.light.text,
   },
   filterTextActive: {
     fontSize: 14,
     color: '#FFF',
     fontWeight: '600',
   },
-  // Card
-  feedCard: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  cardImage: {
-    width: '100%',
-    height: 180,
-    backgroundColor: '#eee',
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#FFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    elevation: 2,
-  },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
-    color: '#333',
-  },
-  cardContent: {
-    padding: 16,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 4,
-  },
-  hostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  hostName: {
-    fontSize: 14,
-    color: '#555',
-  },
-  cardLocation: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
-    marginBottom: 8,
-  },
-  cardContext: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  spotsText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  priceText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  priceSub: {
-    fontSize: 10,
-    color: '#999',
-  },
-  // OLD STYLES KEPT FOR SAFTEY (can be cleaned)
+  // Floating Action Button
   fab: {
     position: 'absolute',
-    bottom: 30, // Adjusted since tab bar is fixed
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FF8C42',
+    right: Spacing.xl,
+    width: Dimensions.fab.size,
+    height: Dimensions.fab.size,
+    borderRadius: Dimensions.fab.borderRadius,
+    backgroundColor: Colors.light.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
@@ -646,8 +635,8 @@ const styles = StyleSheet.create({
   },
   emptyStateContainer: {
     alignItems: 'center',
-    padding: 32,
-    marginTop: 20,
+    padding: Spacing.xxxl,
+    marginTop: Spacing.xl,
   },
   emptyStateIconContainer: {
     width: 120,
@@ -656,29 +645,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xxl,
   },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.light.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   emptyStateBody: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.light.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: Spacing.xxxl,
     lineHeight: 22,
     maxWidth: '80%',
   },
   createEventButton: {
-    backgroundColor: '#FF8C42',
+    backgroundColor: Colors.light.primary,
     paddingVertical: 14,
-    paddingHorizontal: 32,
+    paddingHorizontal: Spacing.xxxl,
     borderRadius: 25,
-    shadowColor: '#FF8C42',
+    shadowColor: Colors.light.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -688,84 +677,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  modalInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  useGpsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingVertical: 8,
-  },
-  useGpsText: {
-    color: '#FF8C42',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  saveButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#FF8C42',
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
   },
 });

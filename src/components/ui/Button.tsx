@@ -1,15 +1,26 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, type TouchableOpacityProps } from 'react-native';
-import { cn } from '@/shared/lib/utils';
+import { type TouchableOpacityProps, StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { cssInterop } from 'nativewind';
+import RButton from '@/shared/ui/base/button';
 import { Colors } from '@/shared/constants/theme';
+import { cn } from '@/shared/lib/utils'; // Assuming this exists, used for merging existing classes if needed
+
+// Make Reacticx Button compatible with NativeWind
+const ReacticxButton = cssInterop(RButton, {
+    className: 'style',
+    loadingTextStyle: 'loadingTextStyle'
+});
 
 interface ButtonProps extends TouchableOpacityProps {
     variant?: 'default' | 'destructive' | 'outline' | 'ghost' | 'secondary' | 'link';
     size?: 'default' | 'sm' | 'lg' | 'icon';
     isLoading?: boolean;
     children: React.ReactNode;
-    className?: string;
+    className?: string; // NativeWind class
     textClassName?: string;
+    // Support bypassing variant styles
+    width?: number;
+    height?: number;
 }
 
 export function Button({
@@ -20,59 +31,121 @@ export function Button({
     className,
     textClassName,
     disabled,
+    style,
     ...props
 }: ButtonProps) {
-    const baseStyles = "flex-row items-center justify-center rounded-md font-medium disabled:opacity-50";
 
-    const variants = {
-        default: "bg-slate-900",
-        destructive: "bg-red-500",
-        outline: "border border-slate-200 bg-transparent",
-        secondary: "bg-slate-100",
-        ghost: "bg-transparent", // hover effect is tricky in React Native without Pressable state
-        link: "bg-transparent underline-offset-4"
+    // Map variants to specific styles (colors)
+    const variantStyles: Record<string, {
+        backgroundColor: string;
+        textColor: string;
+        borderStyle?: StyleProp<ViewStyle>;
+    }> = {
+        default: {
+            backgroundColor: '#0f172a', // slate-900
+            textColor: '#f8fafc' // slate-50
+        },
+        destructive: {
+            backgroundColor: '#ef4444', // red-500
+            textColor: '#f8fafc'
+        },
+        outline: {
+            backgroundColor: 'transparent',
+            textColor: '#0f172a', // slate-900
+            borderStyle: { borderWidth: 1, borderColor: '#e2e8f0' } // slate-200
+        },
+        secondary: {
+            backgroundColor: '#f1f5f9', // slate-100
+            textColor: '#0f172a'
+        },
+        ghost: {
+            backgroundColor: 'transparent',
+            textColor: '#0f172a'
+        },
+        link: {
+            backgroundColor: 'transparent',
+            textColor: '#0f172a'
+        },
     };
 
-    const sizes = {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10"
+    // Map sizes to dimensions
+    const sizeStyles: Record<string, { height: number; paddingHorizontal?: number; width?: number }> = {
+        default: { height: 40, paddingHorizontal: 16 },
+        sm: { height: 36, paddingHorizontal: 12 },
+        lg: { height: 44, paddingHorizontal: 32 },
+        icon: { height: 40, width: 40, paddingHorizontal: 0 },
     };
 
-    const textBaseStyles = "text-sm font-medium";
+    const currentVariant = variantStyles[variant] || variantStyles.default;
+    const currentSize = sizeStyles[size] || sizeStyles.default;
 
-    const textVariants = {
-        default: "text-slate-50",
-        destructive: "text-slate-50",
-        outline: "text-slate-900",
-        secondary: "text-slate-900",
-        ghost: "text-slate-900",
-        link: "text-slate-900 underline"
-    };
-
-    const containerStyle = cn(baseStyles, variants[variant], sizes[size], className);
-    const textStyle = cn(textBaseStyles, textVariants[variant], textClassName);
+    // Reacticx Button expects explicit width/height sometimes, but supports style override.
+    // We pass explicit height to ensure animation works correctly if it relies on it.
 
     return (
-        <TouchableOpacity
-            className={containerStyle}
-            activeOpacity={0.7}
+        <ReacticxButton
+            onPress={props.onPress}
             disabled={disabled || isLoading}
-            {...props}
+            isLoading={isLoading}
+            // Colors
+            backgroundColor={currentVariant.backgroundColor}
+            loadingTextColor={currentVariant.textColor}
+            loadingTextBackgroundColor={currentVariant.backgroundColor} // When loading, keep same bg? Or maybe slightly different
+
+            // Dimensions
+            height={currentSize.height}
+            width={currentSize.width} // Undefined for non-icon, handled by style? 
+            // Reacticx defaults width=200. We need to override this.
+
+            // Text Styles (passed as children usually, but Reacticx renders children inside)
+            // We can style the text inside children if it's a Text component.
+            // If children is string, Reacticx doesn't auto-wrap in Text with specific style?
+            // Let's check Reacticx implementation. It just renders {children}.
+            // So we need to ensure children is a Text component with correct color.
+
+            // Style overrides
+            style={[
+                // If width is undefined in currentSize (default/sm/lg), we want flexible width
+                // But Reacticx forces width prop. 
+                // We should pass width via style to override default 200.
+                !currentSize.width && { width: 'auto', minWidth: currentSize.paddingHorizontal ? currentSize.paddingHorizontal * 2 : undefined },
+
+                // Add padding manually since Reacticx uses centered Flexbox
+                { paddingHorizontal: currentSize.paddingHorizontal },
+
+                currentVariant.borderStyle,
+
+                // NativeWind will pass style via className, but we also pass style prop
+                style
+            ]}
+            className={className} // Passed to style via cssInterop
+
+            // Props for loading
+            loadingText="Carregando..."
+            showLoadingIndicator={true}
         >
-            {isLoading ? (
-                <ActivityIndicator
-                    size="small"
-                    color={variant === 'outline' || variant === 'ghost' || variant === 'secondary' ? Colors.light.text : '#fff'}
-                    className="mr-2"
-                />
-            ) : null}
+            {/* If children is string, wrap in Text to apply variant color */}
             {typeof children === 'string' ? (
-                <Text className={textStyle}>{children}</Text>
-            ) : (
-                children
-            )}
-        </TouchableOpacity>
+                <React.Fragment>
+                    {/* We use a text element that supports className or style */}
+                    <CommonText
+                        className={cn("font-medium text-sm", textClassName)}
+                        style={{ color: currentVariant.textColor }}
+                    >
+                        {children}
+                    </CommonText>
+                </React.Fragment>
+            ) : children}
+        </ReacticxButton>
     );
+}
+
+// Temporary Text wrapper if needed, or just import Text
+import { Text } from 'react-native';
+function CommonText({ children, style, className }: { children: React.ReactNode, style?: any, className?: string }) {
+    // We can just use standard Text with className if configured, or just pass style
+    // Since we don't know if Text is interop'd globally for className (usually yes in strict nativewind)
+    // We'll create a quick wrapper.
+    const SimpleText = cssInterop(Text, { className: 'style' });
+    return <SimpleText style={style} className={className}>{children}</SimpleText>;
 }

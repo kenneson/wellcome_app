@@ -14,8 +14,11 @@ export interface User {
     neighborhood?: string | null;
     languages?: string[];
     dietaryRestrictions?: string[];
+    birthDecade?: string | null;
+    pets?: string | null;
     events?: Event[];
     bookings?: EventRegistration[];
     expoPushToken?: string | null;
     updatedAt: Date;
 }
+

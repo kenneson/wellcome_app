@@ -23,6 +23,47 @@ export interface EventQuestion {
     order: number;
 }
 
+export interface EventHost {
+    id: string;
+    fullName: string;
+    username?: string | null;
+    email?: string | null;
+    avatarUrl: string | null;
+    occupation?: string;
+    bio?: string;
+    city?: string;
+    neighborhood?: string;
+    languages?: string[];
+    birthDecade?: string;
+    pets?: string;
+    expoPushToken?: string | null;
+    updatedAt: string;
+}
+
+export interface EventDish {
+    id: string;
+    eventId: string;
+    name: string;
+    description?: string;
+    category?: string;
+    order?: number;
+    createdAt: string;
+}
+
+export interface EventReview {
+    id: string;
+    eventId: string;
+    userId: string;
+    rating: number;
+    comment?: string;
+    createdAt: string;
+    user?: {
+        id: string;
+        fullName: string;
+        avatarUrl: string | null;
+    };
+}
+
 export interface Event {
     id: string;
     title: string;
@@ -34,11 +75,21 @@ export interface Event {
     latitude?: number | null;
     longitude?: number | null;
     coverImageUrl?: string | null;
+    imageGallery?: string[];
+    eventType?: string;
+    endTime?: string | null;
+    reservationDeadline?: string | null;
+    dietaryOptions?: string[];
     hostId: string;
+    host?: EventHost;
     accessType: EventAccessType;
     requiresApproval: boolean;
     questions?: EventQuestion[];
     bookings?: EventRegistration[];
+    dishes?: EventDish[];
+    reviews?: EventReview[];
+    facilities?: string[];
+    rules?: string[];
     createdAt: string;
     updatedAt: string;
 }

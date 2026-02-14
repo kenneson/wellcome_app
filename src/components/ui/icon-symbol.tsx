@@ -23,11 +23,18 @@ const MAPPING = {
   'person': 'person-outline',
   'calendar': 'event',
   'plus.circle': 'add-circle',
+  'plus': 'add',
   'bell': 'notifications',
   'gear': 'settings',
   'rectangle.portrait.and.arrow.right': 'logout',
   'checkmark.circle': 'check-circle',
+  'checkmark': 'check',
   'magnifyingglass': 'search',
+  'trash': 'delete',
+  'location.fill': 'my-location',
+  'mappin.and.ellipse': 'place',
+  'list.bullet': 'format-list-bulleted',
+  'info.circle': 'info',
 } as IconMapping;
 
 /**

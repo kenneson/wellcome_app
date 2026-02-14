@@ -1,12 +1,11 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
-import { SelectionCard } from '@/components/ui/SelectionCard';
 import { SelectionSection } from '@/components/ui/SelectionSection';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 
 // ============================================================================
 // Constants
@@ -33,17 +32,7 @@ const CUISINE_TYPES = [
     'Vegana', 'Vegetariana'
 ] as const;
 
-const VIBES = [
-    'Família', 'Networking', 'Espiritual', 'Casual',
-    'Romântico', 'Festa', 'Jantar a dois', 'Negócios'
-] as const;
-
-// ============================================================================
-// Types
-// ============================================================================
-
-// Local types removed as they are now in shared component or inferred
-// SelectionSection moved to @/components/ui/SelectionSection
+// Desired design has no "Vibe" section in Step 1.
 
 // ============================================================================
 // Main Component
@@ -51,15 +40,21 @@ const VIBES = [
 
 export default function EventCreateStep1() {
     const router = useRouter();
-    const { data, setEventType, toggleCuisineType, toggleVibe } = useEventCreation();
+    const { data, setEventType, toggleCuisineType, updateDetails } = useEventCreation();
+    const insets = useSafeAreaInsets();
+    const { width } = useWindowDimensions();
 
-    // Memoize validation state
+    const isSmallScreen = width < 375;
+    const horizontalPadding = isSmallScreen ? 16 : width >= 414 ? 24 : 20;
+
     const canProceed = useMemo(() => {
-        return data.eventType && data.cuisineTypes.length > 0;
-    }, [data.eventType, data.cuisineTypes.length]);
-
-    // Memoize vibe array to prevent unnecessary renders
-    const selectedVibes = useMemo(() => data.vibe ?? [], [data.vibe]);
+        return (
+            data.eventType &&
+            data.cuisineTypes.length > 0 &&
+            data.details.title?.trim() &&
+            data.details.description?.trim()
+        );
+    }, [data.eventType, data.cuisineTypes.length, data.details.title, data.details.description]);
 
     const handleNext = useCallback(() => {
         if (!data.eventType) {
@@ -70,169 +65,112 @@ export default function EventCreateStep1() {
             Alert.alert('Atenção', 'Selecione pelo menos um tipo de comida.');
             return;
         }
-        router.push('/events/create/menu');
-    }, [data.eventType, data.cuisineTypes.length, router]);
-
-    const handleBack = useCallback(() => {
-        if (router.canGoBack()) {
-            router.back();
-        } else {
-            router.replace('/(tabs)');
+        if (!data.details.title?.trim()) {
+            Alert.alert('Atenção', 'Informe o título do evento.');
+            return;
         }
-    }, [router]);
+        if (!data.details.description?.trim()) {
+            Alert.alert('Atenção', 'Informe a descrição do evento.');
+            return;
+        }
+        router.push('/events/create/menu');
+    }, [data.eventType, data.cuisineTypes.length, data.details.title, data.details.description, router]);
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <IconSymbol name="chevron.left" size={24} color="#000" />
-                    <Text style={styles.backText}>Voltar</Text>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Crie seu evento</Text>
-                <View style={styles.headerSpacer} />
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+            <CreateEventHeader />
 
-            <WizardProgress currentStep={0} />
-
-            {/* Content */}
-            <ScrollView
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                className="flex-1"
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-                <SelectionSection
-                    title="Qual o tipo do seu evento?"
-                    items={EVENT_TYPES}
-                    selectedItems={data.eventType}
-                    onSelect={setEventType}
-                />
+                <ScrollView
+                    className="flex-1"
+                    contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120, paddingTop: 0 }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <WizardProgress currentStep={0} />
 
-                <View style={styles.divider} />
+                    <View className="mt-6 mb-6">
+                        <SelectionSection
+                            title="Qual o tipo de seu evento?"
+                            items={EVENT_TYPES}
+                            selectedItems={data.eventType}
+                            onSelect={setEventType}
+                            variant="grid"
+                        />
+                    </View>
 
-                <SelectionSection
-                    title="Que tipo de comida será servida?"
-                    subtitle="Selecione pelo menos uma"
-                    items={CUISINE_TYPES}
-                    selectedItems={data.cuisineTypes}
-                    onSelect={toggleCuisineType}
-                    isMultiSelect
-                />
+                    <View className="mb-6">
+                        <SelectionSection
+                            title="Que tipo de comida será servida?"
+                            subtitle="Selecione pelo menos uma"
+                            items={CUISINE_TYPES}
+                            selectedItems={data.cuisineTypes}
+                            onSelect={toggleCuisineType}
+                            isMultiSelect
+                            variant="pill"
+                        />
+                    </View>
 
-                <View style={styles.divider} />
+                    <View className="mb-4">
+                        <Text className="text-lg font-bold mb-4 text-[#1A1A1A]">Fale sobre o seu evento</Text>
 
-                <SelectionSection
-                    title="Qual a vibe do evento?"
-                    subtitle="Selecione as que combinam"
-                    items={VIBES}
-                    selectedItems={selectedVibes}
-                    onSelect={toggleVibe}
-                    isMultiSelect
-                />
+                        <View className="border border-gray-200 rounded-2xl bg-white mb-4" style={{ padding: isSmallScreen ? 12 : 16 }}>
+                            <Text className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Título do evento</Text>
+                            <TextInput
+                                className="text-base text-[#1A1A1A] font-medium"
+                                placeholder="Ex: Jantar das arábias na casa da Ju"
+                                placeholderTextColor="#D1D5DB"
+                                value={data.details.title}
+                                onChangeText={(text) => updateDetails({ title: text })}
+                            />
+                        </View>
 
-                <View style={styles.bottomSpacer} />
-            </ScrollView>
+                        <View className="border border-gray-200 rounded-2xl bg-white" style={{ padding: isSmallScreen ? 12 : 16, minHeight: isSmallScreen ? 100 : 120 }}>
+                            <Text className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Descrição do evento</Text>
+                            <TextInput
+                                className="text-sm text-[#1A1A1A] leading-5"
+                                placeholder="Dica: Seja amigável e convidativo: conte as razões que levaram você a querer receber pessoas..."
+                                placeholderTextColor="#D1D5DB"
+                                value={data.details.description}
+                                onChangeText={(text) => updateDetails({ description: text })}
+                                multiline
+                                textAlignVertical="top"
+                            />
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
-            {/* Footer */}
-            <View style={styles.footer}>
+            <View
+                className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
+                style={{
+                    paddingBottom: Math.max(insets.bottom, 16),
+                    paddingHorizontal: horizontalPadding,
+                    paddingTop: 14,
+                }}
+            >
                 <TouchableOpacity
-                    style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
+                    className={`h-[52px] rounded-2xl items-center justify-center ${!canProceed ? 'bg-orange-200' : 'bg-[#FF8C42]'}`}
                     onPress={handleNext}
                     activeOpacity={canProceed ? 0.8 : 1}
+                    disabled={!canProceed}
+                    style={canProceed ? {
+                        shadowColor: '#FF8C42',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 8,
+                        elevation: 4,
+                    } : undefined}
                 >
-                    <Text style={styles.nextButtonText}>Salvar e prosseguir</Text>
+                    <Text className="text-[16px] font-bold text-white">
+                        Salvar e prosseguir
+                    </Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 }
-
-// ============================================================================
-// Styles
-// ============================================================================
-
-const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    // Header
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: 60,
-    },
-    backText: {
-        fontSize: 16,
-        marginLeft: 4,
-        color: '#000',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#000',
-    },
-    headerSpacer: {
-        width: 60,
-    },
-    // Content
-    content: {
-        padding: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        marginTop: 10,
-        color: '#000',
-    },
-    sectionSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 16,
-    },
-    grid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-    },
-    card: {
-        flexGrow: 1,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 24,
-    },
-    bottomSpacer: {
-        height: 100,
-    },
-    // Footer
-    footer: {
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
-    },
-    nextButton: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    nextButtonDisabled: {
-        opacity: 0.6,
-    },
-    nextButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-});

@@ -19,6 +19,7 @@ const defaultState: EventCreationState = {
         pricePerGuest: '',
         maxGuests: '',
         date: null,
+        endTime: null,
         registrationDeadline: null,
         title: '',
         description: '',
@@ -65,7 +66,7 @@ export function useEventCreationViewModel() {
 
     const setServedInSequence = (value: boolean) => setData(prev => ({ ...prev, isServedInSequence: value }));
 
-    const addDish = (dish: Dish) => setData(prev => ({ ...prev, dishes: [...prev.dishes, dish] }));
+    const addDish = (dish: Dish) => setData(prev => ({ ...prev, dishes: [...prev.dishes, { ...dish, category: dish.category || '' }] }));
 
     const removeDish = (id: string) => setData(prev => ({ ...prev, dishes: prev.dishes.filter(d => d.id !== id) }));
 
@@ -88,7 +89,7 @@ export function useEventCreationViewModel() {
     const setAccessType = (type: 'OPEN' | 'OPEN_WITH_APPROVAL' | 'PRIVATE' | 'INVITE_ONLY') =>
         updateDetails({ accessType: type });
 
-    const addQuestion = (question: { question: string; type: 'TEXT' | 'SELECT' | 'MULTI_SELECT'; required: boolean }) => {
+    const addQuestion = (question: { question: string; questionType: 'TEXT' | 'SELECT' | 'MULTI_SELECT'; required: boolean }) => {
         setData(prev => ({
             ...prev,
             details: {
@@ -116,16 +117,32 @@ export function useEventCreationViewModel() {
     const setMenuAlterations = (value: boolean) => setData(prev => ({ ...prev, menuAlterations: value }));
 
     const submitEvent = async () => {
+        console.log('[DEBUG] useCreateEvent.submitEvent - Full data:');
+        console.log('  - details.endTime:', data.details.endTime);
+        console.log('  - details.registrationDeadline:', data.details.registrationDeadline);
+        console.log('  - dishes count:', data.dishes.length);
+        console.log('  - dishes:', JSON.stringify(data.dishes));
+        console.log('  - veganOptions:', data.veganOptions);
+        console.log('  - substitutions:', data.substitutions);
+        console.log('  - menuAlterations:', data.menuAlterations);
         await eventService.submitEvent(data);
     };
 
     const loadEvent = (event: any) => {
-        // Map backend event to state
+        // Derive dietary booleans from dietaryOptions string array
+        const dietaryOpts: string[] = event.dietary_options || [];
+
         setData(prev => ({
             ...prev,
-            eventType: event.event_type || '', // Handle snake_case from DB
+            eventType: event.event_type || '',
             cuisineTypes: event.cuisine_types || [],
             vibe: event.vibe || [],
+            dishes: (event.dishes || []).map((d: any) => ({
+                id: d.id || Math.random().toString(36).substr(2, 9),
+                name: d.name,
+                description: d.description || '',
+                category: d.category || ''
+            })),
             location: {
                 address: event.location,
                 latitude: event.latitude,
@@ -137,17 +154,17 @@ export function useEventCreationViewModel() {
                 pricePerGuest: event.price?.toString() || '',
                 maxGuests: event.max_guests?.toString() || '',
                 date: event.event_date ? new Date(event.event_date) : null,
-                registrationDeadline: null, // Not in DB yet?
+                endTime: event.end_time ? new Date(event.end_time) : null,
+                registrationDeadline: event.reservation_deadline ? new Date(event.reservation_deadline) : null,
                 title: event.title,
                 description: event.description,
                 coverImage: event.cover_image_url,
                 accessType: event.access_type || 'OPEN',
                 questions: event.questions || []
             },
-            // Defaulting others for now as they might not be in DB or mapped differently
-            veganOptions: false,
-            substitutions: false,
-            menuAlterations: false,
+            veganOptions: dietaryOpts.includes('Opções veganas e vegetarianas disponíveis'),
+            substitutions: dietaryOpts.includes('Aceita adaptações por restrições alimentares'),
+            menuAlterations: dietaryOpts.includes('Cardápio sujeito a alterações'),
         }));
     };
 

@@ -1,11 +1,12 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect, useState, useRef } from 'react';
 import { Session } from '@supabase/supabase-js';
+import './global.css';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+
 import { supabase } from '@/shared/lib/supabase';
 import { View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,7 @@ import { queryClient } from '@/shared/lib/react-query';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+
   const insets = useSafeAreaInsets();
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -158,7 +159,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProfileContext.Provider value={{ isProfileComplete, refetchProfile }}>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <ThemeProvider value={DefaultTheme}>
           <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
             <StatusBar style="light" backgroundColor="#FF8C42" />
             <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
