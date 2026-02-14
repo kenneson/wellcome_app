@@ -45,7 +45,11 @@ describe('DeleteEventUseCase', () => {
             autoApproveMinRating: null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            bookings: []
+            bookings: [],
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
         };
 
         mockEventRepository.findById.mockResolvedValue(existingEvent);
@@ -88,7 +92,11 @@ describe('DeleteEventUseCase', () => {
             autoApproveMinRating: null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            bookings: []
+            bookings: [],
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
         };
 
         mockEventRepository.findById.mockResolvedValue(existingEvent);

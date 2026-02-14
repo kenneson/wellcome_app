@@ -59,6 +59,10 @@ describe('UpdateEventUseCase', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             bookings: [],
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
             questions: []
         };
 
@@ -112,6 +116,10 @@ describe('UpdateEventUseCase', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             bookings: [],
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
             questions: []
         };
 
@@ -153,6 +161,10 @@ describe('UpdateEventUseCase', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             bookings: [],
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
             questions: []
         };
 

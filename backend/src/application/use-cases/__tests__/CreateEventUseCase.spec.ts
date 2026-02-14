@@ -61,6 +61,10 @@ describe('CreateEventUseCase', () => {
             allowWaitlist: false,
             autoApproveIfAttended: false,
             autoApproveMinRating: null,
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
         };
 
         const mockUser: User = {
@@ -108,6 +112,10 @@ describe('CreateEventUseCase', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             bookings: [],
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
             questions: []
         };
 
@@ -144,6 +152,10 @@ describe('CreateEventUseCase', () => {
             allowWaitlist: false,
             autoApproveIfAttended: false,
             autoApproveMinRating: null,
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
         };
 
         mockUserRepository.findById.mockResolvedValue(null);
@@ -175,6 +187,10 @@ describe('CreateEventUseCase', () => {
             allowWaitlist: false,
             autoApproveIfAttended: false,
             autoApproveMinRating: null,
+            endTime: null,
+            reservationDeadline: null,
+            imageGallery: [],
+            dietaryOptions: [],
         };
 
         await expect(createEventUseCase.execute(eventData)).rejects.toThrow('Event must have at least 1 guest');

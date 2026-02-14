@@ -34,7 +34,7 @@ export class UpdateEventUseCase {
             );
         }
 
-        const { questions, ...eventData } = data;
-        return this.eventRepository.update(eventId, eventData);
+        const { questions, dishes, ...eventData } = data;
+        return this.eventRepository.update(eventId, { ...eventData, dishes });
     }
 }
