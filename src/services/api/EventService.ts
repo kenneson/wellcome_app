@@ -50,6 +50,23 @@ export class EventService {
         return { latitude: null, longitude: null };
     }
 
+    private buildDietaryOptions(data: EventCreationState): string[] {
+        const dietaryOptions: string[] = [];
+        if (data.veganOptions) dietaryOptions.push('Opções veganas e vegetarianas disponíveis');
+        if (data.substitutions) dietaryOptions.push('Aceita adaptações por restrições alimentares');
+        if (data.menuAlterations) dietaryOptions.push('Cardápio sujeito a alterações');
+        return dietaryOptions;
+    }
+
+    private mapDishesForPayload(dishes: EventCreationState['dishes']) {
+        return dishes.map((d, idx) => ({
+            name: d.name,
+            description: d.description,
+            category: d.category || 'PRATO_PRINCIPAL',
+            order: idx
+        }));
+    }
+
     async submitEvent(data: EventCreationState): Promise<Event> {
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -60,30 +77,39 @@ export class EventService {
                 coverImageUrl = await this.uploadImage(data.details.coverImage, session.user.id);
             }
 
-            // Construct payload forBackend
-            const apiUrl = `${API_URL}/events`;
-
-            // Adapting data to Backend Schema
             const payload = {
                 title: data.details.title,
-                description: data.details.description, // Menu detail could be structured better, sending raw for now
+                description: data.details.description,
                 price: parseFloat(data.details.pricePerGuest.replace('R$', '').replace(',', '.') || '0'),
                 maxGuests: parseInt(data.details.maxGuests || '0'),
                 eventDate: data.details.date ? data.details.date.toISOString() : new Date().toISOString(),
+                endTime: data.details.endTime ? data.details.endTime.toISOString() : null,
+                reservationDeadline: data.details.registrationDeadline ? data.details.registrationDeadline.toISOString() : null,
                 location: data.location.address,
                 latitude: data.location.latitude,
                 longitude: data.location.longitude,
                 coverImageUrl: coverImageUrl,
-                hostId: session.user.id, // In real backend, extract from JWT token
+                imageGallery: [] as string[],
+                hostId: session.user.id,
                 eventType: data.eventType,
                 cuisineTypes: data.cuisineTypes,
                 vibe: data.vibe,
                 facilities: data.location.facilities,
                 rules: data.location.rules,
+                dietaryOptions: this.buildDietaryOptions(data),
                 accessType: data.details.accessType,
-                questions: data.details.questions
+                questions: data.details.questions,
+                dishes: this.mapDishesForPayload(data.dishes)
             };
 
+            // Debug logging
+            console.log('[DEBUG] EventService.submitEvent - Payload:');
+            console.log('  - endTime:', payload.endTime);
+            console.log('  - reservationDeadline:', payload.reservationDeadline);
+            console.log('  - dishes count:', payload.dishes.length);
+            console.log('  - dishes:', JSON.stringify(payload.dishes));
+
+            const apiUrl = `${API_URL}/events`;
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
@@ -105,11 +131,24 @@ export class EventService {
     }
 
     async getEventById(id: string): Promise<Event> {
+        console.log('[DEBUG] EventService.getEventById - Fetching from:', `${API_URL}/events/${id}`);
         const response = await fetch(`${API_URL}/events/${id}`);
         if (!response.ok) {
             throw new Error('Failed to fetch event');
         }
-        return response.json();
+        const event = await response.json();
+        
+        // Debug logging - log the full object
+        console.log('[DEBUG] EventService.getEventById - Full response:', JSON.stringify(event, null, 2));
+        console.log('[DEBUG] EventService.getEventById - Key fields:');
+        console.log('  - endTime:', event.endTime);
+        console.log('  - reservationDeadline:', event.reservationDeadline);
+        console.log('  - dishes count:', event.dishes?.length || 0);
+        console.log('  - host:', event.host);
+        console.log('  - host fullName:', event.host?.fullName);
+        console.log('  - host avatarUrl:', event.host?.avatarUrl);
+        
+        return event;
     }
 
     async listEvents(filters?: any): Promise<Event[]> {
@@ -125,9 +164,14 @@ export class EventService {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('Usuário não autenticado');
 
-        // Reuse logic from submitEvent to map Frontend State -> Backend DTO
         const details = data.details;
         const location = data.location;
+
+        // Build dietaryOptions from boolean flags
+        const dietaryOptions: string[] = [];
+        if (data.veganOptions) dietaryOptions.push('Opções veganas e vegetarianas disponíveis');
+        if (data.substitutions) dietaryOptions.push('Aceita adaptações por restrições alimentares');
+        if (data.menuAlterations) dietaryOptions.push('Cardápio sujeito a alterações');
 
         const payload = {
             title: details?.title,
@@ -135,6 +179,8 @@ export class EventService {
             price: details?.pricePerGuest ? parseFloat(details.pricePerGuest.replace('R$', '').replace('.', '').replace(',', '.') || '0') : undefined,
             maxGuests: details?.maxGuests ? parseInt(details.maxGuests) : undefined,
             eventDate: details?.date ? details.date.toISOString() : undefined,
+            endTime: details?.endTime ? details.endTime.toISOString() : undefined,
+            reservationDeadline: details?.registrationDeadline ? details.registrationDeadline.toISOString() : undefined,
             location: location?.address,
             latitude: location?.latitude,
             longitude: location?.longitude,
@@ -145,14 +191,18 @@ export class EventService {
             vibe: data.vibe,
             facilities: location?.facilities,
             rules: location?.rules,
+            dietaryOptions,
             accessType: details?.accessType,
-            questions: details?.questions
+            questions: details?.questions,
+            dishes: data.dishes?.map((d, idx) => ({
+                name: d.name,
+                description: d.description,
+                category: d.category || 'PRATO_PRINCIPAL',
+                order: idx
+            }))
         };
 
-        // Remove undefined keys to allow partial updates if backend supports it
-        // But PUT usually expects full resource or PATCH expects partial.
-        // Our backend UpdateEventDTO allows partials (all fields optional).
-        // So we should clean undefined.
+        // Remove undefined keys for partial updates
         const cleanPayload = Object.fromEntries(Object.entries(payload).filter(([_, v]) => v !== undefined));
 
         const response = await fetch(`${API_URL}/events/${id}`, {
