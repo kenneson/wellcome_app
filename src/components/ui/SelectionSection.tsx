@@ -1,6 +1,8 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { SelectionCard } from '@/components/ui/SelectionCard';
+import { SelectionPill } from '@/components/ui/SelectionPill';
+import { SelectionGridItem } from '@/components/ui/SelectionGridItem';
 
 interface SelectionSectionProps {
     title: string;
@@ -9,6 +11,7 @@ interface SelectionSectionProps {
     selectedItems: string | string[];
     onSelect: (item: string) => void;
     isMultiSelect?: boolean;
+    variant?: 'card' | 'pill' | 'grid';
 }
 
 export const SelectionSection = React.memo<SelectionSectionProps>(({
@@ -18,6 +21,7 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
     selectedItems,
     onSelect,
     isMultiSelect = false,
+    variant = 'card',
 }) => {
     const isSelected = useCallback((item: string) => {
         if (isMultiSelect && Array.isArray(selectedItems)) {
@@ -27,45 +31,50 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
     }, [selectedItems, isMultiSelect]);
 
     return (
-        <>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
-            <View style={styles.grid}>
-                {items.map((item) => (
-                    <SelectionCard
-                        key={item}
-                        label={item}
-                        selected={isSelected(item)}
-                        onPress={() => onSelect(item)}
-                        style={styles.card}
-                    />
-                ))}
+        <View>
+            <Text className="text-lg font-bold mb-2 mt-2.5 text-[#1A1A1A]">{title}</Text>
+            {subtitle && <Text className="text-sm text-gray-500 mb-4">{subtitle}</Text>}
+
+            <View className={`flex-row flex-wrap ${variant === 'grid' ? 'justify-between' : 'gap-2.5'}`}>
+                {items.map((item) => {
+                    const selected = isSelected(item);
+                    const handlePress = () => onSelect(item);
+
+                    if (variant === 'pill') {
+                        return (
+                            <SelectionPill
+                                key={item}
+                                label={item}
+                                selected={selected}
+                                onPress={handlePress}
+                            />
+                        );
+                    }
+
+                    if (variant === 'grid') {
+                        return (
+                            <SelectionGridItem
+                                key={item}
+                                label={item}
+                                selected={selected}
+                                onPress={handlePress}
+                            />
+                        );
+                    }
+
+                    return (
+                        <SelectionCard
+                            key={item}
+                            label={item}
+                            selected={selected}
+                            onPress={handlePress}
+                        />
+                    );
+                })}
+                {/* Spacer logic for grid consistency if needed, but flex-wrap justify-between works ok for 3 cols if strict width */}
             </View>
-        </>
+        </View>
     );
 });
 
 SelectionSection.displayName = 'SelectionSection';
-
-const styles = StyleSheet.create({
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        marginTop: 10,
-        color: '#000',
-    },
-    sectionSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 16,
-    },
-    grid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-    },
-    card: {
-        flexGrow: 1,
-    },
-});

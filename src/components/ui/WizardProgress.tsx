@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '@/shared/constants/theme';
+import { View, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 interface WizardProgressProps {
@@ -16,101 +15,44 @@ const steps = [
 
 export function WizardProgress({ currentStep }: WizardProgressProps) {
     return (
-        <View style={styles.container}>
-            <View style={styles.stepsContainer}>
+        <View className="px-5 py-4 bg-white">
+            <View className="flex-row items-center justify-between relative">
+                {/* Background Line */}
+                <View className="absolute top-3 left-0 right-0 h-[2px] bg-gray-200 z-0" />
+
+                {/* Active Line Progress */}
+                <View
+                    className="absolute top-3 left-0 h-[2px] bg-[#FF8C42] z-0"
+                    style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+                />
+
                 {steps.map((step, index) => {
                     const isCompleted = index < currentStep;
                     const isCurrent = index === currentStep;
 
                     return (
-                        <React.Fragment key={index}>
-                            {/* Line Connector */}
-                            {index > 0 && (
-                                <View style={[
-                                    styles.connector,
-                                    { backgroundColor: index <= currentStep ? '#FF8C42' : '#E0E0E0' }
-                                ]} />
-                            )}
-
-                            <View style={styles.stepItem}>
-                                <View style={[
-                                    styles.circle,
-                                    isCompleted ? styles.circleCompleted : (isCurrent ? styles.circleCurrent : styles.circlePending)
-                                ]}>
-                                    {isCompleted ? (
-                                        <IconSymbol name="checkmark" size={12} color="#FFF" />
-                                    ) : (
-                                        <View style={[
-                                            styles.innerCircle,
-                                            { backgroundColor: isCurrent ? '#FF8C42' : 'transparent' }
-                                        ]} />
-                                    )}
-                                </View>
-                                <Text style={[
-                                    styles.label,
-                                    { color: isCurrent || isCompleted ? '#000' : '#999' }
-                                ]}>
-                                    {step.label}
-                                </Text>
+                        <View key={index} className="items-center z-10 w-16">
+                            <View
+                                className={`w-6 h-6 rounded-full items-center justify-center border-2 mb-1 bg-white ${isCompleted
+                                        ? 'bg-[#FF8C42] border-[#FF8C42]'
+                                        : isCurrent
+                                            ? 'border-[#FF8C42]'
+                                            : 'border-gray-200'
+                                    }`}
+                            >
+                                {isCompleted ? (
+                                    <IconSymbol name="checkmark" size={14} color="#FFF" />
+                                ) : isCurrent ? (
+                                    <View className="w-2.5 h-2.5 rounded-full bg-[#FF8C42]" />
+                                ) : null}
                             </View>
-                        </React.Fragment>
+                            <Text className={`text-[10px] font-medium ${isCurrent || isCompleted ? 'text-[#1A1A1A]' : 'text-gray-400'}`}>
+                                {step.label}
+                            </Text>
+                        </View>
                     );
                 })}
             </View>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#fff',
-    },
-    stepsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    stepItem: {
-        alignItems: 'center',
-        zIndex: 1,
-    },
-    connector: {
-        flex: 1,
-        height: 2,
-        position: 'relative',
-        top: -10, // Adjust based on layout
-        zIndex: 0,
-        marginHorizontal: -10, // Pull connectors under circles
-    },
-    circle: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        marginBottom: 4,
-        backgroundColor: '#fff',
-    },
-    circleCompleted: {
-        borderColor: '#FF8C42',
-        backgroundColor: '#FF8C42',
-    },
-    circleCurrent: {
-        borderColor: '#FF8C42',
-    },
-    circlePending: {
-        borderColor: '#E0E0E0',
-    },
-    innerCircle: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-    },
-    label: {
-        fontSize: 10,
-        fontWeight: '500',
-    },
-});

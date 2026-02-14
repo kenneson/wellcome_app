@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, View } from 'react-native';
+import { Pressable, Text, View, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 interface SelectionCardProps {
     label: string;
@@ -10,73 +11,50 @@ interface SelectionCardProps {
 }
 
 export function SelectionCard({ label, description, selected, onPress, style }: SelectionCardProps) {
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    const handlePressIn = () => {
+        scale.value = withSpring(0.98);
+    };
+
+    const handlePressOut = () => {
+        scale.value = withSpring(1);
+    };
+
     return (
-        <TouchableOpacity
-            style={[
-                styles.container,
-                selected ? styles.selected : styles.unselected,
-                style
-            ]}
+        <Pressable
             onPress={onPress}
-            activeOpacity={0.7}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            style={style}
         >
-            <View style={styles.content}>
-                <Text style={[
-                    styles.text,
-                    selected ? styles.textSelected : styles.textUnselected
-                ]}>
-                    {label}
-                </Text>
-                {description && (
-                    <Text style={[
-                        styles.description,
-                        selected ? styles.descriptionSelected : styles.descriptionUnselected
-                    ]}>
-                        {description}
-                    </Text>
-                )}
-            </View>
-        </TouchableOpacity>
+            <Animated.View style={animatedStyle}>
+                <View
+                    className={`py-4 px-6 rounded-2xl border min-w-[100px] shadow-sm ${selected
+                        ? 'bg-[#FFF5F0] border-[#FF8C42] shadow-orange-200/50'
+                        : 'bg-white border-gray-100 shadow-gray-200/50'
+                        }`}
+                >
+                    <View className="items-start">
+                        <Text
+                            className={`text-[15px] font-bold mb-1 ${selected ? 'text-[#1A1A1A]' : 'text-gray-600'}`}
+                        >
+                            {label}
+                        </Text>
+                        {description && (
+                            <Text
+                                className={`text-[13px] leading-5 ${selected ? 'text-orange-700' : 'text-gray-400'}`}
+                            >
+                                {description}
+                            </Text>
+                        )}
+                    </View>
+                </View>
+            </Animated.View>
+        </Pressable>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        minWidth: 80,
-    },
-    content: {
-        alignItems: 'flex-start',
-    },
-    unselected: {
-        backgroundColor: '#fff',
-        borderColor: '#E0E0E0',
-    },
-    selected: {
-        backgroundColor: '#FFF0E5',
-        borderColor: '#FF8C42',
-    },
-    text: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 4,
-    },
-    description: {
-        fontSize: 13,
-    },
-    textUnselected: {
-        color: '#333',
-    },
-    textSelected: {
-        color: '#FF8C42',
-    },
-    descriptionUnselected: {
-        color: '#666',
-    },
-    descriptionSelected: {
-        color: '#E67A35',
-    },
-});
