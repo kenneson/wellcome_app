@@ -1,4 +1,3 @@
-import { supabaseUrl } from '@/shared/lib/supabase';
 
 interface ImageOptimizationOptions {
   width?: number;

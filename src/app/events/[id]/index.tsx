@@ -437,9 +437,9 @@ export default function EventDetailsScreen() {
                 {isHost ? (
                     <TouchableOpacity 
                         className="bg-gray-100 px-8 py-3.5 rounded-2xl"
-                        onPress={() => router.push(`/events/${id}/edit`)}
+                        onPress={() => router.push(`/events/${id}/registrations`)}
                     >
-                        <Text className="text-base font-bold text-gray-900">Editar evento</Text>
+                        <Text className="text-base font-bold text-gray-900">Gerenciar inscrições</Text>
                     </TouchableOpacity>
                 ) : (
                     <TouchableOpacity 

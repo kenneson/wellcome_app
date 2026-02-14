@@ -179,6 +179,9 @@ export default function HomeScreen() {
     try {
       setLoadingEvents(true);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+
       let lat = null;
       let long = null;
 
@@ -193,37 +196,74 @@ export default function HomeScreen() {
         console.log('Error getting location', e);
       }
 
-      let query;
+      let data: any[] = [];
+      let error = null;
 
       if (lat && long) {
         // Use Spatial Search (60km radius default)
-        query = supabase
+        const { data: rpcData, error: rpcError } = await supabase
           .rpc('get_events_nearby', { lat, long, radius_km: 60 })
           .select(`
                 *,
                 host:profiles(full_name, avatar_url),
                 event_participants(count)
             `);
+        
+        if (rpcError) {
+           error = rpcError;
+        } else if (rpcData) {
+           data = rpcData;
+           
+           // Apply Filters in JS for RPC results
+           if (currentUserId) {
+             data = data.filter((e: any) => e.host_id !== currentUserId);
+           }
+           if (filters.priceMin && filters.priceMin.trim() !== '') {
+             data = data.filter((e: any) => e.price >= parseFloat(filters.priceMin!));
+           }
+           if (filters.priceMax && filters.priceMax.trim() !== '') {
+             data = data.filter((e: any) => e.price <= parseFloat(filters.priceMax!));
+           }
+           if (filters.cuisine && filters.cuisine.length > 0) {
+             data = data.filter((e: any) => e.cuisine_types && e.cuisine_types.some((c: string) => filters.cuisine!.includes(c)));
+           }
+           if (filters.vibe && filters.vibe.length > 0) {
+              data = data.filter((e: any) => e.vibe && e.vibe.some((v: string) => filters.vibe!.includes(v)));
+           }
+
+           // Sort by created_at desc (most recent)
+           data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
+
       } else {
         // Fallback: Fetch all future events if no location
-        query = supabase
+        let query = supabase
           .from('events')
           .select(`
               *,
               host:profiles(full_name, avatar_url),
               event_participants(count)
             `)
-          .gte('event_date', new Date().toISOString())
-          .order('event_date', { ascending: true });
+          .gte('event_date', new Date().toISOString());
+        
+        // Exclude own events
+        if (currentUserId) {
+          query = query.neq('host_id', currentUserId);
+        }
+
+        // Apply Filters (DB side)
+        if (filters.priceMin && filters.priceMin.trim() !== '') query = query.gte('price', parseFloat(filters.priceMin));
+        if (filters.priceMax && filters.priceMax.trim() !== '') query = query.lte('price', parseFloat(filters.priceMax));
+        if (filters.cuisine && filters.cuisine.length > 0) query = query.overlaps('cuisine_types', filters.cuisine);
+        if (filters.vibe && filters.vibe.length > 0) query = query.overlaps('vibe', filters.vibe);
+
+        // Sort by created_at desc (most recent)
+        query = query.order('created_at', { ascending: false });
+
+        const result = await query;
+        data = result.data || [];
+        error = result.error;
       }
-
-      // Apply Filters
-      if (filters.priceMin && filters.priceMin.trim() !== '') query = query.gte('price', parseFloat(filters.priceMin));
-      if (filters.priceMax && filters.priceMax.trim() !== '') query = query.lte('price', parseFloat(filters.priceMax));
-      if (filters.cuisine && filters.cuisine.length > 0) query = query.overlaps('cuisine_types', filters.cuisine);
-      if (filters.vibe && filters.vibe.length > 0) query = query.overlaps('vibe', filters.vibe);
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching events:', error);
@@ -236,6 +276,7 @@ export default function HomeScreen() {
       setLoadingEvents(false);
     }
   }
+
 
   const onRefresh = async () => {
     setRefreshing(true);

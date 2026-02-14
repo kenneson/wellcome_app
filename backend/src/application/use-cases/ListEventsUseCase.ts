@@ -10,6 +10,7 @@ interface ListEventsInput {
     priceMin?: number;
     priceMax?: number;
     eventType?: string;
+    excludeHostId?: string;
 }
 
 export class ListEventsUseCase {

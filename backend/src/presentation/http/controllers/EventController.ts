@@ -145,7 +145,7 @@ export class EventController {
 
     async list(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { lat, lon, radius, cuisine, vibe, priceMin, priceMax, eventType } = request.query as any;
+            const { lat, lon, radius, cuisine, vibe, priceMin, priceMax, eventType, excludeHostId } = request.query as any;
             const events = await this.listEventsUseCase.execute({
                 latitude: lat ? parseFloat(lat) : undefined,
                 longitude: lon ? parseFloat(lon) : undefined,
@@ -154,7 +154,8 @@ export class EventController {
                 vibe: vibe ? (Array.isArray(vibe) ? vibe : [vibe]) : undefined,
                 priceMin: priceMin ? parseFloat(priceMin) : undefined,
                 priceMax: priceMax ? parseFloat(priceMax) : undefined,
-                eventType: eventType ? (Array.isArray(eventType) ? eventType[0] : eventType) : undefined
+                eventType: eventType ? (Array.isArray(eventType) ? eventType[0] : eventType) : undefined,
+                excludeHostId: excludeHostId ? (Array.isArray(excludeHostId) ? excludeHostId[0] : excludeHostId) : undefined
             });
             return reply.send(events);
         } catch (error) {

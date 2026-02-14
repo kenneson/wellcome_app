@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking, TextInput, StatusBar, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,14 +10,17 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
 import { RegistrationStatus } from '@/entities/event/types';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
+import { formatPrice } from '@/utils/formatters';
 
 export default function EventRegistrationsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const [registrations, setRegistrations] = useState<any[]>([]);
+    const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<RegistrationStatus>(RegistrationStatus.PENDING);
+    const [activeTab, setActiveTab] = useState<'confirmed' | 'pending'>('confirmed');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Helper to open links
     const openLink = (url: string) => {
@@ -31,19 +34,26 @@ export default function EventRegistrationsScreen() {
     };
 
     useEffect(() => {
-        if (id) fetchRegistrations();
+        if (id) {
+            fetchData();
+        }
     }, [id]);
 
-    async function fetchRegistrations() {
+    async function fetchData() {
         try {
             setLoading(true);
-            const data = await registrationService.getRegistrations(id as string);
-            console.log('📋 Registrations fetched:', data);
-            console.log('📋 Number of registrations:', data?.length);
-            setRegistrations(data);
+            const [registrationsData, eventData] = await Promise.all([
+                registrationService.getRegistrations(id as string),
+                supabase.from('events').select('*').eq('id', id).single()
+            ]);
+
+            setRegistrations(registrationsData || []);
+            if (eventData.data) {
+                setEvent(eventData.data);
+            }
         } catch (error) {
-            console.error('❌ Error fetching registrations:', error);
-            Alert.alert('Erro', 'Não foi possível carregar as inscrições.');
+            console.error('❌ Error fetching data:', error);
+            Alert.alert('Erro', 'Não foi possível carregar os dados.');
         } finally {
             setLoading(false);
         }
@@ -79,7 +89,36 @@ export default function EventRegistrationsScreen() {
         }
     }
 
-    const filteredRegistrations = registrations.filter(r => r.status === activeTab);
+    const filteredRegistrations = useMemo(() => {
+        let filtered = registrations;
+
+        // Filter by tab
+        if (activeTab === 'confirmed') {
+            filtered = filtered.filter(r => r.status === RegistrationStatus.APPROVED);
+        } else {
+            filtered = filtered.filter(r => r.status === RegistrationStatus.PENDING);
+        }
+
+        // Filter by search
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(r => 
+                r.user?.fullName?.toLowerCase().includes(query) ||
+                r.user?.username?.toLowerCase().includes(query)
+            );
+        }
+
+        return filtered;
+    }, [registrations, activeTab, searchQuery]);
+
+    const stats = useMemo(() => {
+        const confirmedCount = registrations.filter(r => r.status === RegistrationStatus.APPROVED).length;
+        const pendingCount = registrations.filter(r => r.status === RegistrationStatus.PENDING).length;
+        const revenue = event ? confirmedCount * (event.price || 0) : 0;
+        const occupancy = event ? `${confirmedCount} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0';
+
+        return { confirmedCount, pendingCount, revenue, occupancy };
+    }, [registrations, event]);
 
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
@@ -92,155 +131,195 @@ export default function EventRegistrationsScreen() {
                 />
                 <View style={styles.userInfo}>
                     <View style={styles.headerTop}>
-                        <View style={styles.nameContainer}>
-                            <Text style={styles.userName}>{item.user?.fullName}</Text>
-                            <Text style={styles.userOccupation}>{item.user?.occupation || 'Sem ocupação definida'}</Text>
+                        <Text style={styles.userName}>{item.user?.fullName}</Text>
+                        <View style={[
+                            styles.statusBadge, 
+                            item.status === RegistrationStatus.APPROVED ? styles.statusConfirmed : styles.statusPending
+                        ]}>
+                            <Text style={[
+                                styles.statusText,
+                                item.status === RegistrationStatus.APPROVED ? styles.textConfirmed : styles.textPending
+                            ]}>
+                                {item.status === RegistrationStatus.APPROVED ? 'CONFIRMADO' : 'PENDENTE'}
+                            </Text>
                         </View>
-                        <StatusBadge status={item.status} />
                     </View>
+                    
+                    <Text style={styles.subInfo}>
+                        {item.status === RegistrationStatus.APPROVED ? 
+                            `Pago • ${item.guestsCount || 1} convite${(item.guestsCount || 1) > 1 ? 's' : ''}` : 
+                            'Aguardando Pagamento'
+                        }
+                    </Text>
 
-                    {item.user?.bio && (
-                        <Text style={styles.userBio} numberOfLines={3}>{item.user.bio}</Text>
+                    {item.user?.dietaryRestrictions && item.user.dietaryRestrictions.length > 0 && (
+                        <View style={styles.warningBox}>
+                            <Ionicons name="alert-circle" size={16} color="#B45309" />
+                            <Text style={styles.warningText}>
+                                Restrição alimentar: {item.user.dietaryRestrictions.join(', ')}.
+                            </Text>
+                        </View>
                     )}
-
-                    <View style={styles.detailsContainer}>
-                        {(item.user?.city || item.user?.neighborhood) && (
-                            <View style={styles.detailRow}>
-                                <Ionicons name="location-outline" size={14} color="#666" style={styles.detailIcon} />
-                                <Text style={styles.detailText}>
-                                    {[item.user.city, item.user.neighborhood].filter(Boolean).join(', ')}
-                                </Text>
-                            </View>
-                        )}
-
-                        {item.user?.lookingFor && (
-                            <View style={styles.detailRow}>
-                                <Ionicons name="search-outline" size={14} color="#666" style={styles.detailIcon} />
-                                <Text style={styles.detailText}>Procurando: {item.user.lookingFor}</Text>
-                            </View>
-                        )}
-
-                        {item.user?.languages && item.user.languages.length > 0 && (
-                            <View style={styles.detailRow}>
-                                <Ionicons name="chatbubble-outline" size={14} color="#666" style={styles.detailIcon} />
-                                <Text style={styles.detailText}>{item.user.languages.join(', ')}</Text>
-                            </View>
-                        )}
-
-                        {item.user?.website && (
-                            <TouchableOpacity onPress={() => openLink(item.user.website)} style={styles.detailRow}>
-                                <Ionicons name="link-outline" size={14} color="#007AFF" style={styles.detailIcon} />
-                                <Text style={[styles.detailText, { color: '#007AFF' }]}>{item.user.website}</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
                 </View>
             </View>
 
-            {item.answers && item.answers.length > 0 && (
-                <View style={styles.answersContainer}>
-                    <Text style={styles.answersTitle}>Respostas:</Text>
-                    {item.answers.map((ans: any, idx: number) => (
-                        <View key={idx} style={styles.answerItem}>
-                            <Text style={styles.questionText}>{ans.question}</Text>
-                            <Text style={styles.answerText}>{ans.answer}</Text>
-                        </View>
-                    ))}
-                </View>
-            )}
+            <View style={styles.actions}>
+                <TouchableOpacity 
+                    style={styles.secondaryButton}
+                    onPress={() => item.status === RegistrationStatus.APPROVED ? handleReject(item.id) : handleApprove(item.id)} // For demo, allow cancel/approve toggle or logic
+                >
+                    <Ionicons 
+                        name={item.status === RegistrationStatus.APPROVED ? "close-circle-outline" : "reload-outline"} 
+                        size={18} 
+                        color="#666" 
+                    />
+                    <Text style={styles.secondaryButtonText}>
+                        {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Reenviar'}
+                    </Text>
+                </TouchableOpacity>
 
-            {item.status === RegistrationStatus.PENDING && (
-                <View style={styles.actions}>
-                    <TouchableOpacity
-                        style={[styles.actionButton, styles.rejectButton]}
-                        onPress={() => handleReject(item.id)}
-                        disabled={processingId === item.id}
-                    >
-                        {processingId === item.id ? (
-                            <ActivityIndicator color="#FF3B30" />
-                        ) : (
-                            <>
-                                <Ionicons name="close" size={20} color="#FF3B30" />
-                                <Text style={styles.rejectText}>Rejeitar</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.secondaryButton, styles.contactButton]}
+                    onPress={() => {
+                        // Implement contact logic (e.g., open WhatsApp or email)
+                        if (item.user?.phone) Linking.openURL(`https://wa.me/${item.user.phone}`);
+                        else Alert.alert('Contato', 'Telefone não disponível');
+                    }}
+                >
+                    <Ionicons name="chatbubble-outline" size={18} color="#FF8C42" />
+                    <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Contatar</Text>
+                </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.actionButton, styles.approveButton]}
+                {item.status === RegistrationStatus.PENDING && (
+                    <TouchableOpacity 
+                        style={styles.primaryButton}
                         onPress={() => handleApprove(item.id)}
-                        disabled={processingId === item.id}
                     >
-                        {processingId === item.id ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <>
-                                <Ionicons name="checkmark" size={20} color="#fff" />
-                                <Text style={styles.approveText}>Aprovar</Text>
-                            </>
-                        )}
+                        <Text style={styles.primaryButtonText}>Aprovar</Text>
                     </TouchableOpacity>
-                </View>
-            )}
+                )}
+            </View>
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Gestão de Inscrições</Text>
-                <View style={{ width: 40 }} />
-            </View>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#FF8C42" />
+            
+            {/* Orange Header Background */}
+            <View style={styles.headerBackground}>
+                <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Gerenciar Evento</Text>
+                        <TouchableOpacity style={styles.moreButton}>
+                            <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
 
-            <View style={styles.tabs}>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === RegistrationStatus.PENDING && styles.activeTab]}
-                    onPress={() => setActiveTab(RegistrationStatus.PENDING)}
-                >
-                    <Text style={[styles.tabText, activeTab === RegistrationStatus.PENDING && styles.activeTabText]}>Pendentes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === RegistrationStatus.APPROVED && styles.activeTab]}
-                    onPress={() => setActiveTab(RegistrationStatus.APPROVED)}
-                >
-                    <Text style={[styles.tabText, activeTab === RegistrationStatus.APPROVED && styles.activeTabText]}>Confirmados</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === RegistrationStatus.REJECTED && styles.activeTab]}
-                    onPress={() => setActiveTab(RegistrationStatus.REJECTED)}
-                >
-                    <Text style={[styles.tabText, activeTab === RegistrationStatus.REJECTED && styles.activeTabText]}>Rejeitados</Text>
-                </TouchableOpacity>
-            </View>
-
-            {loading ? (
-                <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#FF8C42" />
-                </View>
-            ) : (
-                <FlatList
-                    data={filteredRegistrations}
-                    keyExtractor={item => item.id}
-                    renderItem={renderItem}
-                    contentContainerStyle={styles.listContent}
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyText}>Nenhuma inscrição nesta categoria.</Text>
+                    {event && (
+                        <View style={styles.eventInfo}>
+                            <Text style={styles.eventTitle}>{event.title}</Text>
+                            <View style={styles.eventDateContainer}>
+                                <Ionicons name="calendar-outline" size={16} color="#fff" />
+                                <Text style={styles.eventDate}>
+                                    {new Date(event.event_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} • {new Date(event.event_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </Text>
+                            </View>
                         </View>
-                    }
-                />
-            )}
-        </SafeAreaView>
+                    )}
+                </SafeAreaView>
+            </View>
+
+            {/* Content Body */}
+            <View style={styles.contentBody}>
+                {/* Stats Card */}
+                <View style={styles.statsCard}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>RECEITA</Text>
+                        <Text style={styles.statValue}>
+                            {event ? formatPrice(stats.revenue) : 'R$ 0,00'}
+                        </Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>OCUPAÇÃO</Text>
+                        <Text style={styles.statValue}>{stats.occupancy}</Text>
+                    </View>
+                </View>
+
+                {/* Tabs */}
+                <View style={styles.tabsContainer}>
+                    <TouchableOpacity 
+                        style={[styles.tab, activeTab === 'confirmed' && styles.activeTab]}
+                        onPress={() => setActiveTab('confirmed')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'confirmed' && styles.activeTabText]}>
+                            Confirmados ({stats.confirmedCount})
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+                        onPress={() => setActiveTab('pending')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+                            Pendentes ({stats.pendingCount})
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search-outline" size={20} color="#9CA3AF" />
+                    <TextInput 
+                        style={styles.searchInput}
+                        placeholder="Buscar participante..."
+                        placeholderTextColor="#9CA3AF"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    <TouchableOpacity>
+                        <Ionicons name="filter-outline" size={20} color="#4B5563" />
+                    </TouchableOpacity>
+                </View>
+
+                {/* List */}
+                {loading ? (
+                    <ActivityIndicator size="large" color="#FF8C42" style={{ marginTop: 40 }} />
+                ) : (
+                    <FlatList
+                        data={filteredRegistrations}
+                        keyExtractor={item => item.id}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyStateText}>
+                                    Nenhum participante encontrado.
+                                </Text>
+                            </View>
+                        }
+                    />
+                )}
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
+    container: {
         flex: 1,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: '#F3F4F6',
+    },
+    headerBackground: {
+        backgroundColor: '#FF8C42',
+        paddingBottom: 80, // Space for stats card overlap
+    },
+    headerSafeArea: {
+        // backgroundColor: '#FF8C42',
     },
     header: {
         flexDirection: 'row',
@@ -248,47 +327,136 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
     },
     backButton: {
-        padding: 8,
+        padding: 4,
+    },
+    moreButton: {
+        padding: 4,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-    },
-    tabs: {
-        flexDirection: 'row',
-        padding: 16,
-        gap: 12,
-    },
-    tab: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: '#eee',
-    },
-    activeTab: {
-        backgroundColor: '#FF8C42',
-    },
-    tabText: {
-        color: '#666',
         fontWeight: '600',
-    },
-    activeTabText: {
         color: '#fff',
     },
+    eventInfo: {
+        paddingHorizontal: 20,
+        marginTop: 10,
+    },
+    eventTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 8,
+        lineHeight: 28,
+    },
+    eventDateContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    eventDate: {
+        color: 'rgba(255,255,255,0.9)',
+        fontSize: 14,
+        marginLeft: 6,
+    },
+    contentBody: {
+        flex: 1,
+        marginTop: -60, // Overlap the header
+    },
+    statsCard: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        marginHorizontal: 16,
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 5,
+        marginBottom: 20,
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statDivider: {
+        width: 1,
+        backgroundColor: '#E5E7EB',
+        marginHorizontal: 10,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#6B7280',
+        fontWeight: '600',
+        letterSpacing: 0.5,
+        marginBottom: 4,
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1F2937',
+    },
+    tabsContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        marginBottom: 16,
+        backgroundColor: '#E5E7EB',
+        marginHorizontal: 16,
+        borderRadius: 12,
+        padding: 4,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 10,
+    },
+    activeTab: {
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    tabText: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '500',
+    },
+    activeTabText: {
+        color: '#FF8C42',
+        fontWeight: '700',
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        marginHorizontal: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 15,
+        color: '#1F2937',
+    },
     listContent: {
-        padding: 16,
-        gap: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 30,
     },
     card: {
         backgroundColor: '#fff',
-        borderRadius: 12,
+        borderRadius: 20,
         padding: 16,
-        shadowColor: "#000",
+        marginBottom: 16,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
@@ -296,126 +464,110 @@ const styles = StyleSheet.create({
     },
     cardHeader: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        marginRight: 12,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#F3F4F6',
     },
     userInfo: {
         flex: 1,
+        marginLeft: 12,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         marginBottom: 4,
-    },
-    nameContainer: {
-        flex: 1,
-        marginRight: 8,
     },
     userName: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 2,
+        color: '#1F2937',
+        flex: 1,
+        marginRight: 8,
     },
-    userOccupation: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
+    statusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
-    userBio: {
-        fontSize: 14,
-        color: '#444',
-        marginTop: 6,
-        lineHeight: 20,
+    statusConfirmed: {
+        backgroundColor: '#DCFCE7', // Green-100
     },
-    detailsContainer: {
-        marginTop: 8,
-        gap: 4,
+    statusPending: {
+        backgroundColor: '#FFEDD5', // Orange-100
     },
-    detailRow: {
+    statusText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    textConfirmed: {
+        color: '#166534', // Green-800
+    },
+    textPending: {
+        color: '#C2410C', // Orange-800
+    },
+    subInfo: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginBottom: 8,
+    },
+    warningBox: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    detailIcon: {
-        marginRight: 6,
-        width: 16,
-    },
-    detailText: {
-        fontSize: 13,
-        color: '#666',
-        flex: 1,
-    },
-    answersContainer: {
-        marginTop: 12,
-        padding: 12,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FEF3C7', // Amber-100
+        padding: 8,
         borderRadius: 8,
+        marginTop: 4,
     },
-    answersTitle: {
+    warningText: {
         fontSize: 12,
-        fontWeight: 'bold',
-        color: '#666',
-        marginBottom: 8,
-    },
-    answerItem: {
-        marginBottom: 8,
-    },
-    questionText: {
-        fontSize: 12,
-        color: '#888',
-        marginBottom: 2,
-    },
-    answerText: {
-        fontSize: 14,
-        color: '#333',
+        color: '#92400E', // Amber-800
+        marginLeft: 6,
+        flex: 1,
     },
     actions: {
         flexDirection: 'row',
-        gap: 12,
-        marginTop: 16,
+        justifyContent: 'flex-end',
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+        paddingTop: 12,
     },
-    actionButton: {
-        flex: 1,
+    secondaryButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
+        marginRight: 16,
+    },
+    secondaryButtonText: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#6B7280',
+        marginLeft: 4,
+    },
+    contactButton: {
+        marginRight: 0,
+    },
+    primaryButton: {
+        backgroundColor: '#FF8C42',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
         borderRadius: 8,
-        gap: 8,
+        marginLeft: 16,
     },
-    approveButton: {
-        backgroundColor: '#4CD964',
-    },
-    rejectButton: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#FF3B30',
-    },
-    approveText: {
+    primaryButtonText: {
         color: '#fff',
-        fontWeight: 'bold',
-    },
-    rejectText: {
-        color: '#FF3B30',
-        fontWeight: 'bold',
-    },
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        fontSize: 13,
+        fontWeight: '600',
     },
     emptyState: {
-        padding: 24,
         alignItems: 'center',
+        padding: 40,
     },
-    emptyText: {
-        color: '#999',
+    emptyStateText: {
+        color: '#9CA3AF',
+        fontSize: 14,
     },
 });
