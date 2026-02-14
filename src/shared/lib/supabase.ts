@@ -6,8 +6,12 @@ import { createClient } from '@supabase/supabase-js';
 
 // Better to use environment variables, but for now we'll use placeholders
 
-export const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://cmkknuvydqetzmdpzzqv.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_NcU_Jp3xZY6SKd-x5uY0gg_AXXWZvM2';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('⚠️ As credenciais do Supabase estão ausentes. Por favor, verifique seu arquivo .env ou as variáveis de ambiente.');
+}
 
 const ExpoStorage = {
     getItem: (key: string) => {
