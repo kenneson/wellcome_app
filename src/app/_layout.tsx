@@ -156,13 +156,20 @@ export default function RootLayout() {
     );
   }
 
+  const isEventDetails = segments[0] === 'events' && segments[1] === '[id]';
+
   return (
     <QueryClientProvider client={queryClient}>
       <UserProfileContext.Provider value={{ isProfileComplete, refetchProfile }}>
         <ThemeProvider value={DefaultTheme}>
           <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
-            <StatusBar style="light" backgroundColor="#FF8C42" />
-            <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
+            {!isEventDetails && (
+              <>
+                <StatusBar style="light" backgroundColor="#FF8C42" />
+                <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
+              </>
+            )}
+            {isEventDetails && <StatusBar style="light" />}
             <View style={{ flex: 1, backgroundColor: '#fff' }}>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

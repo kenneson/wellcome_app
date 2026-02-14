@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
 import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
 import { eventService } from '@/services/api/EventService';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 
 export default function MyEventsScreen() {
     const router = useRouter();
@@ -62,8 +64,11 @@ export default function MyEventsScreen() {
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
             <Image
-                source={{ uri: item.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }}
+                source={{ uri: getOptimizedImageUrl(item.cover_image_url, { width: 200 }) || DEFAULT_PLACEHOLDER_IMAGE }}
                 style={styles.cardImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
             />
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{item.title}</Text>

@@ -36,6 +36,7 @@ export interface EventHost {
     languages?: string[];
     birthDecade?: string;
     pets?: string;
+    isSuperhost?: boolean;
     expoPushToken?: string | null;
     updatedAt: string;
 }

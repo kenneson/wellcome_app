@@ -16,6 +16,7 @@ export interface User {
     dietaryRestrictions?: string[];
     birthDecade?: string | null;
     pets?: string | null;
+    isSuperhost?: boolean;
     events?: Event[];
     bookings?: EventRegistration[];
     expoPushToken?: string | null;
