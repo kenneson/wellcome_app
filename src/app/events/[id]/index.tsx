@@ -1,21 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, FlatList, Dimensions, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/shared/lib/supabase';
 import { DEFAULT_PLACEHOLDER_IMAGE, DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
+import { formatPrice } from '@/utils/formatters';
+import { eventService } from '@/services/api/EventService';
+import { Event } from '@/entities/event/types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function EventDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const [event, setEvent] = useState<any>(null);
+    const insets = useSafeAreaInsets();
+    const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
     const [joining, setJoining] = useState(false);
     const [isParticipant, setIsParticipant] = useState(false);
     const [isHost, setIsHost] = useState(false);
     const [participationStatus, setParticipationStatus] = useState<string | null>(null);
     const [participantCount, setParticipantCount] = useState(0);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const carouselRef = useRef<FlatList>(null);
+
+    const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+        if (viewableItems.length > 0) {
+            setCurrentImageIndex(viewableItems[0].index || 0);
+        }
+    }).current;
+
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 50
+    }).current;
 
     useEffect(() => {
         if (id) fetchEventDetails();
@@ -27,45 +46,28 @@ export default function EventDetailsScreen() {
             const { data: { session } } = await supabase.auth.getSession();
             const currentUserId = session?.user?.id;
 
-            // 1. Fetch Event + Host
-            const { data: eventData, error } = await supabase
-                .from('events')
-                .select(`
-                    *,
-                    host:profiles(full_name, avatar_url, occupation)
-                `)
-                .eq('id', id)
-                .single();
-
-            if (error) throw error;
+            const eventData = await eventService.getEventById(id as string);
             setEvent(eventData);
 
-            setIsHost(eventData.host_id === currentUserId);
-
-            // 2. Check Participation & Count
-            // Fetch all participants
-            const { data: participants, error: pError } = await supabase
-                .from('event_participants')
-                .select('user_id, status')
-                .eq('event_id', id);
-
-            if (pError) throw pError;
-
-            // Check if I am in the list
-            const myParticipation = participants.find((p: any) => p.user_id === currentUserId);
-            setIsParticipant(!!myParticipation);
-            if (myParticipation) {
-                setParticipationStatus(myParticipation.status);
+            if (currentUserId && eventData.hostId === currentUserId) {
+                setIsHost(true);
             }
 
-            // Count only approved or all? Usually count only approved for capacity
-            // Assuming the view/table returns all, we might want to filter for count if 'limit' matters
-            // For now, let's count all or just approved?
-            // If backend logic counts bookings for limit, we should stick to that. 
-            // Usually pending spots are reserved or not? Let's treat count as is for now.
-            setParticipantCount(participants.length);
+            // Check participation from bookings
+            if (currentUserId && eventData.bookings) {
+                const myParticipation = eventData.bookings.find(b => b.userId === currentUserId);
+                setIsParticipant(!!myParticipation);
+                if (myParticipation) {
+                    setParticipationStatus(myParticipation.status);
+                }
+                const validBookings = eventData.bookings.filter(b => b.status === 'APPROVED' || b.status === 'PENDING');
+                setParticipantCount(validBookings.length);
+            } else {
+                setParticipantCount(0);
+            }
 
         } catch (error) {
+            console.error(error);
             Alert.alert('Erro', 'Não foi possível carregar o evento.');
             router.back();
         } finally {
@@ -75,7 +77,6 @@ export default function EventDetailsScreen() {
 
     async function handleJoin() {
         if (!event) return;
-        // Navigate to the join screen to handle questions and confirmation
         router.push(`/events/${id}/join`);
     }
 
@@ -88,14 +89,17 @@ export default function EventDetailsScreen() {
             const { error } = await supabase
                 .from('event_participants')
                 .delete()
-                .eq('event_id', event.id)
+                .eq('event_id', event!.id)
                 .eq('user_id', session.user.id);
 
             if (error) throw error;
 
             setIsParticipant(false);
             setParticipationStatus(null);
-            setParticipantCount(prev => prev - 1);
+            setParticipantCount(prev => Math.max(0, prev - 1));
+
+            // Refetch to be safe
+            fetchEventDetails();
 
         } catch (error) {
             Alert.alert('Erro', 'Falha ao cancelar participação.');
@@ -104,9 +108,19 @@ export default function EventDetailsScreen() {
         }
     }
 
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                message: `Confira este evento: ${event?.title} no Wellcome!`,
+            });
+        } catch (error) {
+            // ignore
+        }
+    };
+
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={s.loadingContainer}>
                 <ActivityIndicator size="large" color="#FF8C42" />
             </View>
         );
@@ -114,234 +128,869 @@ export default function EventDetailsScreen() {
 
     if (!event) return null;
 
-    const isFull = participantCount >= (event.max_guests || 0);
-    // const canJoin = !isFull && !isParticipant && !isHost; 
+    const isFull = participantCount >= (event.maxGuests || 0);
+    const date = new Date(event.eventDate);
+    const spotsAvailable = Math.max(0, event.maxGuests - participantCount);
+
+    const eventImages = event.imageGallery && event.imageGallery.length > 0
+        ? event.imageGallery
+        : [event.coverImageUrl || DEFAULT_PLACEHOLDER_IMAGE];
+
+    // ────────────────────────────────────────────────────────
+    // RENDER
+    // ────────────────────────────────────────────────────────
+
+    const hostDisplayName = event.host?.fullName || event.host?.username || (isHost ? 'Você' : 'Anfitrião');
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Hero Image */}
-                <Image
-                    source={{ uri: event.cover_image_url || DEFAULT_PLACEHOLDER_IMAGE }}
-                    style={styles.coverImage}
-                />
+        <View style={s.root}>
+            <ScrollView style={s.scrollView} contentContainerStyle={{ paddingBottom: 140 }}>
 
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#FFF" />
-                </TouchableOpacity>
+                {/* ═══════ Hero Image Carousel ═══════ */}
+                <View style={s.heroContainer}>
+                    <FlatList
+                        ref={carouselRef}
+                        data={eventImages}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onViewableItemsChanged={onViewableItemsChanged}
+                        viewabilityConfig={viewabilityConfig}
+                        keyExtractor={(_, index) => `image-${index}`}
+                        renderItem={({ item }) => (
+                            <Image
+                                source={{ uri: item }}
+                                style={{ width: SCREEN_WIDTH, height: 360 }}
+                                contentFit="cover"
+                                transition={200}
+                                placeholder={DEFAULT_PLACEHOLDER_IMAGE}
+                            />
+                        )}
+                    />
 
-                <View style={styles.content}>
-                    <Text style={styles.title}>{event.title}</Text>
+                    {/* Pagination Dots */}
+                    {eventImages.length > 1 && (
+                        <View style={s.dotsContainer}>
+                            {eventImages.map((_: any, index: number) => (
+                                <View
+                                    key={`dot-${index}`}
+                                    style={[
+                                        s.dot,
+                                        index === currentImageIndex ? s.dotActive : s.dotInactive,
+                                    ]}
+                                />
+                            ))}
+                        </View>
+                    )}
 
-                    <View style={styles.hostRow}>
+                    {/* Floating Header Actions */}
+                    <View style={[s.headerActions, { paddingTop: insets.top + 10 }]}>
+                        <TouchableOpacity onPress={() => router.back()} style={s.headerBtn} activeOpacity={0.8}>
+                            <Ionicons name="chevron-back" size={24} color="#FF8C42" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleShare} style={s.headerBtn} activeOpacity={0.8}>
+                            <Ionicons name="share-outline" size={24} color="#FF8C42" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* ═══════ Main Content ═══════ */}
+                <View style={s.content}>
+
+                    {/* Title */}
+                    <Text style={s.title}>{event.title || 'Evento sem título'}</Text>
+
+                    {/* Host Mini Profile */}
+                    <View style={s.hostRow}>
                         <Image
-                            source={{ uri: event.host?.avatar_url || DEFAULT_AVATAR_PLACEHOLDER }}
-                            style={styles.hostAvatar}
+                            source={{ uri: event.host?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }}
+                            style={s.hostAvatar}
+                            contentFit="cover"
+                            transition={200}
                         />
-                        <View>
-                            <Text style={styles.hostLabel}>Anfitrião</Text>
-                            <Text style={styles.hostName}>{event.host?.full_name}</Text>
+                        <View style={{ flex: 1 }}>
+                            <View style={s.hostNameRow}>
+                                <Text style={s.hostName}>{hostDisplayName}</Text>
+                                {(event.host?.fullName || event.host?.username) && <Ionicons name="checkmark-circle" size={18} color="#FF8C42" />}
+                            </View>
+                            <Text style={s.hostLocation}>
+                                {event.location || event.host?.neighborhood || 'Localização não informada'}
+                            </Text>
                         </View>
                     </View>
 
-                    <View style={styles.infoRow}>
-                        <Ionicons name="calendar-outline" size={20} color="#666" style={styles.infoIcon} />
-                        <Text style={styles.infoText}>
-                            {new Date(event.event_date).toLocaleDateString('pt-BR')} às {new Date(event.event_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {/* ═══════ Quick Info 2x2 Grid ═══════ */}
+                    <View style={s.quickInfoGrid}>
+                        {/* Row 1 */}
+                        <View style={s.quickInfoGridRow}>
+                            {/* Spots Card */}
+                            <View style={s.quickInfoCard}>
+                                <View style={s.quickInfoAvatarsRow}>
+                                    <Image
+                                        source={{ uri: event.host?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }}
+                                        style={s.quickInfoAvatarSmall}
+                                        contentFit="cover"
+                                        transition={200}
+                                    />
+                                    <View style={s.quickInfoAvatarPlaceholder} />
+                                </View>
+                                <Text style={s.quickInfoValue}>{event.maxGuests || 0} lugares</Text>
+                                <View style={s.quickInfoSubRow}>
+                                    <Text style={s.quickInfoSub}>{spotsAvailable} disponíveis</Text>
+                                    <Ionicons name="information-circle-outline" size={14} color="#FF8C42" />
+                                </View>
+                            </View>
+
+                            {/* Price Card */}
+                            <View style={s.quickInfoCard}>
+                                <Text style={s.priceValue}>{formatPrice(event.price)}</Text>
+                                <Text style={s.priceSub}>por convidado</Text>
+                            </View>
+                        </View>
+
+                        {/* Row 2 */}
+                        <View style={s.quickInfoGridRow}>
+                            {/* Event Type Card */}
+                            <View style={s.quickInfoCard}>
+                                <Ionicons name="cafe-outline" size={28} color="#2D3436" style={{ marginBottom: 8 }} />
+                                <Text style={s.quickInfoValue}>{event.eventType || 'Evento'}</Text>
+                                <Text style={s.quickInfoSub}>
+                                    {date && !isNaN(date.getTime())
+                                        ? `de ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                                        : 'Horário a definir'}
+                                    {event.endTime
+                                        ? ` às ${new Date(event.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                                        : ''}
+                                </Text>
+                            </View>
+
+                            {/* Date Card */}
+                            <View style={s.quickInfoCard}>
+                                <Ionicons name="calendar-outline" size={28} color="#2D3436" style={{ marginBottom: 8 }} />
+                                <Text style={s.quickInfoValue}>
+                                    {date && !isNaN(date.getTime())
+                                        ? `${date.toLocaleDateString('pt-BR', { day: 'numeric' })} de ${date.toLocaleDateString('pt-BR', { month: 'long' })}`
+                                        : 'Data a definir'}
+                                </Text>
+                                <Text style={s.quickInfoSub}>
+                                    {event.reservationDeadline
+                                        ? `Reservas até: ${new Date(event.reservationDeadline).toLocaleDateString('pt-BR', { day: 'numeric', month: '2-digit' })}`
+                                        : 'Sem prazo de reserva'}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* ═══════ O evento ═══════ */}
+                    <View style={s.section}>
+                        <Text style={s.sectionTitle}>O evento</Text>
+                        <Text style={s.bodyText}>
+                            {event.description || 'Nenhuma descrição fornecida pelo anfitrião.'}
                         </Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-                        <Ionicons name="location-outline" size={20} color="#666" style={styles.infoIcon} />
-                        <Text style={styles.infoText}>{event.location}</Text>
+                    {/* ═══════ Cardápio ═══════ */}
+                    <View style={s.section}>
+                        <Text style={s.sectionTitle}>Cardápio</Text>
+
+                        {event.dishes && event.dishes.length > 0 ? (
+                            <View style={s.timeline}>
+                                {event.dishes.map((dish: any, index: number) => (
+                                    <View key={index} style={s.timelineItem}>
+                                        <View style={s.timelineDot} />
+                                        <Text style={s.timelineLabel}>
+                                            {dish.category || (index === 0 ? 'ENTRADA' : index === event.dishes!.length - 1 ? 'SOBREMESA' : 'PRATO PRINCIPAL')}
+                                        </Text>
+                                        <Text style={s.timelineDishName}>{dish.name || 'Prato sem nome'}</Text>
+                                        {dish.description ? <Text style={s.timelineDishDesc}>{dish.description}</Text> : null}
+                                    </View>
+                                ))}
+                            </View>
+                        ) : (
+                            <View style={s.timeline}>
+                                <Text style={s.bodyText}>Nenhum prato cadastrado.</Text>
+                            </View>
+                        )}
+
+                        {/* Dietary Info */}
+                        {event.dietaryOptions && event.dietaryOptions.length > 0 && (
+                            <View style={s.dietaryInfo}>
+                                {event.dietaryOptions.map((option: string, idx: number) => (
+                                    <View key={idx} style={s.dietaryRow}>
+                                        <Ionicons name="checkmark" size={20} color="#2D3436" />
+                                        <Text style={s.dietaryText}>{option}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
                     </View>
 
-                    <View style={styles.infoRow}>
-                        <Ionicons name="people-outline" size={20} color="#666" style={styles.infoIcon} />
-                        <Text style={styles.infoText}>
-                            {participantCount} / {event.max_guests} convidados confirmados
-                        </Text>
+                    {/* ═══════ Sua Anfitriã ═══════ */}
+                    {event.host && (
+                        <View style={s.section}>
+                            <Text style={s.sectionTitle}>Sua Anfitriã</Text>
+
+                            <View style={s.hostCard}>
+                                {/* Host header */}
+                                <View style={s.hostCardHeader}>
+                                    <Image
+                                        source={{ uri: event.host.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }}
+                                        style={s.hostCardAvatar}
+                                    />
+                                    <View style={{ flex: 1 }}>
+                                        <View style={s.hostCardTopRow}>
+                                            <Text style={s.hostCardGreeting}>Olá, eu sou</Text>
+                                            <View style={s.ratingBadge}>
+                                                <Ionicons name="star" size={14} color="#FF8C42" />
+                                                <Text style={s.ratingText}>
+                                                    {event.reviews && event.reviews.length > 0
+                                                        ? (event.reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / event.reviews.length).toFixed(1).replace('.', ',')
+                                                        : 'Novo'}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text style={s.hostCardName}>{hostDisplayName}</Text>
+                                        <View style={s.verifiedBadge}>
+                                            <Ionicons name="checkmark" size={11} color="#FFF" />
+                                            <Text style={s.verifiedText}>VERIFICADO</Text>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Stats list */}
+                                <View style={s.statsList}>
+                                    {event.host.birthDecade && (
+                                        <View style={s.statRow}>
+                                            <Ionicons name="star-outline" size={22} color="#FF8C42" />
+                                            <Text style={s.statText}>Nasci na década de {event.host.birthDecade}</Text>
+                                        </View>
+                                    )}
+                                    <View style={s.statRow}>
+                                        <Ionicons name="briefcase-outline" size={22} color="#FF8C42" />
+                                        <Text style={s.statText}>Trabalho: {event.host.occupation || 'Não informado'}</Text>
+                                    </View>
+                                    {event.host.pets && (
+                                        <View style={s.statRow}>
+                                            <Ionicons name="paw-outline" size={22} color="#FF8C42" />
+                                            <Text style={s.statText}>Pets: {event.host.pets}</Text>
+                                        </View>
+                                    )}
+                                    <View style={s.statRow}>
+                                        <Ionicons name="chatbubble-outline" size={22} color="#FF8C42" />
+                                        <Text style={s.statText}>
+                                            Línguas: {event.host.languages && event.host.languages.length > 0
+                                                ? event.host.languages.join(', ')
+                                                : 'Português'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <Text style={s.hostBio}>
+                                    {event.host.bio || 'Este anfitrião ainda não adicionou uma bio.'}
+                                </Text>
+
+                                {event.reviews && event.reviews.length > 0 ? (
+                                    <>
+                                        <Text style={s.reviewsTitle}>O que dizem sobre seus eventos:</Text>
+                                        <View style={{ gap: 12, marginBottom: 16 }}>
+                                            {event.reviews.slice(0, 3).map((review: any) => (
+                                                <View key={review.id} style={s.reviewCard}>
+                                                    <View style={s.starsRow}>
+                                                        {[1, 2, 3, 4, 5].map(i => (
+                                                            <Ionicons key={i} name={i <= review.rating ? 'star' : 'star-outline'} size={16} color="#FF8C42" />
+                                                        ))}
+                                                    </View>
+                                                    {review.comment && <Text style={s.reviewText}>{review.comment}</Text>}
+                                                    <Text style={s.reviewAuthor}>{review.user?.fullName || 'Anônimo'}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                        {event.reviews.length > 3 && (
+                                            <TouchableOpacity style={s.loadMoreBtn}>
+                                                <Text style={s.loadMoreText}>Carregar mais</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text style={s.hostBio}>Ainda sem avaliações.</Text>
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* ═══════ Sobre o local ═══════ */}
+                    <View style={s.section}>
+                        <Text style={s.sectionTitle}>Sobre o local</Text>
+
+                        {event.latitude && event.longitude ? (
+                            <View style={s.mapContainer}>
+                                <Image
+                                    source={{ uri: `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/${event.longitude},${event.latitude},13,0/600x300@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw` }}
+                                    style={s.mapImage}
+                                    resizeMode="cover"
+                                />
+                                <View style={s.mapPinContainer}>
+                                    <View style={s.mapPin}>
+                                        <Ionicons name="location" size={32} color="#fff" />
+                                    </View>
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={[s.mapContainer, { backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }]}>
+                                <Ionicons name="map-outline" size={48} color="#9CA3AF" />
+                                <Text style={{ color: '#6B7280', marginTop: 8 }}>Mapa indisponível</Text>
+                            </View>
+                        )}
+
+                        <View style={s.locationLabelRow}>
+                            <Text style={s.locationLabel}>{event.location || 'Localização não informada'}</Text>
+                            <Ionicons name="information-circle-outline" size={16} color="#FF8C42" />
+                        </View>
+
+                        <View style={{ gap: 14 }}>
+                            {event.facilities && event.facilities.length > 0 && event.facilities.map((facility: string, idx: number) => (
+                                <View key={`f-${idx}`} style={s.amenityRow}>
+                                    <Ionicons name="checkmark" size={20} color="#22C55E" />
+                                    <Text style={s.amenityText}>{facility}</Text>
+                                </View>
+                            ))}
+                            {event.rules && event.rules.length > 0 && event.rules.map((rule: string, idx: number) => (
+                                <View key={`r-${idx}`} style={s.amenityRow}>
+                                    <Ionicons name="close" size={20} color="#EF4444" />
+                                    <Text style={s.amenityText}>{rule}</Text>
+                                </View>
+                            ))}
+                            {(!event.facilities?.length && !event.rules?.length) && (
+                                <Text style={s.bodyText}>Nenhuma informação adicional sobre o local.</Text>
+                            )}
+                        </View>
                     </View>
-
-                    <View style={styles.divider} />
-
-                    <Text style={styles.sectionTitle}>Sobre o evento</Text>
-                    <Text style={styles.description}>{event.description}</Text>
-
-                    <View style={{ height: 100 }} />
                 </View>
             </ScrollView>
 
-            <View style={styles.footer}>
-                {isHost ? (
-                    <TouchableOpacity
-                        style={[styles.button, styles.manageButton]}
-                        onPress={() => router.push(`/events/${id}/registrations`)}
-                    >
-                        <Text style={styles.buttonText}>Gerenciar Inscrições</Text>
-                    </TouchableOpacity>
-                ) : isParticipant ? (
-                    <TouchableOpacity
-                        style={[styles.button, styles.secondaryButton, participationStatus === 'PENDING' && styles.pendingButton]}
-                        onPress={handleLeave}
-                        disabled={joining}
-                    >
-                        {joining ? (
-                            <ActivityIndicator color={participationStatus === 'PENDING' ? "#666" : "#FF8C42"} />
-                        ) : (
-                            <Text style={[styles.secondaryButtonText, participationStatus === 'PENDING' && styles.pendingButtonText]}>
-                                {participationStatus === 'PENDING' ? 'Solicitação Enviada (Cancelar)' : 'Cancelar Presença'}
-                            </Text>
-                        )}
-                    </TouchableOpacity>
-                ) : isFull ? (
-                    <TouchableOpacity style={[styles.button, styles.disabledButton]} disabled>
-                        <Text style={styles.buttonText}>Vagas Esgotadas</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <TouchableOpacity style={styles.button} onPress={handleJoin} disabled={joining}>
-                        {joining ? (
-                            <ActivityIndicator color="#FFF" />
-                        ) : (
-                            <Text style={styles.buttonText}>Confirmar Presença</Text>
-                        )}
-                    </TouchableOpacity>
-                )}
+            {/* ═══════ Sticky Footer ═══════ */}
+            <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}>
+                <View style={s.footerContent}>
+                    <View>
+                        <Text style={s.footerPrice}>{formatPrice(event.price)}</Text>
+                        <Text style={s.footerPriceSub}>por convidado</Text>
+                    </View>
+
+                    {isHost ? (
+                        <TouchableOpacity
+                            style={[s.footerBtn, { backgroundColor: '#1A1A1A' }]}
+                            onPress={() => router.push(`/events/${id}/registrations`)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={s.footerBtnText}>Gerenciar</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={[
+                                s.footerBtn,
+                                { backgroundColor: isFull || joining ? '#D1D5DB' : '#FF8C42' },
+                            ]}
+                            onPress={isParticipant ? handleLeave : handleJoin}
+                            disabled={joining || (isFull && !isParticipant)}
+                            activeOpacity={0.8}
+                        >
+                            {joining ? (
+                                <ActivityIndicator color="#FFF" />
+                            ) : (
+                                <Text style={[s.footerBtnText, isFull && !isParticipant && { color: '#6B7280' }]}>
+                                    {isParticipant
+                                        ? (participationStatus === 'PENDING' ? 'Solicitação enviada' : 'Cancelar')
+                                        : (isFull ? 'Esgotado' : 'Pedir para participar')
+                                    }
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 
-const styles = StyleSheet.create({
-    safeArea: {
+// ============================================================================
+// Styles
+// ============================================================================
+
+const s = StyleSheet.create({
+    root: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#FFFFFF',
+    },
+    scrollView: {
+        flex: 1,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
     },
-    scrollContent: {
-        paddingBottom: 20
+
+    // ─── Hero ────────────────────────────────────────────
+    heroContainer: {
+        position: 'relative',
+        height: 360,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        overflow: 'hidden',
     },
-    coverImage: {
-        width: '100%',
-        height: 250,
-        backgroundColor: '#eee',
-    },
-    backButton: {
+    dotsContainer: {
         position: 'absolute',
-        top: 40,
-        left: 20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    content: {
-        padding: 20,
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        marginTop: -20,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
-    },
-    hostRow: {
+        bottom: 24,
+        left: 0,
+        right: 0,
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 24,
+        justifyContent: 'center',
+        gap: 8,
     },
-    hostAvatar: {
+    dot: {
+        height: 8,
+        borderRadius: 4,
+    },
+    dotActive: {
+        width: 24,
+        backgroundColor: '#FFFFFF',
+    },
+    dotInactive: {
+        width: 8,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    headerActions: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+    },
+    headerBtn: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        marginRight: 12,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    hostLabel: {
-        fontSize: 12,
-        color: '#999',
+
+    // ─── Content ─────────────────────────────────────────
+    content: {
+        paddingHorizontal: 24,
+        paddingTop: 24,
     },
-    hostName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
+    title: {
+        fontSize: 26,
+        fontWeight: '800',
+        color: '#2D3436',
+        marginBottom: 20,
+        lineHeight: 32,
     },
-    infoRow: {
+
+    // ─── Host mini ───────────────────────────────────────
+    hostRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        gap: 12,
+        marginBottom: 24,
     },
-    infoIcon: {
-        marginRight: 12,
-        width: 24,
-        textAlign: 'center'
-    },
-    infoText: {
-        fontSize: 16,
-        color: '#555',
-        flex: 1,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 24,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 12,
-    },
-    description: {
-        fontSize: 14,
-        lineHeight: 24,
-        color: '#666',
-    },
-    footer: {
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
-    },
-    button: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    disabledButton: {
-        backgroundColor: '#ccc',
-    },
-    secondaryButton: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
+    hostAvatar: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        borderWidth: 2,
         borderColor: '#FF8C42',
     },
-    secondaryButtonText: {
+    hostNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    hostName: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#2D3436',
+    },
+    hostLocation: {
+        fontSize: 13,
+        color: '#9CA3AF',
+        marginTop: 2,
+    },
+
+    // ─── Quick Info 2×2 Grid ────────────────────────────
+    quickInfoGrid: {
+        gap: 12,
+        marginBottom: 32,
+    },
+    quickInfoGridRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    quickInfoCard: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        paddingVertical: 20,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 110,
+    },
+    quickInfoAvatarsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginBottom: 8,
+    },
+    quickInfoAvatarSmall: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#FF8C42',
+    },
+    quickInfoAvatarPlaceholder: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#D1D5DB',
+        marginLeft: -8,
+    },
+    quickInfoValue: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#2D3436',
+        marginBottom: 4,
+        textAlign: 'center',
+    },
+    quickInfoSubRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    quickInfoSub: {
+        fontSize: 11,
+        color: '#9CA3AF',
+        textAlign: 'center',
+    },
+    priceValue: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#2D3436',
+        marginBottom: 4,
+    },
+    priceSub: {
+        fontSize: 12,
+        color: '#9CA3AF',
+    },
+
+    // ─── Section ─────────────────────────────────────────
+    section: {
+        marginBottom: 32,
+    },
+    sectionTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#2D3436',
+        marginBottom: 16,
+    },
+    bodyText: {
+        fontSize: 15,
+        color: '#6B7280',
+        lineHeight: 24,
+    },
+
+    // ─── Cardápio timeline ───────────────────────────────
+    timeline: {
+        borderLeftWidth: 2,
+        borderLeftColor: '#E5E7EB',
+        marginLeft: 6,
+        paddingLeft: 24,
+        gap: 24,
+        paddingVertical: 4,
+    },
+    timelineItem: {
+        position: 'relative',
+    },
+    timelineDot: {
+        position: 'absolute',
+        left: -31,
+        top: 0,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#FF8C42',
+    },
+    timelineLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        letterSpacing: 1,
+        marginBottom: 6,
+    },
+    timelineDishName: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#2D3436',
+        marginBottom: 4,
+    },
+    timelineDishDesc: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 22,
+    },
+
+    // ─── Dietary ─────────────────────────────────────────
+    dietaryInfo: {
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        gap: 12,
+    },
+    dietaryRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 12,
+    },
+    dietaryText: {
+        flex: 1,
+        fontSize: 15,
+        color: '#374151',
+    },
+
+    // ─── Host Card ───────────────────────────────────────
+    hostCard: {
+        backgroundColor: '#FFF5F0',
+        borderRadius: 24,
+        padding: 24,
+    },
+    hostCardHeader: {
+        flexDirection: 'row',
+        gap: 16,
+        marginBottom: 24,
+    },
+    hostCardAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+    },
+    hostCardTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    hostCardGreeting: {
+        fontSize: 14,
+        color: '#9CA3AF',
+    },
+    ratingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    ratingText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#2D3436',
+    },
+    hostCardName: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#2D3436',
+        marginBottom: 8,
+    },
+    verifiedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#FF8C42',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    verifiedText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
+    },
+
+    // ─── Stats ───────────────────────────────────────────
+    statsList: {
+        gap: 16,
+        marginBottom: 24,
+        paddingTop: 8,
+    },
+    statRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    statText: {
+        fontSize: 15,
+        color: '#374151',
+    },
+    hostBio: {
+        fontSize: 15,
+        color: '#6B7280',
+        lineHeight: 24,
+        marginBottom: 24,
+    },
+
+    // ─── Reviews ─────────────────────────────────────────
+    reviewsTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#2D3436',
+        marginBottom: 16,
+    },
+    reviewCard: {
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E8E0DB',
+        padding: 20,
+        borderRadius: 16,
+    },
+    starsRow: {
+        flexDirection: 'row',
+        gap: 4,
+        marginBottom: 12,
+    },
+    reviewText: {
+        fontSize: 15,
+        color: '#6B7280',
+        lineHeight: 24,
+        marginBottom: 12,
+    },
+    reviewAuthor: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#2D3436',
+        fontStyle: 'italic',
+    },
+    loadMoreBtn: {
+        alignItems: 'center',
+        paddingVertical: 8,
+    },
+    loadMoreText: {
+        fontSize: 15,
+        fontWeight: '700',
         color: '#FF8C42',
+    },
+
+    // ─── Map / Location ──────────────────────────────────
+    mapContainer: {
+        height: 192,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 24,
+        overflow: 'hidden',
+        marginBottom: 16,
+        position: 'relative',
+    },
+    mapImage: {
+        width: '100%',
+        height: '100%',
+    },
+    mapPinContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mapPin: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#FF8C42',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 6,
+    },
+    locationLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 20,
+    },
+    locationLabel: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#6B7280',
+        fontStyle: 'italic',
+    },
+    amenityRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    amenityText: {
+        fontSize: 15,
+        color: '#374151',
+    },
+
+    // ─── Footer ──────────────────────────────────────────
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        paddingHorizontal: 24,
+        paddingTop: 16,
+    },
+    footerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 20,
+    },
+    footerPrice: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#2D3436',
+    },
+    footerPriceSub: {
+        fontSize: 13,
+        color: '#9CA3AF',
+    },
+    footerBtn: {
+        flex: 1,
+        height: 52,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    footerBtnText: {
+        color: '#FFFFFF',
+        fontWeight: '700',
         fontSize: 16,
-        fontWeight: 'bold',
-    },
-    manageButton: {
-        backgroundColor: '#333',
-    },
-    pendingButton: {
-        borderColor: '#999',
-        backgroundColor: '#f5f5f5',
-    },
-    pendingButtonText: {
-        color: '#666',
     },
 });

@@ -2,22 +2,26 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors, Dimensions, Spacing } from '@/shared/constants/theme';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#FF8C42',
+        tabBarActiveTintColor: Colors.light.primary,
         tabBarInactiveTintColor: '#CDCDE0',
         tabBarShowLabel: false,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          height: 60,
+          backgroundColor: Colors.light.background,
+          height: Dimensions.tabBar.height + insets.bottom,
           borderTopWidth: 1,
-          borderTopColor: '#f0f0f0',
-          paddingBottom: 5,
-          paddingTop: 5,
+          borderTopColor: Colors.light.border,
+          paddingBottom: insets.bottom + Spacing.xs,
+          paddingTop: Spacing.xs,
           elevation: 0,
         },
       }}>
@@ -26,8 +30,14 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons size={28} name={focused ? 'home' : 'home-outline'} color={color} />
+            <Ionicons 
+              size={Dimensions.icon.xlarge} 
+              name={focused ? 'home' : 'home-outline'} 
+              color={color}
+              accessibilityLabel="Início"
+            />
           ),
+          tabBarAccessibilityLabel: 'Ir para página inicial',
         }}
       />
       <Tabs.Screen
@@ -35,8 +45,14 @@ export default function TabLayout() {
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons size={28} name={focused ? 'person' : 'person-outline'} color={color} />
+            <Ionicons 
+              size={Dimensions.icon.xlarge} 
+              name={focused ? 'person' : 'person-outline'} 
+              color={color}
+              accessibilityLabel="Perfil"
+            />
           ),
+          tabBarAccessibilityLabel: 'Ir para perfil',
         }}
       />
     </Tabs>

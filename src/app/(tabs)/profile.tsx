@@ -19,6 +19,8 @@ import { useQuery } from '@tanstack/react-query';
 import { userService } from '@/services/api/UserService';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
+import { Colors, Spacing, Dimensions, BorderRadius } from '@/shared/constants/theme';
+import { formatFirstName, formatShortDate } from '@/utils/formatters';
 
 export default function ProfileScreen() {
     const router = useRouter();
@@ -196,8 +198,12 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Meu Perfil</Text>
-                <TouchableOpacity>
-                    <Ionicons name="settings-outline" size={24} color="#333" />
+                <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Configurações"
+                    accessibilityHint="Abrir configurações do perfil"
+                >
+                    <Ionicons name="settings-outline" size={Dimensions.icon.large} color={Colors.light.text} />
                 </TouchableOpacity>
             </View>
 
@@ -290,11 +296,10 @@ export default function ProfileScreen() {
                                 style={styles.expImagePlaceholder}
                                 contentFit="cover"
                             />
-                            <View style={styles.expInfo}>
+                             <View style={styles.expInfo}>
                                 <Text style={styles.expTitle}>{booking.event?.title || 'Evento'}</Text>
                                 <Text style={styles.expSubtitle}>
-                                    Anfitrião: {booking.event?.host?.fullName?.split(' ')[0] || 'Unknown'} •
-                                    {new Date(booking.event?.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                    Anfitrião: {formatFirstName(booking.event?.host?.fullName)} • {formatShortDate(booking.event?.eventDate)}
                                 </Text>
                                 <View style={{ marginTop: 4 }}>
                                     <StatusBadge status={booking.status} />
