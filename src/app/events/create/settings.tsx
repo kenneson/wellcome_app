@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { SelectionCard } from '@/components/ui/SelectionCard';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 
 export default function EventCreateSettings() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const { width } = useWindowDimensions();
+    const isSmallScreen = width < 375;
+    const horizontalPadding = isSmallScreen ? 16 : width >= 414 ? 24 : 20;
     const {
         data,
         setAccessType,
@@ -27,7 +32,7 @@ export default function EventCreateSettings() {
         if (!newQuestion.trim()) return;
         addQuestion({
             question: newQuestion,
-            type: 'TEXT',
+            questionType: 'TEXT',
             required: isRequired
         });
         setNewQuestion('');
@@ -49,56 +54,59 @@ export default function EventCreateSettings() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <IconSymbol name="chevron.left" size={24} color="#000" />
-                    <Text style={styles.backText}>Voltar</Text>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Configurações</Text>
-                <View style={{ width: 60 }} />
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+            <CreateEventHeader title="Ajustes finais" />
 
-            <WizardProgress currentStep={4} />
-
-            <ScrollView contentContainerStyle={styles.content}>
-
-                <Text style={styles.sectionTitle}>Tipo de Acesso</Text>
-                <Text style={styles.sectionSubtitle}>Quem pode participar do seu evento?</Text>
-
-                <View style={styles.selectionContainer}>
-                    <SelectionCard
-                        label="Aberto a todos"
-                        description="Qualquer pessoa pode se inscrever e participar instantaneamente."
-                        selected={data.details.accessType === 'OPEN'}
-                        onPress={() => setAccessType('OPEN')}
-                        style={styles.card}
-                    />
-                    <SelectionCard
-                        label="Requer Aprovação"
-                        description="Os interessados solicitam participar e você aprova ou rejeita."
-                        selected={data.details.accessType === 'OPEN_WITH_APPROVAL'}
-                        onPress={() => setAccessType('OPEN_WITH_APPROVAL')}
-                        style={styles.card}
-                    />
+            <ScrollView
+                className="flex-1"
+                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View className="mb-6">
+                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
+                        Ajustes finais
+                    </Text>
+                    <Text className="text-sm text-gray-400">
+                        Quem pode participar e perguntas extras.
+                    </Text>
                 </View>
 
-                <View style={styles.divider} />
+                <View className="mb-6">
+                    <WizardProgress currentStep={4} />
+                </View>
 
-                <Text style={styles.sectionTitle}>Perguntas aos Convidados</Text>
-                <Text style={styles.sectionSubtitle}>Adicione perguntas para os convidados responderem na inscrição.</Text>
+                <View className="bg-gray-50 rounded-2xl mb-6" style={{ padding: isSmallScreen ? 14 : 20 }}>
+                    <Text style={{ fontSize: isSmallScreen ? 16 : 18 }} className="font-bold mb-4 text-[#1A1A1A]">Tipo de Acesso</Text>
+                    <View className="gap-3">
+                        <SelectionCard
+                            label="Aberto a todos"
+                            description="Qualquer pessoa pode se inscrever e participar instantaneamente."
+                            selected={data.details.accessType === 'OPEN'}
+                            onPress={() => setAccessType('OPEN')}
+                        />
+                        <SelectionCard
+                            label="Requer Aprovação"
+                            description="Os interessados solicitam participar e você aprova ou rejeita."
+                            selected={data.details.accessType === 'OPEN_WITH_APPROVAL'}
+                            onPress={() => setAccessType('OPEN_WITH_APPROVAL')}
+                        />
+                    </View>
+                </View>
+
+                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#1A1A1A] mb-4">Perguntas aos Convidados</Text>
 
                 {data.details.questions && data.details.questions.length > 0 && (
-                    <View style={styles.questionsList}>
+                    <View className="mb-4 gap-3">
                         {data.details.questions.map((q, index) => (
-                            <View key={index} style={styles.questionItem}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.questionText}>{q.question}</Text>
-                                    <Text style={styles.questionType}>
-                                        {q.required ? 'Obrigatória' : 'Opcional'} • Texto
+                            <View key={index} className="flex-row items-center bg-white rounded-2xl border border-gray-100" style={{ padding: isSmallScreen ? 12 : 16 }}>
+                                <View className="flex-1">
+                                    <Text className="text-base font-bold text-[#1A1A1A]">{q.question}</Text>
+                                    <Text className="text-xs text-gray-500 mt-1">
+                                        {q.required ? 'Obrigatória • Texto' : 'Opcional • Texto'}
                                     </Text>
                                 </View>
-                                <TouchableOpacity onPress={() => removeQuestion(index)} style={styles.deleteButton}>
+                                <TouchableOpacity onPress={() => removeQuestion(index)} className="p-2">
                                     <IconSymbol name="trash" size={20} color="#FF3B30" />
                                 </TouchableOpacity>
                             </View>
@@ -106,188 +114,67 @@ export default function EventCreateSettings() {
                     </View>
                 )}
 
-                <View style={styles.addQuestionContainer}>
+                <View className="bg-gray-50 rounded-2xl" style={{ padding: isSmallScreen ? 14 : 20 }}>
+                    <Text className="text-sm font-bold text-gray-900 mb-3">Adicionar nova pergunta</Text>
                     <TextInput
-                        style={styles.input}
+                        className="bg-white border border-gray-200 rounded-xl text-base mb-4 text-[#1A1A1A]"
+                        style={{ padding: isSmallScreen ? 12 : 16 }}
                         placeholder="Ex: Qual seu perfil no Instagram?"
-                        placeholderTextColor="#666"
+                        placeholderTextColor="#D1D5DB"
                         value={newQuestion}
                         onChangeText={setNewQuestion}
                     />
 
-                    <View style={styles.questionControls}>
-                        <View style={styles.switchContainer}>
-                            <Text style={styles.switchLabel}>Obrigatória?</Text>
+                    <View className={`${isSmallScreen ? 'flex-col gap-3' : 'flex-row'} justify-between items-center`}>
+                        <View className="flex-row items-center gap-2">
                             <Switch
                                 value={isRequired}
                                 onValueChange={setIsRequired}
-                                trackColor={{ false: '#767577', true: '#FF8C42' }}
+                                trackColor={{ false: '#E5E7EB', true: '#FF8C42' }}
+                                thumbColor={isRequired ? '#FFF' : '#F9FAFB'}
                             />
+                            <Text className="text-sm text-gray-600 font-medium">Pergunta obrigatória</Text>
                         </View>
                         <TouchableOpacity
-                            style={[styles.addButton, !newQuestion.trim() && styles.disabledButton]}
+                            className={`bg-[#1A1A1A] rounded-xl ${!newQuestion.trim() ? 'opacity-40' : ''}`}
+                            style={{ paddingHorizontal: isSmallScreen ? 16 : 24, paddingVertical: 12 }}
                             onPress={handleAddQuestion}
                             disabled={!newQuestion.trim()}
                         >
-                            <Text style={styles.addButtonText}>Adicionar</Text>
+                            <Text className="text-white text-sm font-bold">Adicionar</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
-
-                <View style={{ height: 100 }} />
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View
+                className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
+                style={{
+                    paddingBottom: Math.max(insets.bottom, 16),
+                    paddingHorizontal: horizontalPadding,
+                    paddingTop: 14,
+                }}
+            >
                 <TouchableOpacity
-                    style={[styles.nextButton, submitting && styles.disabledButton]}
+                    className={`h-[52px] rounded-2xl items-center justify-center ${submitting ? 'bg-gray-400' : 'bg-[#FF8C42]'}`}
                     onPress={handleSubmit}
                     disabled={submitting}
+                    activeOpacity={0.8}
+                    style={!submitting ? {
+                        shadowColor: '#FF8C42',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 8,
+                        elevation: 4,
+                    } : undefined}
                 >
                     {submitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.nextButtonText}>Criar Evento</Text>
+                        <Text className="text-white text-[16px] font-bold">Publicar Evento</Text>
                     )}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: 60,
-    },
-    backText: {
-        fontSize: 16,
-        marginLeft: 4,
-        color: '#000',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    content: {
-        padding: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        marginTop: 10,
-    },
-    sectionSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 16,
-    },
-    selectionContainer: {
-        gap: 12,
-    },
-    card: {
-        marginBottom: 8,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 24,
-    },
-    questionsList: {
-        marginBottom: 16,
-        gap: 12,
-    },
-    questionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F9F9F9',
-        padding: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-    },
-    questionText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#000',
-    },
-    questionType: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 2,
-    },
-    deleteButton: {
-        padding: 8,
-    },
-    addQuestionContainer: {
-        backgroundColor: '#F5F5F5',
-        padding: 16,
-        borderRadius: 12,
-    },
-    input: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        marginBottom: 12,
-    },
-    questionControls: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    switchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    switchLabel: {
-        fontSize: 14,
-        color: '#666',
-    },
-    addButton: {
-        backgroundColor: '#000',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 6,
-    },
-    addButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    footer: {
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
-    },
-    nextButton: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    disabledButton: {
-        opacity: 0.7,
-    },
-    nextButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-});

@@ -9,6 +9,7 @@ export default function CreateEventLayout() {
                 <Stack.Screen name="menu" />
                 <Stack.Screen name="location" />
                 <Stack.Screen name="details" />
+                <Stack.Screen name="settings" />
             </Stack>
         </EventCreationProvider>
     );

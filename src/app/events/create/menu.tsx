@@ -1,15 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { DishInputCard } from '@/components/ui/DishInputCard';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 
 export default function EventCreateStep2() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const { width } = useWindowDimensions();
+    const isSmallScreen = width < 375;
+    const horizontalPadding = isSmallScreen ? 16 : width >= 414 ? 24 : 20;
     const {
         data,
         setServedInSequence,
@@ -22,18 +27,15 @@ export default function EventCreateStep2() {
     } = useEventCreation();
 
     const handleNext = () => {
-        // Basic validation: at least one dish?
         if (data.dishes.length === 0) {
             Alert.alert('Atenção', 'Adicione pelo menos um prato ao cardápio.');
             return;
         }
-        // Check if dishes have content
         const invalidDish = data.dishes.find(d => !d.name.trim());
         if (invalidDish) {
             Alert.alert('Atenção', 'Preencha o nome de todos os pratos.');
             return;
         }
-
         router.push('/events/create/location');
     };
 
@@ -41,40 +43,45 @@ export default function EventCreateStep2() {
         addDish({
             id: Math.random().toString(36).substr(2, 9),
             name: '',
-            description: ''
+            description: '',
+            category: ''
         });
     };
 
     const handleBack = () => router.back();
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <IconSymbol name="chevron.left" size={24} color="#000" />
-                    <Text style={styles.backText}>Voltar</Text>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Crie seu evento</Text>
-                <View style={{ width: 60 }} />
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+            <CreateEventHeader />
 
-            <WizardProgress currentStep={1} />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            <ScrollView
+                className="flex-1"
+                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
-                <ScrollView contentContainerStyle={styles.content}>
-                    <Text style={styles.sectionTitle}>Adicione os pratos que serão servidos</Text>
+                <View className="mb-6">
+                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
+                        O que será{'\n'}servido?
+                    </Text>
+                    <Text className="text-sm text-gray-400">
+                        Detalhe o cardápio da experiência.
+                    </Text>
+                </View>
 
+                <View className="mb-6">
+                    <WizardProgress currentStep={1} />
+                </View>
+
+                <View className="bg-gray-50 rounded-2xl mb-6" style={{ padding: isSmallScreen ? 14 : 20 }}>
                     <Checkbox
-                        label="Os pratos serão servidos em uma sequência"
+                        label="Serviço em sequência (Entrada, Prato Principal...)"
                         checked={data.isServedInSequence}
                         onChange={setServedInSequence}
-                        style={styles.checkbox}
                     />
+                </View>
 
+                <View className="gap-3 mb-6">
                     {data.dishes.map((dish, index) => (
                         <DishInputCard
                             key={dish.id}
@@ -84,120 +91,63 @@ export default function EventCreateStep2() {
                             onRemove={() => removeDish(dish.id)}
                         />
                     ))}
+                </View>
 
-                    <TouchableOpacity style={styles.addButton} onPress={handleAddDish}>
-                        <Text style={styles.addButtonText}>Adicionar prato</Text>
-                    </TouchableOpacity>
+                <TouchableOpacity
+                    className="flex-row items-center justify-center border border-dashed border-orange-300 rounded-2xl bg-orange-50 mb-6"
+                    style={{ paddingVertical: isSmallScreen ? 12 : 16, paddingHorizontal: 16 }}
+                    onPress={handleAddDish}
+                >
+                    <IconSymbol name="plus" size={20} color="#FF8C42" />
+                    <Text className="text-[#FF8C42] font-bold ml-2">Adicionar prato</Text>
+                </TouchableOpacity>
 
-                    <View style={styles.divider} />
+                <View className="h-[1px] bg-gray-100 mb-6" />
 
-                    <Text style={styles.sectionTitle}>Possibilidade de alteração do cardápio</Text>
+                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#1A1A1A] mb-4">Informações importantes</Text>
 
+                <View className="gap-4">
                     <Checkbox
-                        label="Opções veganas e vegetarianas, caso necessário"
+                        label="Opções veganas e vegetarianas disponíveis"
                         checked={data.veganOptions}
                         onChange={setVeganOptions}
-                        style={styles.optionCheckbox}
                     />
                     <Checkbox
-                        label="Farei substituições no menu, caso necessário (alergias alimentares, por exemplo)"
+                        label="Aceito adaptações por restrições alimentares"
                         checked={data.substitutions}
                         onChange={setSubstitutions}
-                        style={styles.optionCheckbox}
                     />
                     <Checkbox
-                        label="O cardápio pode sofrer leves alterações dependendo da disponibilidade de ingredientes"
+                        label="Cardápio sujeito a alterações de ingredientes"
                         checked={data.menuAlterations}
                         onChange={setMenuAlterations}
-                        style={styles.optionCheckbox}
                     />
+                </View>
+            </ScrollView>
 
-                    <View style={{ height: 100 }} />
-                </ScrollView>
-            </KeyboardAvoidingView>
-
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                    <Text style={styles.nextButtonText}>Salvar e prosseguir</Text>
+            <View
+                className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
+                style={{
+                    paddingBottom: Math.max(insets.bottom, 16),
+                    paddingHorizontal: horizontalPadding,
+                    paddingTop: 14,
+                }}
+            >
+                <TouchableOpacity
+                    className="h-[52px] bg-[#FF8C42] rounded-2xl items-center justify-center"
+                    onPress={handleNext}
+                    activeOpacity={0.8}
+                    style={{
+                        shadowColor: '#FF8C42',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 8,
+                        elevation: 4,
+                    }}
+                >
+                    <Text className="text-white text-[16px] font-bold">Salvar e prosseguir</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: 60,
-    },
-    backText: {
-        fontSize: 16,
-        marginLeft: 4,
-        color: '#000',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    content: {
-        padding: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16,
-    },
-    checkbox: {
-        marginBottom: 24,
-    },
-    optionCheckbox: {
-        marginBottom: 16,
-    },
-    addButton: {
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingVertical: 14,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    addButtonText: {
-        color: '#FF8C42',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 24,
-    },
-    footer: {
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
-    },
-    nextButton: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    nextButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-});

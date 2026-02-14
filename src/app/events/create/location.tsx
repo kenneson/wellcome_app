@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { WizardProgress } from '@/components/ui/WizardProgress';
-import { SelectionCard } from '@/components/ui/SelectionCard';
+import { SelectionSection } from '@/components/ui/SelectionSection';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 
 const FACILITIES = [
     'Estacionamento para visitantes',
@@ -32,6 +33,10 @@ export default function EventCreateStep3() {
     const { data, updateLocation } = useEventCreation();
     const [loadingGPS, setLoadingGPS] = useState(false);
     const [showSearchModal, setShowSearchModal] = useState(false);
+    const insets = useSafeAreaInsets();
+    const { width } = useWindowDimensions();
+    const isSmallScreen = width < 375;
+    const horizontalPadding = isSmallScreen ? 16 : width >= 414 ? 24 : 20;
 
     const handleSelectAddress = (result: any) => {
         updateLocation({
@@ -50,10 +55,10 @@ export default function EventCreateStep3() {
         if (!data.location.latitude || !data.location.longitude) {
             Alert.alert(
                 'Localização incompleta',
-                'Precisamos das coordenadas exatas. Por favor, use o botão "Usar minha localização atual" ou verifique o endereço.',
+                'Precisamos das coordenadas exatas.',
                 [
                     { text: 'Tentar GPS', onPress: handleUseGPS },
-                    { text: 'Continuar mesmo assim (não recomendado)', onPress: () => router.push('/events/create/details'), style: 'cancel' }
+                    { text: 'Continuar', onPress: () => router.push('/events/create/details'), style: 'cancel' }
                 ]
             );
             return;
@@ -67,46 +72,26 @@ export default function EventCreateStep3() {
         setLoadingGPS(true);
         try {
             let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Permissão negada', 'Precisamos de acesso ao GPS para pegar o endereço exato.');
-                return;
-            }
+            if (status !== 'granted') return;
 
             let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
             const { latitude, longitude } = location.coords;
 
-            // Web doesn't support built-in reverse geocoding in Expo SDK 50+
             if (Platform.OS === 'web') {
-                updateLocation({
-                    latitude: latitude,
-                    longitude: longitude
-                });
-                Alert.alert('Sucesso', 'Coordenadas capturadas! Na versão Web, por favor digite o endereço manualmente.');
+                updateLocation({ latitude, longitude });
                 return;
             }
 
-            // Reverse Geocode to get address text (Native only)
             let addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
-
             if (addressResponse && addressResponse.length > 0) {
                 const addr = addressResponse[0];
-                const fullAddress = `${addr.street || ''}, ${addr.streetNumber || ''} - ${addr.district || ''}, ${addr.city || ''} - ${addr.region || ''}`;
-
-                updateLocation({
-                    address: fullAddress,
-                    latitude: latitude,
-                    longitude: longitude
-                });
+                const fullAddress = `${addr.street || ''}, ${addr.streetNumber || ''} - ${addr.district || ''}, ${addr.city || ''}`;
+                updateLocation({ address: fullAddress, latitude, longitude });
             } else {
-                updateLocation({
-                    latitude: latitude,
-                    longitude: longitude
-                });
-                Alert.alert('Coordenadas capturadas', 'Não conseguimos achar o endereço escrito, favor preencher manualmente, mas a localização GPS já foi salva!');
+                updateLocation({ latitude, longitude });
             }
-
         } catch (error) {
-            Alert.alert('Erro', 'Falha ao pegar localização GPS.');
+            // ignore
         } finally {
             setLoadingGPS(false);
         }
@@ -129,237 +114,122 @@ export default function EventCreateStep3() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                    <IconSymbol name="chevron.left" size={24} color="#000" />
-                    <Text style={styles.backText}>Voltar</Text>
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Crie seu evento</Text>
-                <View style={{ width: 60 }} />
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+            <CreateEventHeader />
 
-            <WizardProgress currentStep={2} />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            <ScrollView
+                className="flex-1"
+                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
-                <ScrollView contentContainerStyle={styles.content}>
-                    <Text style={styles.sectionTitle}>Informações sobre o local</Text>
-                    <Text style={styles.description}>
-                        A localização exata é importante para convidados num raio de 60km te encontrarem.
+                <View className="mb-6">
+                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
+                        Onde será{'\n'}o evento?
                     </Text>
+                    <Text className="text-sm text-gray-400">
+                        A localização exata é importante para os convidados.
+                    </Text>
+                </View>
 
-                    <TouchableOpacity
-                        style={styles.gpsButton}
-                        onPress={handleUseGPS}
-                        disabled={loadingGPS}
-                    >
-                        {loadingGPS ? (
-                            <ActivityIndicator color="#FFF" />
-                        ) : (
-                            <>
-                                <IconSymbol name="location.fill" size={20} color="#FFF" />
-                                <Text style={styles.gpsButtonText}>Usar minha localização atual</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                <View className="mb-6">
+                    <WizardProgress currentStep={2} />
+                </View>
 
+                <TouchableOpacity
+                    className="flex-row bg-[#4A90E2] rounded-2xl items-center justify-center mb-6 gap-2"
+                    style={{ paddingVertical: isSmallScreen ? 14 : 16, paddingHorizontal: 16 }}
+                    onPress={handleUseGPS}
+                    disabled={loadingGPS}
+                >
+                    {loadingGPS ? (
+                        <ActivityIndicator color="#FFF" />
+                    ) : (
+                        <>
+                            <IconSymbol name="location.fill" size={20} color="#FFF" />
+                            <Text className="text-white font-bold text-base">Usar localização atual</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
+
+                <View className="mb-6">
+                    <Text className="text-xs text-gray-500 mb-1.5 font-semibold ml-1 uppercase tracking-wider">Endereço completo</Text>
                     <TextInput
-                        style={styles.addressInput}
-                        placeholder="Endereço completo (Rua, Número, Bairro, Cidade)"
-                        placeholderTextColor="#666"
+                        className="border border-gray-200 rounded-2xl text-base bg-gray-50 text-[#1A1A1A]"
+                        style={{ padding: isSmallScreen ? 12 : 16, minHeight: isSmallScreen ? 80 : 100 }}
+                        placeholder="Rua, Número, Bairro, Cidade..."
+                        placeholderTextColor="#D1D5DB"
                         value={data.location.address}
                         onChangeText={(text) => updateLocation({ address: text })}
                         multiline
-                        numberOfLines={3}
                         textAlignVertical="top"
                     />
+                </View>
 
-                    <TouchableOpacity
-                        style={styles.searchButton}
-                        onPress={() => setShowSearchModal(true)}
-                    >
-                        <IconSymbol name="magnifyingglass" size={20} color="#FF8C42" />
-                        <Text style={styles.searchButtonText}>Buscar endereço / preencher automático</Text>
-                    </TouchableOpacity>
+                <TouchableOpacity
+                    className="flex-row items-center justify-center border border-orange-200 rounded-2xl gap-2 bg-orange-50 mb-6"
+                    style={{ paddingVertical: isSmallScreen ? 12 : 14, paddingHorizontal: 16 }}
+                    onPress={() => setShowSearchModal(true)}
+                >
+                    <IconSymbol name="magnifyingglass" size={20} color="#FF8C42" />
+                    <Text className="text-[#FF8C42] font-bold text-base">Buscar endereço</Text>
+                </TouchableOpacity>
 
-                    {/* Autocomplete Modal */}
-                    <LocationAutocomplete
-                        visible={showSearchModal}
-                        onClose={() => setShowSearchModal(false)}
-                        onSelectAddress={handleSelectAddress}
-                        type="address"
-                        asModal={true}
-                        placeholder="Digite o nome da rua, número, cidade..."
+                <LocationAutocomplete
+                    visible={showSearchModal}
+                    onClose={() => setShowSearchModal(false)}
+                    onSelectAddress={handleSelectAddress}
+                    type="address"
+                    asModal={true}
+                    placeholder="Busque por rua, número..."
+                />
+
+                <View className="mb-6">
+                    <SelectionSection
+                        title="Selecione as facilidades do local"
+                        items={FACILITIES}
+                        selectedItems={data.location.facilities}
+                        onSelect={toggleFacility}
+                        isMultiSelect
+                        variant="pill"
                     />
+                </View>
 
-                    {data.location.latitude && (
-                        <Text style={styles.coordenadasText}>
-                            ✅ Coordenadas salvas: {data.location.latitude.toFixed(4)}, {data.location.longitude?.toFixed(4)}
-                        </Text>
-                    )}
+                <View className="mb-6">
+                    <SelectionSection
+                        title="Selecione as regras do seu local"
+                        items={RULES}
+                        selectedItems={data.location.rules}
+                        onSelect={toggleRule}
+                        isMultiSelect
+                        variant="pill"
+                    />
+                </View>
+            </ScrollView>
 
-                    <View style={styles.divider} />
-
-                    <Text style={styles.sectionTitle}>Selecione as facilidades do local</Text>
-                    <View style={styles.grid}>
-                        {FACILITIES.map((item) => (
-                            <SelectionCard
-                                key={item}
-                                label={item}
-                                selected={data.location.facilities.includes(item)}
-                                onPress={() => toggleFacility(item)}
-                                style={styles.card}
-                            />
-                        ))}
-                    </View>
-
-                    <View style={styles.divider} />
-
-                    <Text style={styles.sectionTitle}>Selecione as regras do seu local</Text>
-                    <View style={styles.grid}>
-                        {RULES.map((item) => (
-                            <SelectionCard
-                                key={item}
-                                label={item}
-                                selected={data.location.rules.includes(item)}
-                                onPress={() => toggleRule(item)}
-                                style={styles.card}
-                            />
-                        ))}
-                    </View>
-
-                    <View style={{ height: 100 }} />
-                </ScrollView>
-            </KeyboardAvoidingView>
-
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                    <Text style={styles.nextButtonText}>Salvar e prosseguir</Text>
+            <View
+                className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
+                style={{
+                    paddingBottom: Math.max(insets.bottom, 16),
+                    paddingHorizontal: horizontalPadding,
+                    paddingTop: 14,
+                }}
+            >
+                <TouchableOpacity
+                    className="h-[52px] bg-[#FF8C42] rounded-2xl items-center justify-center"
+                    onPress={handleNext}
+                    activeOpacity={0.8}
+                    style={{
+                        shadowColor: '#FF8C42',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 8,
+                        elevation: 4,
+                    }}
+                >
+                    <Text className="text-white text-[16px] font-bold">Salvar e prosseguir</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: 60,
-    },
-    backText: {
-        fontSize: 16,
-        marginLeft: 4,
-        color: '#000',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    content: {
-        padding: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 8,
-    },
-    description: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 16,
-    },
-    gpsButton: {
-        flexDirection: 'row',
-        backgroundColor: '#4A90E2',
-        padding: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-        gap: 8
-    },
-    gpsButtonText: {
-        color: '#FFF',
-        fontWeight: 'bold',
-        fontSize: 14
-    },
-    addressInput: {
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 14,
-        minHeight: 80,
-        backgroundColor: '#FAFAFA'
-    },
-    coordenadasText: {
-        fontSize: 12,
-        color: 'green',
-        marginTop: 4,
-        fontWeight: '600'
-    },
-    grid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 8,
-    },
-    card: {
-        // Override default card styles if needed
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 24,
-    },
-    footer: {
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
-    },
-    nextButton: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    nextButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    searchButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#FF8C42',
-        borderRadius: 8,
-        marginTop: 8,
-        gap: 8,
-        backgroundColor: '#FFF0E6'
-    },
-    searchButtonText: {
-        color: '#FF8C42',
-        fontWeight: '600',
-        fontSize: 14
-    }
-});
