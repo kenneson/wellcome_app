@@ -69,6 +69,7 @@ export class PrismaEventRepository implements EventRepository {
         priceMin?: number;
         priceMax?: number;
         eventType?: string;
+        excludeHostId?: string;
     }): Promise<Event[]> {
         const where: any = {};
 
@@ -77,10 +78,11 @@ export class PrismaEventRepository implements EventRepository {
         if (filters?.eventType) where.eventType = filters.eventType;
         if (filters?.cuisine && filters.cuisine.length > 0) where.cuisineTypes = { hasSome: filters.cuisine };
         if (filters?.vibe && filters.vibe.length > 0) where.vibe = { hasSome: filters.vibe };
+        if (filters?.excludeHostId) where.hostId = { not: filters.excludeHostId };
 
         const events = await prisma.event.findMany({
             where,
-            orderBy: { eventDate: 'asc' },
+            orderBy: { createdAt: 'desc' },
             include: { host: true }
         });
 
