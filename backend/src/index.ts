@@ -214,7 +214,17 @@ const start = async () => {
                                 price: { type: 'number' },
                                 location: { type: 'string' },
                                 eventDate: { type: 'string' },
-                                coverImageUrl: { type: 'string', nullable: true }
+                                coverImageUrl: { type: 'string', nullable: true },
+                                host: {
+                                    type: 'object',
+                                    properties: {
+                                        id: { type: 'string' },
+                                        fullName: { type: 'string', nullable: true },
+                                        username: { type: 'string', nullable: true },
+                                        avatarUrl: { type: 'string', nullable: true },
+                                        isSuperhost: { type: 'boolean' }
+                                    }
+                                }
                             }
                         }
                     }
@@ -552,15 +562,65 @@ const start = async () => {
                         properties: {
                             id: { type: 'string' },
                             title: { type: 'string' },
-                            description: { type: 'string' },
+                            description: { type: 'string', nullable: true },
                             price: { type: 'number' },
                             maxGuests: { type: 'integer' },
                             eventDate: { type: 'string' },
+                            endTime: { type: 'string', nullable: true },
+                            reservationDeadline: { type: 'string', nullable: true },
                             location: { type: 'string' },
                             latitude: { type: 'number', nullable: true },
                             longitude: { type: 'number', nullable: true },
                             coverImageUrl: { type: 'string', nullable: true },
-                            hostId: { type: 'string' }
+                            imageGallery: { type: 'array', items: { type: 'string' } },
+                            hostId: { type: 'string' },
+                            eventType: { type: 'string', nullable: true },
+                            cuisineTypes: { type: 'array', items: { type: 'string' } },
+                            vibe: { type: 'array', items: { type: 'string' } },
+                            facilities: { type: 'array', items: { type: 'string' } },
+                            rules: { type: 'array', items: { type: 'string' } },
+                            dietaryOptions: { type: 'array', items: { type: 'string' } },
+                            accessType: { type: 'string' },
+                            requiresApproval: { type: 'boolean' },
+                            allowWaitlist: { type: 'boolean' },
+                            autoApproveIfAttended: { type: 'boolean' },
+                            autoApproveMinRating: { type: 'number', nullable: true },
+                            host: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    fullName: { type: 'string', nullable: true },
+                                    username: { type: 'string', nullable: true },
+                                    avatarUrl: { type: 'string', nullable: true },
+                                    bio: { type: 'string', nullable: true },
+                                    isSuperhost: { type: 'boolean' },
+                                    occupation: { type: 'string', nullable: true },
+                                    email: { type: 'string', nullable: true },
+                                    city: { type: 'string', nullable: true },
+                                    neighborhood: { type: 'string', nullable: true },
+                                    languages: { type: 'array', items: { type: 'string' } },
+                                    birthDecade: { type: 'string', nullable: true },
+                                    pets: { type: 'string', nullable: true },
+                                    expoPushToken: { type: 'string', nullable: true },
+                                    updatedAt: { type: 'string', nullable: true }
+                                }
+                            },
+                            dishes: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        id: { type: 'string' },
+                                        name: { type: 'string' },
+                                        description: { type: 'string', nullable: true },
+                                        category: { type: 'string' },
+                                        order: { type: 'integer' }
+                                    }
+                                }
+                            },
+                            bookings: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                            reviews: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                            questions: { type: 'array', items: { type: 'object', additionalProperties: true } }
                         }
                     }
                 }
