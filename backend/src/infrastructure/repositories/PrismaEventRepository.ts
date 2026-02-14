@@ -244,16 +244,11 @@ export class PrismaEventRepository implements EventRepository {
         await prisma.eventDish.deleteMany({ where: { eventId: id } });
         await prisma.eventReview.deleteMany({ where: { eventId: id } });
         await prisma.eventQuestion.deleteMany({ where: { eventId: id } });
+        await prisma.booking.deleteMany({ where: { eventId: id } });
         await prisma.event.delete({ where: { id } });
     }
 
     private mapToDomain(prismaEvent: any): Event {
-        console.log('[DEBUG] mapToDomain - Input prismaEvent keys:', Object.keys(prismaEvent));
-        console.log('[DEBUG] mapToDomain - endTime:', prismaEvent.endTime);
-        console.log('[DEBUG] mapToDomain - reservationDeadline:', prismaEvent.reservationDeadline);
-        console.log('[DEBUG] mapToDomain - host:', prismaEvent.host ? 'present' : 'missing');
-        console.log('[DEBUG] mapToDomain - dishes:', prismaEvent.dishes ? `${prismaEvent.dishes.length} items` : 'missing');
-        
         const mapped = {
             id: prismaEvent.id,
             title: prismaEvent.title,
@@ -295,6 +290,7 @@ export class PrismaEventRepository implements EventRepository {
                 languages: prismaEvent.host.languages || [],
                 birthDecade: prismaEvent.host.birthDecade,
                 pets: prismaEvent.host.pets,
+                isSuperhost: prismaEvent.host.isSuperhost,
                 expoPushToken: prismaEvent.host.expoPushToken,
                 updatedAt: prismaEvent.host.updatedAt
             } : undefined,
