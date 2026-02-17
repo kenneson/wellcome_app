@@ -1,3 +1,12 @@
 // Entry point for Hostinger deployment
-// This file redirects the execution to the compiled backend code
-require('./backend/dist/index.js');
+// Mudar o diretório de trabalho para 'backend' para garantir que os caminhos relativos funcionem
+try {
+  process.chdir('backend');
+  console.log('Changed working directory to:', process.cwd());
+  
+  // Carregar o código compilado
+  require('./dist/index.js');
+} catch (err) {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+}
