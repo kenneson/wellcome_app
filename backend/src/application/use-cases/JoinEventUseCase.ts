@@ -3,6 +3,8 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { EventRegistration } from '../../domain/entities/EventRegistration';
 import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
 import { EventAccessType } from '../../domain/value-objects/EventAccessType';
+import { SendNotificationUseCase } from './SendNotificationUseCase';
+import { NotificationType } from '../../domain/value-objects/NotificationType';
 
 export interface JoinEventDTO {
     eventId: string;
@@ -10,13 +12,11 @@ export interface JoinEventDTO {
     answers?: { questionId: string; answer: string }[];
 }
 
-import { NotificationService, notificationService } from '../services/NotificationService';
-
 export class JoinEventUseCase {
     constructor(
         private eventRegistrationRepository: EventRegistrationRepository,
         private eventRepository: EventRepository,
-        private notificationService: NotificationService
+        private sendNotificationUseCase: SendNotificationUseCase
     ) { }
 
     async execute(data: JoinEventDTO): Promise<EventRegistration> {
@@ -35,12 +35,9 @@ export class JoinEventUseCase {
 
         // Check for existing registration
         const existingRegistrations = await this.eventRegistrationRepository.findByUserId(data.userId);
-        console.log('[DEBUG] Existing registrations for user:', data.userId, existingRegistrations.map(r => ({ id: r.id, eventId: r.eventId })));
-
         const alreadyRegistered = existingRegistrations.some(r => r.eventId === data.eventId);
 
         if (alreadyRegistered) {
-            console.warn('[DEBUG] User already registered:', { userId: data.userId, eventId: data.eventId });
             throw new Error('User already registered for this event');
         }
 
@@ -52,8 +49,6 @@ export class JoinEventUseCase {
         } else if (event.accessType === EventAccessType.OPEN) {
             initialStatus = RegistrationStatus.APPROVED;
         } else if (event.accessType === EventAccessType.OPEN_WITH_APPROVAL) {
-            // Check auto-approval rules
-            // TODO: Implement auto-approval logic based on rating or past attendance
             initialStatus = RegistrationStatus.PENDING;
         }
 
@@ -64,20 +59,22 @@ export class JoinEventUseCase {
             answers: data.answers
         });
 
-        // Send notification to host including data for navigation
-        if (event.host && event.host.expoPushToken) {
-            // Determine message based on status
+        // Notify Host
+        if (event.host) {
             const isPending = initialStatus === RegistrationStatus.PENDING;
             const notificationTitle = isPending ? 'Solicitação de inscrição!' : 'Nova inscrição confirmada!';
             const notificationBody = isPending
                 ? `Alguém quer participar do seu evento "${event.title}" e aguarda aprovação.`
                 : `Alguém se inscreveu no seu evento "${event.title}"!`;
+            const notificationType = isPending ? NotificationType.NEW_REGISTRATION_PENDING : NotificationType.NEW_REGISTRATION_CONFIRMED;
 
-            await this.notificationService.sendPushBlocking(
-                event.host.expoPushToken,
+            await this.sendNotificationUseCase.execute(
+                event.host.id,
+                event.host.expoPushToken || null,
                 notificationTitle,
                 notificationBody,
-                { type: 'NEW_REGISTRATION', eventId: event.id }
+                notificationType,
+                { eventId: event.id }
             );
         }
 

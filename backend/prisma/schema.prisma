@@ -22,6 +22,7 @@ model User {
   city                String?
   neighborhood        String?
   languages           String[]       @default([])
+  phoneNumber         String?        @map("phone_number")
   expoPushToken       String?        @map("expo_push_token")
   email               String?
   birthDecade         String?        @map("birth_decade")
@@ -715,8 +716,12 @@ enum NotificationType {
   REGISTRATION_APPROVED
   REGISTRATION_REJECTED
   NEW_REGISTRATION_PENDING
+  NEW_REGISTRATION_CONFIRMED
   EVENT_UPDATE
   EVENT_REMINDER
+  EVENT_CANCELED
+  PARTICIPANT_CANCELED
+  NEW_REVIEW
 
   @@schema("public")
 }

@@ -23,6 +23,7 @@ export default function RegisterScreen() {
     const router = useRouter();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            const data = await authService.register(email, password, name);
+            const data = await authService.register(email, password, name, phoneNumber);
 
             if (data?.session) {
                 const { error } = await supabase.auth.setSession({
@@ -142,6 +143,18 @@ export default function RegisterScreen() {
                             onChangeText={setEmail}
                             autoCapitalize="none"
                             keyboardType="email-address"
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>WhatsApp / Telefone</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="(11) 99999-9999"
+                            placeholderTextColor="#666"
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
+                            keyboardType="phone-pad"
                         />
                     </View>
 

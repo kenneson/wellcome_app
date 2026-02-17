@@ -1,0 +1,130 @@
+import React from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { EventReview } from '@/entities/event/types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface ReviewListProps {
+    reviews: EventReview[];
+    onDelete?: (reviewId: string) => void;
+    currentUserId?: string;
+}
+
+export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps) {
+    if (!reviews || reviews.length === 0) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Nenhuma avaliação ainda.</Text>
+            </View>
+        );
+    }
+
+    const renderItem = ({ item }: { item: EventReview }) => (
+        <View style={styles.reviewItem}>
+            <View style={styles.header}>
+                <View style={styles.userInfo}>
+                    <Image
+                        source={{ uri: item.user?.avatarUrl || 'https://via.placeholder.com/40' }}
+                        style={styles.avatar}
+                    />
+                    <View>
+                        <Text style={styles.userName}>{item.user?.fullName || 'Usuário'}</Text>
+                        <Text style={styles.date}>
+                            {format(new Date(item.createdAt), "d 'de' MMMM, yyyy", { locale: ptBR })}
+                        </Text>
+                    </View>
+                </View>
+                {currentUserId === item.userId && onDelete && (
+                    <TouchableOpacity onPress={() => onDelete(item.id)}>
+                        <Ionicons name="trash-outline" size={20} color="#FF4B4B" />
+                    </TouchableOpacity>
+                )}
+            </View>
+            <View style={styles.ratingContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <Ionicons
+                        key={star}
+                        name={star <= item.rating ? 'star' : 'star-outline'}
+                        size={16}
+                        color="#FFD700"
+                    />
+                ))}
+            </View>
+            {item.comment && <Text style={styles.comment}>{item.comment}</Text>}
+        </View>
+    );
+
+    return (
+        <View style={styles.container}>
+            {reviews.map((item) => (
+                <View key={item.id} style={styles.wrapper}>
+                    {renderItem({ item })}
+                </View>
+            ))}
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        marginTop: 16,
+    },
+    wrapper: {
+        marginBottom: 16,
+    },
+    emptyContainer: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    emptyText: {
+        color: '#666',
+        fontSize: 14,
+    },
+    reviewItem: {
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 12,
+        backgroundColor: '#F0F0F0',
+    },
+    userName: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+    },
+    date: {
+        fontSize: 12,
+        color: '#999',
+    },
+    ratingContainer: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    comment: {
+        fontSize: 14,
+        color: '#444',
+        lineHeight: 20,
+    },
+});

@@ -196,30 +196,22 @@ export default function MyEventsScreen() {
                 <View style={styles.cardActions}>
                     <TouchableOpacity 
                         style={styles.actionButton} 
+                        onPress={() => router.push(`/events/${item.id}`)}
+                    >
+                        <Text style={styles.actionButtonText}>Ver Detalhes</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.actionButton, styles.secondaryButton]} 
                         onPress={() => router.push(`/events/${item.id}/edit`)}
                     >
                         <Ionicons name="pencil" size={18} color="#FF8C42" />
-                        <Text style={styles.actionButtonText}>Editar</Text>
+                        <Text style={[styles.actionButtonText, { color: '#FF8C42' }]}>Editar</Text>
                     </TouchableOpacity>
-                    
-                    <View style={styles.actionDivider} />
-                    
                     <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => router.push(`/events/${item.id}/registrations`)}
-                    >
-                        <Ionicons name="people" size={18} color="#FF8C42" />
-                        <Text style={styles.actionButtonText}>Lista</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.actionDivider} />
-
-                    <TouchableOpacity 
-                        style={styles.actionButton} 
+                        style={[styles.actionButton, styles.secondaryButton]} 
                         onPress={() => handleDelete(item.id)}
                     >
-                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                        <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Excluir</Text>
+                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -293,7 +285,13 @@ export default function MyEventsScreen() {
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
                             <View style={styles.emptyState}>
+                                <View style={styles.emptyIconContainer}>
+                                    <Ionicons name="calendar-outline" size={64} color="#CDCDE0" />
+                                </View>
                                 <Text style={styles.emptyText}>Nenhum evento encontrado.</Text>
+                                <Text style={styles.emptySubText}>
+                                    Que tal criar seu primeiro evento e começar a receber convidados?
+                                </Text>
                                 <TouchableOpacity style={styles.createButtonLarge} onPress={() => router.push('/events/create')}>
                                     <Text style={styles.createButtonTextLarge}>Criar meu primeiro evento</Text>
                                 </TouchableOpacity>
@@ -531,21 +529,29 @@ const styles = StyleSheet.create({
     },
     cardActions: {
         flexDirection: 'row',
+        padding: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        paddingVertical: 12,
+        borderTopColor: '#f0f0f0',
+        justifyContent: 'space-between',
+        gap: 8,
     },
     actionButton: {
         flex: 1,
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 4,
+        justifyContent: 'center',
+        paddingVertical: 10,
+        backgroundColor: '#FF8C42',
+        borderRadius: 8,
+    },
+    secondaryButton: {
+        backgroundColor: '#FFF0E0',
+        flex: 0.5,
     },
     actionButtonText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#374151',
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#fff',
         marginLeft: 6,
     },
     actionDivider: {
@@ -589,11 +595,30 @@ const styles = StyleSheet.create({
         padding: 40,
         alignItems: 'center',
         justifyContent: 'center',
+        flex: 1,
+    },
+    emptyIconContainer: {
+        width: 120,
+        height: 120,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 24,
     },
     emptyText: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        marginBottom: 20,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 32,
+        lineHeight: 20,
     },
     createButtonLarge: {
         backgroundColor: '#FF8C42',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, Dimensions, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, Dimensions, Platform, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,6 +9,9 @@ import { DEFAULT_PLACEHOLDER_IMAGE, DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/
 import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { eventService } from '@/services/api/EventService';
+import { reviewService } from '@/services/api/ReviewService';
+import { ReviewList } from '@/features/reviews/ReviewList';
+import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { Event } from '@/entities/event/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -43,6 +46,19 @@ export default function EventDetailsScreen() {
     const [isParticipant, setIsParticipant] = useState(false);
     const [isHost, setIsHost] = useState(false);
     const [participantCount, setParticipantCount] = useState(0);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [submittingReview, setSubmittingReview] = useState(false);
+
+    const isPastEvent = React.useMemo(() => {
+        if (!event) return false;
+        const eventTime = new Date(event.endTime || event.eventDate).getTime();
+        return eventTime < Date.now();
+    }, [event]);
+
+    const userHasReviewed = React.useMemo(() => {
+        if (!event?.reviews || !currentUserId) return false;
+        return event.reviews.some(r => r.userId === currentUserId);
+    }, [event, currentUserId]);
 
     useEffect(() => {
         if (id) fetchEventDetails();
@@ -52,17 +68,18 @@ export default function EventDetailsScreen() {
         try {
             setLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
-            const currentUserId = session?.user?.id;
+            const userId = session?.user?.id;
+            setCurrentUserId(userId || null);
 
             const eventData = await eventService.getEventById(id as string);
             setEvent(eventData);
 
-            if (currentUserId && eventData.hostId === currentUserId) {
+            if (userId && eventData.hostId === userId) {
                 setIsHost(true);
             }
 
-            if (currentUserId && eventData.bookings) {
-                const myParticipation = eventData.bookings.find(b => b.userId === currentUserId);
+            if (userId && eventData.bookings) {
+                const myParticipation = eventData.bookings.find(b => b.userId === userId);
                 setIsParticipant(!!myParticipation);
                 const validBookings = eventData.bookings.filter(b => b.status === 'APPROVED' || b.status === 'PENDING');
                 setParticipantCount(validBookings.length);
@@ -84,6 +101,29 @@ export default function EventDetailsScreen() {
         router.push(`/events/${id}/join`);
     }
 
+    const handleContactHost = async () => {
+        if (!event?.host?.phoneNumber) {
+            Alert.alert('Indisponível', 'O anfitrião não cadastrou um telefone de contato.');
+            return;
+        }
+
+        let phone = event.host.phoneNumber.replace(/\D/g, '');
+        // Simple heuristic for BR numbers: if 10 or 11 digits, prepend 55
+        if (phone.length === 10 || phone.length === 11) {
+            phone = `55${phone}`;
+        }
+        
+        const message = `Olá ${event.host.fullName ? event.host.fullName.split(' ')[0] : 'Anfitrião'}, vi seu evento "${event.title}" no Wellcome e gostaria de tirar uma dúvida.`;
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+            await Linking.openURL(url);
+        } else {
+            Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
+        }
+    };
+
     const handleShare = async () => {
         try {
             await Share.share({
@@ -92,6 +132,54 @@ export default function EventDetailsScreen() {
         } catch (error) {
             // ignore
         }
+    };
+
+    const handleCreateReview = async (rating: number, comment: string) => {
+        if (!event || !currentUserId) return;
+        
+        try {
+            setSubmittingReview(true);
+            await reviewService.create({
+                eventId: event.id,
+                userId: currentUserId,
+                rating,
+                comment
+            });
+            
+            Alert.alert('Sucesso', 'Sua avaliação foi enviada!');
+            await fetchEventDetails();
+        } catch (error: any) {
+            Alert.alert('Erro', error.message || 'Não foi possível enviar a avaliação');
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
+    const handleDeleteReview = (reviewId: string) => {
+        if (!currentUserId) return;
+
+        Alert.alert(
+            'Excluir avaliação',
+            'Tem certeza que deseja excluir sua avaliação?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                { 
+                    text: 'Excluir', 
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            setLoading(true);
+                            await reviewService.delete(reviewId, currentUserId);
+                            await fetchEventDetails();
+                        } catch (error: any) {
+                            Alert.alert('Erro', 'Não foi possível excluir a avaliação');
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     if (loading) {
@@ -358,22 +446,37 @@ export default function EventDetailsScreen() {
                                 {event.host?.bio || `Sou ${hostName}, adoro receber pessoas e cozinhar!`}
                             </Text>
 
-                            <View className="border-t border-orange-100 pt-4">
-                                <Text className="text-sm font-bold text-[#1A1A1A] mb-3">O que dizem sobre seus eventos:</Text>
-                                <View className="bg-white p-4 rounded-xl shadow-sm mb-3">
-                                    <View className="flex-row mb-2">
-                                        {[1,2,3,4,5].map(i => <Ionicons key={i} name="star" size={12} color="#FF8C42" />)}
-                                    </View>
-                                    <Text className="text-xs text-gray-600 italic mb-2">
-                                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt."
-                                    </Text>
-                                    <Text className="text-[10px] font-bold text-[#1A1A1A]">Maria do Carmo</Text>
-                                </View>
-                                <TouchableOpacity>
-                                    <Text className="text-xs font-bold text-[#1A1A1A] text-center mt-2 underline">Carregar mais</Text>
+                            {/* Contact Host Button */}
+                            {!isHost && event.host?.phoneNumber && (
+                                <TouchableOpacity 
+                                    className="bg-[#25D366] mt-4 flex-row items-center justify-center py-3 rounded-xl shadow-sm"
+                                    onPress={handleContactHost}
+                                >
+                                    <Ionicons name="logo-whatsapp" size={20} color="white" />
+                                    <Text className="text-white font-bold ml-2">Conversar com anfitriã(o)</Text>
                                 </TouchableOpacity>
-                            </View>
+                            )}
                         </View>
+                    </View>
+
+                    {/* Reviews Section */}
+                    <View className="mb-8">
+                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">
+                            Avaliações ({event.reviews?.length || 0})
+                        </Text>
+                        
+                        {isParticipant && !isHost && !userHasReviewed && isPastEvent && (
+                            <ReviewForm 
+                                onSubmit={handleCreateReview} 
+                                loading={submittingReview} 
+                            />
+                        )}
+
+                        <ReviewList 
+                            reviews={event.reviews || []} 
+                            onDelete={handleDeleteReview}
+                            currentUserId={currentUserId || undefined}
+                        />
                     </View>
 
                     {/* Location */}
