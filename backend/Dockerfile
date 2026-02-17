@@ -9,7 +9,10 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies (including devDependencies for build)
-RUN npm install
+RUN npm install --unsafe-perm
+
+# Rebuild prisma client to ensure WASM engine is downloaded
+RUN npm rebuild @prisma/client
 
 COPY . .
 
