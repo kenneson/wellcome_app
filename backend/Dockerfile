@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Install OpenSSL required for Prisma
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -15,6 +18,9 @@ RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
+
+# Install OpenSSL required for Prisma
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
