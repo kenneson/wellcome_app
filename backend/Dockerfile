@@ -24,19 +24,11 @@ RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
-COPY package*.json ./
-COPY prisma ./prisma/
-
-# Install only production dependencies
-RUN npm install --only=production
-
-# Regenerate prisma client for production environment
-RUN npx prisma generate
-
-# Copy built artifacts
+# Copy necessary files from builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 
