@@ -283,7 +283,6 @@ export class PrismaEventRepository implements EventRepository {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,
                 username: prismaEvent.host.username,
-                email: prismaEvent.host.email,
                 avatarUrl: prismaEvent.host.avatarUrl,
                 occupation: prismaEvent.host.occupation,
                 bio: prismaEvent.host.bio,
@@ -292,6 +291,8 @@ export class PrismaEventRepository implements EventRepository {
                 languages: prismaEvent.host.languages || [],
                 birthDecade: prismaEvent.host.birthDecade,
                 pets: prismaEvent.host.pets,
+                phoneNumber: prismaEvent.host.phoneNumber,
+                email: prismaEvent.host.email,
                 isSuperhost: prismaEvent.host.isSuperhost,
                 expoPushToken: prismaEvent.host.expoPushToken,
                 updatedAt: prismaEvent.host.updatedAt

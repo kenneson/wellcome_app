@@ -26,9 +26,6 @@ export class PrismaUserRepository implements UserRepository {
         if (!user) return null;
 
         console.log('DEBUG: Prisma User found:', Object.keys(user));
-        console.log('DEBUG: Prisma User full_name:', (user as any).full_name);
-        console.log('DEBUG: Prisma User fullName:', (user as any).fullName);
-
         return this.mapToDomain(user);
     }
 
@@ -56,7 +53,7 @@ export class PrismaUserRepository implements UserRepository {
     private mapToDomain(prismaUser: any): User {
         return {
             id: prismaUser.id,
-            fullName: prismaUser.fullName ?? prismaUser.full_name ?? null,
+            fullName: prismaUser.fullName || prismaUser.full_name || null,
             username: prismaUser.username ?? null,
             website: prismaUser.website ?? null,
             avatarUrl: prismaUser.avatarUrl ?? prismaUser.avatar_url ?? null,

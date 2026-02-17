@@ -27,6 +27,13 @@ import { PrismaEventRegistrationRepository } from './infrastructure/repositories
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
+import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
+import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
+import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
+import { ReviewController } from './presentation/http/controllers/ReviewController';
+import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
+import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
+import { NotificationController } from './presentation/http/controllers/NotificationController';
 
 const fastify = Fastify({
     logger: true
@@ -71,17 +78,43 @@ const start = async () => {
         const eventQuestionRepository = new PrismaEventQuestionRepository();
         const userRepository = new PrismaUserRepository();
         const { notificationService } = require('./application/services/NotificationService'); // Import service
+        const notificationRepository = new PrismaNotificationRepository();
+        const sendNotificationUseCase = new SendNotificationUseCase(notificationRepository, notificationService);
+        const eventRegistrationRepository = new PrismaEventRegistrationRepository();
+        const eventReviewRepository = new PrismaEventReviewRepository();
 
+        // Use Cases
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository);
-        const deleteEventUseCase = new DeleteEventUseCase(eventRepository);
-        const eventController = new EventController(createEventUseCase, listEventsUseCase, updateEventUseCase, deleteEventUseCase);
+        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository, sendNotificationUseCase);
+        
+        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
+        const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
+        const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
+        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
 
-        // Auth Dependencies
+        const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
+        const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
+
+        const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
+        const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
+
         const loginUseCase = new LoginUseCase();
         const registerUseCase = new RegisterUseCase();
+
+        // Controllers
+        const eventController = new EventController(createEventUseCase, listEventsUseCase, updateEventUseCase, deleteEventUseCase);
+        const reviewController = new ReviewController(createReviewUseCase, deleteReviewUseCase);
         const authController = new AuthController(loginUseCase, registerUseCase);
+        const eventRegistrationController = new EventRegistrationController(
+            joinEventUseCase,
+            cancelEventRegistrationUseCase,
+            approveRegistrationUseCase,
+            rejectRegistrationUseCase
+        );
+        const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
+        const notificationController = new NotificationController(notificationRepository);
 
         // Auth Routes
         fastify.post('/auth/login', {
@@ -232,6 +265,37 @@ const start = async () => {
             }
         }, (req, reply) => eventController.list(req, reply));
 
+        fastify.post('/reviews', {
+            schema: {
+                description: 'Create a review',
+                tags: ['Reviews'],
+                body: {
+                    type: 'object',
+                    required: ['eventId', 'userId', 'rating'],
+                    properties: {
+                        eventId: { type: 'string' },
+                        userId: { type: 'string' },
+                        rating: { type: 'number', minimum: 1, maximum: 5 },
+                        comment: { type: 'string' }
+                    }
+                },
+                response: {
+                    201: {
+                        description: 'Review created',
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            eventId: { type: 'string' },
+                            userId: { type: 'string' },
+                            rating: { type: 'number' },
+                            comment: { type: 'string', nullable: true },
+                            createdAt: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => reviewController.create(req, reply));
+
 
         fastify.get('/', {
             schema: {
@@ -249,20 +313,6 @@ const start = async () => {
         }, async () => {
             return { hello: 'Wellcome API' };
         });
-
-        // Event Registration Dependencies
-        const eventRegistrationRepository = new PrismaEventRegistrationRepository();
-        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, notificationService);
-        const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository);
-        const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository);
-        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository);
-
-        const eventRegistrationController = new EventRegistrationController(
-            joinEventUseCase,
-            cancelEventRegistrationUseCase,
-            approveRegistrationUseCase,
-            rejectRegistrationUseCase
-        );
 
         fastify.post('/bookings', {
             schema: {
@@ -441,11 +491,58 @@ const start = async () => {
             return { success: true };
         });
 
-        // User Dependencies
-        // userRepository moved up for CreateEventUseCase
-        const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
-        const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
-        const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
+        // Notification endpoints
+        fastify.get('/notifications', {
+            schema: {
+                description: 'Get user notifications',
+                tags: ['General'],
+                querystring: {
+                    type: 'object',
+                    properties: {
+                        userId: { type: 'string' }
+                    },
+                    required: ['userId']
+                },
+                response: {
+                    200: {
+                        description: 'List of notifications',
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string' },
+                                title: { type: 'string' },
+                                body: { type: 'string' },
+                                type: { type: 'string' },
+                                read: { type: 'boolean' },
+                                createdAt: { type: 'string' },
+                                data: { type: 'object', additionalProperties: true }
+                            }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => notificationController.list(req as any, reply));
+
+        fastify.put<{ Params: { id: string } }>('/notifications/:id/read', {
+            schema: {
+                description: 'Mark notification as read',
+                tags: ['General'],
+                params: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Notification marked as read',
+                        type: 'object',
+                        properties: { success: { type: 'boolean' } }
+                    }
+                }
+            }
+        }, (req, reply) => notificationController.markAsRead(req, reply));
 
         fastify.get('/users/:id', {
             schema: {
@@ -601,6 +698,7 @@ const start = async () => {
                                     languages: { type: 'array', items: { type: 'string' } },
                                     birthDecade: { type: 'string', nullable: true },
                                     pets: { type: 'string', nullable: true },
+                                    phoneNumber: { type: 'string', nullable: true },
                                     expoPushToken: { type: 'string', nullable: true },
                                     updatedAt: { type: 'string', nullable: true }
                                 }
@@ -735,7 +833,10 @@ const start = async () => {
             }
         }, (req, reply) => eventController.delete(req, reply));
 
-        const address = await fastify.listen({ port: 3000, host: '0.0.0.0' });
+
+
+        const port = Number(process.env.PORT) || 3000;
+        const address = await fastify.listen({ port, host: '0.0.0.0' });
 
         console.log(`\n🚀 Backend running at: ${address}`);
 

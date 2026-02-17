@@ -181,13 +181,26 @@ export default function EventRegistrationsScreen() {
                 <TouchableOpacity 
                     style={[styles.secondaryButton, styles.contactButton]}
                     onPress={() => {
-                        // Implement contact logic (e.g., open WhatsApp or email)
-                        if (item.user?.phone) Linking.openURL(`https://wa.me/${item.user.phone}`);
-                        else Alert.alert('Contato', 'Telefone não disponível');
+                        // Check for phone number (phoneNumber or phone)
+                        const phone = item.user?.phoneNumber || item.user?.phone;
+                        
+                        if (phone) {
+                            // Format phone number for WhatsApp
+                            let formattedPhone = phone.replace(/\D/g, '');
+                            // If it's a Brazilian number without country code, add 55
+                            if (formattedPhone.length >= 10 && formattedPhone.length <= 11) {
+                                formattedPhone = `55${formattedPhone}`;
+                            }
+                            
+                            const message = `Olá ${item.user.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
+                            Linking.openURL(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`);
+                        } else {
+                            Alert.alert('Contato', 'Telefone não disponível para este usuário.');
+                        }
                     }}
                 >
                     <Ionicons name="chatbubble-outline" size={18} color="#FF8C42" />
-                    <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Contatar</Text>
+                    <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Chat</Text>
                 </TouchableOpacity>
 
                 {item.status === RegistrationStatus.PENDING && (

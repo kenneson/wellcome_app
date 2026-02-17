@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import { supabase } from '@/shared/lib/supabase';
+import { useRouter } from 'expo-router';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -76,6 +77,7 @@ async function registerForPushNotificationsAsync() {
 }
 
 export function usePushNotifications(id: string | undefined) {
+    const router = useRouter();
     const [expoPushToken, setExpoPushToken] = useState<string | undefined>('');
     const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
     const notificationListener = useRef<Notifications.EventSubscription | undefined>(undefined);
@@ -95,7 +97,12 @@ export function usePushNotifications(id: string | undefined) {
 
         responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
             console.log('User tapped notification:', response);
-            // Handle navigation here if needed
+            const data = response.notification.request.content.data;
+            if (data && data.eventId) {
+                router.push(`/events/${data.eventId}`);
+            } else {
+                router.push('/notifications');
+            }
         });
 
         return () => {
@@ -111,8 +118,7 @@ export function usePushNotifications(id: string | undefined) {
 
             console.log('Saving push token to profile...', token);
 
-            // Using RPC or direct update if permitted
-            // Assuming user table is "profiles" and we have RLS to update our own profile
+            // Using 'profiles' table as defined in Supabase schema
             const { error } = await supabase
                 .from('profiles')
                 .update({ expo_push_token: token })

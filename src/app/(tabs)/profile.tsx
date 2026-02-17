@@ -198,13 +198,24 @@ export default function ProfileScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Meu Perfil</Text>
-                <TouchableOpacity
-                    accessibilityRole="button"
-                    accessibilityLabel="Configurações"
-                    accessibilityHint="Abrir configurações do perfil"
-                >
-                    <Ionicons name="settings-outline" size={Dimensions.icon.large} color={Colors.light.text} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Notificações"
+                        accessibilityHint="Abrir notificações"
+                        onPress={() => router.push('/notifications')}
+                        style={{ marginRight: 16 }}
+                    >
+                        <Ionicons name="notifications-outline" size={Dimensions.icon.large} color={Colors.light.text} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Configurações"
+                        accessibilityHint="Abrir configurações do perfil"
+                    >
+                        <Ionicons name="settings-outline" size={Dimensions.icon.large} color={Colors.light.text} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -340,7 +351,7 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/notifications' as any)}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
                     <View style={[styles.menuIconCircle, { backgroundColor: '#E3F2FD' }]}>
                         <Ionicons name="notifications-outline" size={20} color="#2196F3" />
                     </View>

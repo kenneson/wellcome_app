@@ -24,14 +24,14 @@ export class AuthService {
         }
     }
 
-    async register(email: string, password: string, fullName: string) {
+    async register(email: string, password: string, fullName: string, phoneNumber: string) {
         try {
             const response = await fetch(`${this.apiUrl}/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ email, password, fullName })
+                body: JSON.stringify({ email, password, fullName, phoneNumber })
             });
 
             if (!response.ok) {

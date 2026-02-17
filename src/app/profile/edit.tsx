@@ -53,6 +53,7 @@ export default function EditProfileScreen() {
     const [city, setCity] = useState('');
     const [neighborhood, setNeighborhood] = useState('');
     const [languages, setLanguages] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     useEffect(() => {
         getProfile();
@@ -90,6 +91,7 @@ export default function EditProfileScreen() {
                 if (data.languages && data.languages.length > 0) {
                     setLanguages(data.languages.join(', '));
                 }
+                setPhoneNumber(data.phone_number || '');
                 if (data.dietary_restrictions && data.dietary_restrictions.length > 0) {
                     setDietaryRestriction(data.dietary_restrictions.join(', ')); // Changed to join for multi support
                 }
@@ -160,6 +162,7 @@ export default function EditProfileScreen() {
                 city,
                 neighborhood,
                 languages: languages.split(',').map(s => s.trim()).filter(s => s.length > 0),
+                phone_number: phoneNumber,
                 dietary_restrictions: dietaryRestriction ? dietaryRestriction.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
                 avatar_url: avatarUrl,
                 updated_at: new Date(),
@@ -286,6 +289,18 @@ export default function EditProfileScreen() {
                                 placeholderTextColor="#666"
                                 value={languages}
                                 onChangeText={setLanguages}
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>WhatsApp / Telefone</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="(11) 99999-9999"
+                                placeholderTextColor="#666"
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
+                                keyboardType="phone-pad"
                             />
                         </View>
 

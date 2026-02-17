@@ -29,11 +29,12 @@ export class AuthController {
             email: z.string().email(),
             password: z.string().min(6),
             fullName: z.string(),
+            phoneNumber: z.string().optional(),
         });
 
         try {
-            const { email, password, fullName } = registerSchema.parse(req.body);
-            const data = await this.registerUseCase.execute(email, password, fullName);
+            const { email, password, fullName, phoneNumber } = registerSchema.parse(req.body);
+            const data = await this.registerUseCase.execute(email, password, fullName, phoneNumber || '');
             return reply.code(201).send(data);
         } catch (error: any) {
             return reply.code(400).send({ message: error.message });
