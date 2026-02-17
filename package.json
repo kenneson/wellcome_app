@@ -1,6 +1,6 @@
 {
   "name": "wellcome",
-  "main": "server.js",
+  "main": "expo-router/entry",
   "version": "1.0.0",
   "engines": {
     "node": "20.x"
