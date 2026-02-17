@@ -5,18 +5,16 @@ RUN apt-get update -y && apt-get install -y openssl
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (including devDependencies for build)
+# Install dependencies (ignoring local lockfile to avoid platform mismatches)
+# Also using --unsafe-perm to ensure postinstall scripts run correctly
 RUN npm install --unsafe-perm
-
-# Rebuild prisma client to ensure WASM engine is downloaded
-RUN npm rebuild @prisma/client
 
 COPY . .
 
-# Generate Prisma Client
+# Generate Prisma Client explicitly
 RUN npx prisma generate
 
 # Build the application
