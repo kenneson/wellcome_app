@@ -1,11 +1,15 @@
 // Entry point for Hostinger deployment
-// Mudar o diretório de trabalho para 'backend' para garantir que os caminhos relativos funcionem
+const path = require('path');
+
 try {
-  process.chdir('backend');
+  // Mudar o diretório de trabalho para 'backend' para garantir que os caminhos relativos (como .env) funcionem
+  const backendDir = path.join(__dirname, 'backend');
+  process.chdir(backendDir);
   console.log('Changed working directory to:', process.cwd());
   
   // Carregar o código compilado
-  require('./dist/index.js');
+  // Nota: O caminho do require deve ser relativo ao server.js ou absoluto
+  require(path.join(backendDir, 'dist', 'index.js'));
 } catch (err) {
   console.error('Failed to start server:', err);
   process.exit(1);
