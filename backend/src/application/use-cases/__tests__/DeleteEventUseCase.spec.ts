@@ -1,11 +1,15 @@
 import { DeleteEventUseCase } from '../DeleteEventUseCase';
 import { EventRepository } from '../../../domain/repositories/EventRepository';
+import { EventRegistrationRepository } from '../../../domain/repositories/EventRegistrationRepository';
+import { SendNotificationUseCase } from '../SendNotificationUseCase';
 import { Event } from '../../../domain/entities/Event';
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
 
 describe('DeleteEventUseCase', () => {
     let deleteEventUseCase: DeleteEventUseCase;
     let mockEventRepository: jest.Mocked<EventRepository>;
+    let mockEventRegistrationRepository: jest.Mocked<EventRegistrationRepository>;
+    let mockSendNotificationUseCase: jest.Mocked<SendNotificationUseCase>;
 
     beforeEach(() => {
         mockEventRepository = {
@@ -14,9 +18,25 @@ describe('DeleteEventUseCase', () => {
             findById: jest.fn(),
             update: jest.fn(),
             delete: jest.fn(),
-        };
+        } as unknown as jest.Mocked<EventRepository>;
+
+        mockEventRegistrationRepository = {
+            create: jest.fn(),
+            findByEventId: jest.fn(),
+            findByEventIdWithUser: jest.fn(),
+            updateStatus: jest.fn(),
+            findByUserAndEvent: jest.fn(),
+            cancel: jest.fn(),
+        } as unknown as jest.Mocked<EventRegistrationRepository>;
+
+        mockSendNotificationUseCase = {
+            execute: jest.fn(),
+        } as unknown as jest.Mocked<SendNotificationUseCase>;
+
         deleteEventUseCase = new DeleteEventUseCase(
-            mockEventRepository
+            mockEventRepository,
+            mockEventRegistrationRepository,
+            mockSendNotificationUseCase
         );
     });
 
@@ -50,9 +70,13 @@ describe('DeleteEventUseCase', () => {
             reservationDeadline: null,
             imageGallery: [],
             dietaryOptions: [],
+            questions: [],
+            reviews: [],
+            dishes: []
         };
 
         mockEventRepository.findById.mockResolvedValue(existingEvent);
+        mockEventRegistrationRepository.findByEventIdWithUser.mockResolvedValue([]);
 
         await deleteEventUseCase.execute('event-123', 'host-123');
 
@@ -97,6 +121,9 @@ describe('DeleteEventUseCase', () => {
             reservationDeadline: null,
             imageGallery: [],
             dietaryOptions: [],
+            questions: [],
+            reviews: [],
+            dishes: []
         };
 
         mockEventRepository.findById.mockResolvedValue(existingEvent);
