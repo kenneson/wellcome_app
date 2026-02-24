@@ -1,32 +1,32 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Estágio de Build
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Build args for Expo
-ARG EXPO_PUBLIC_API_URL
-ARG EXPO_PUBLIC_SUPABASE_URL
-ARG EXPO_PUBLIC_SUPABASE_ANON_KEY
-
-ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
-ENV EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL
-ENV EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY
-
+# Copiar arquivos de dependência
 COPY package*.json ./
 
-RUN npm ci
+# Instalar dependências
+RUN npm install
 
+# Copiar todo o código fonte
 COPY . .
 
-# Build for web
-RUN npx expo export --platform web
+# Construir a versão Web do Expo
+# Isso cria a pasta 'dist' com os arquivos estáticos
+RUN npx expo export -p web
 
-# Serve stage
+# Estágio de Produção (Nginx)
 FROM nginx:alpine
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copiar configuração do Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Copiar os arquivos estáticos gerados no build
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expor porta 80
 EXPOSE 80
 
+# Iniciar Nginx
 CMD ["nginx", "-g", "daemon off;"]

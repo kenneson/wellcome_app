@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, Dimensions, Platform, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, Platform, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,8 +15,6 @@ import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { Event } from '@/entities/event/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Map facilities/rules to icons/labels
 const FACILITY_ICONS: Record<string, { icon: string, label: string }> = {
@@ -100,6 +98,31 @@ export default function EventDetailsScreen() {
         if (!event) return;
         router.push(`/events/${id}/join`);
     }
+
+    const openMaps = async () => {
+        if (!event?.latitude || !event?.longitude) return;
+
+        const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+        const latLng = `${event.latitude},${event.longitude}`;
+        const label = event.title;
+        const url = Platform.select({
+            ios: `${scheme}${label}@${latLng}`,
+            android: `${scheme}${latLng}(${label})`
+        });
+
+        if (url) {
+            try {
+                const supported = await Linking.canOpenURL(url);
+                if (supported) {
+                    await Linking.openURL(url);
+                } else {
+                    Alert.alert('Erro', 'Não foi possível abrir o mapa.');
+                }
+            } catch (error) {
+                Alert.alert('Erro', 'Ocorreu um erro ao tentar abrir o mapa.');
+            }
+        }
+    };
 
     const handleContactHost = async () => {
         if (!event?.host?.phoneNumber) {
@@ -222,7 +245,7 @@ export default function EventDetailsScreen() {
                 <View className="relative h-[300px] w-full">
                     <Image
                         source={{ uri: optimizedCoverImage || DEFAULT_PLACEHOLDER_IMAGE }}
-                        className="w-full h-full"
+                        style={{ width: '100%', height: '100%' }}
                         contentFit="cover"
                         transition={200}
                         cachePolicy="memory-disk"
@@ -264,7 +287,8 @@ export default function EventDetailsScreen() {
                     <View className="flex-row items-center mb-8">
                         <Image
                             source={{ uri: optimizedHostAvatar || DEFAULT_AVATAR_PLACEHOLDER }}
-                            className="w-12 h-12 rounded-full border-2 border-white shadow-sm"
+                            style={{ width: 48, height: 48, borderRadius: 24 }}
+                            className="border-2 border-white shadow-sm"
                             contentFit="cover"
                             cachePolicy="memory-disk"
                         />
@@ -388,13 +412,13 @@ export default function EventDetailsScreen() {
 
                     {/* Host Full Profile */}
                     <View className="mb-8">
-                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">Sua Anfitriã</Text>
+                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">Seu Anfitrião(a)</Text>
                         <View className="bg-[#FFF5F0] rounded-2xl p-5">
                             <View className="flex-row items-start justify-between mb-6">
                                 <View className="flex-row items-center">
                                     <Image
-                                        source={{ uri: event.host?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }}
-                                        className="w-16 h-16 rounded-full"
+                                        source={{ uri: optimizedHostAvatar || DEFAULT_AVATAR_PLACEHOLDER }}
+                                        style={{ width: 64, height: 64, borderRadius: 32 }}
                                         contentFit="cover"
                                     />
                                     <View className="ml-3">
@@ -482,24 +506,29 @@ export default function EventDetailsScreen() {
                     {/* Location */}
                     <View className="mb-8">
                         <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">Sobre o local</Text>
-                        <View className="h-[180px] bg-gray-200 rounded-2xl mb-4 overflow-hidden relative">
-                            {/* Placeholder Map */}
+                        
+                        <TouchableOpacity 
+                            className="h-[180px] bg-gray-100 rounded-2xl mb-4 overflow-hidden relative border border-gray-200"
+                            activeOpacity={0.9}
+                            onPress={openMaps}
+                        >
                             <View className="absolute inset-0 items-center justify-center bg-[#E5E7EB]">
                                 <Ionicons name="map" size={40} color="#9CA3AF" />
+                                <Text className="text-gray-500 mt-2 text-sm">Ver no mapa</Text>
                             </View>
                             <View className="absolute inset-0 items-center justify-center">
                                 <View className="w-10 h-10 bg-[#FF8C42] rounded-full items-center justify-center border-4 border-white shadow-lg">
                                     <Ionicons name="location" size={20} color="white" />
                                 </View>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                         
-                        <View className="flex-row items-center mb-6">
+                        <TouchableOpacity onPress={openMaps} className="flex-row items-center mb-6">
                             <Text className="text-sm text-gray-500 italic flex-1">
                                 {event.location || event.host?.neighborhood}, Florianópolis
                             </Text>
                             <Ionicons name="navigate-circle-outline" size={20} color="#FF8C42" />
-                        </View>
+                        </TouchableOpacity>
 
                         <View className="space-y-2">
                             {(event.facilities || []).map((facility, idx) => {

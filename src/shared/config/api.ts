@@ -14,7 +14,7 @@ const getBaseUrl = () => {
 
     // Fallback for development if env var is missing
     // For physical devices, set EXPO_PUBLIC_API_URL in your .env file with your LAN IP
-    return 'http://192.168.1.6:3000';
+    return 'http://192.168.1.11:3000';
 };
 
 export const API_URL = getBaseUrl();

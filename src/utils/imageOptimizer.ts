@@ -28,20 +28,21 @@ export function getOptimizedImageUrl(
     // Construct transformation parameters
     const params = [];
     
-    if (width) params.push(`width=${Math.round(width)}`);
-    if (height) params.push(`height=${Math.round(height)}`);
+    // if (width) params.push(`width=${Math.round(width)}`);
+    // if (height) params.push(`height=${Math.round(height)}`);
     
-    // Quality 80 is a good balance
-    params.push(`quality=${quality}`);
-    params.push(`resize=${resize}`);
+    // // Quality 80 is a good balance
+    // params.push(`quality=${quality}`);
+    // params.push(`resize=${resize}`);
     
-    // Prefer WebP for better compression
-    params.push('format=webp');
+    // // Prefer WebP for better compression
+    // params.push('format=webp');
 
-    const queryString = params.join('&');
-    const separator = url.includes('?') ? '&' : '?';
+    // const queryString = params.join('&');
+    // const separator = url.includes('?') ? '&' : '?';
     
-    return `${url}${separator}${queryString}`;
+    // return `${url}${separator}${queryString}`;
+    return url; // Return original URL for now as transformations might not be enabled
   }
 
   return url;

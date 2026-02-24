@@ -1,57 +1,73 @@
 # Project Architecture
 
-This project follows the standard **Expo Layered Architecture** for scalability, maintainability, and ease of testing.
+This project follows a robust architecture designed for scalability, maintainability, and clear separation of concerns.
 
-## Directory Structure
+## High-Level Overview
 
-```
-src/
-├── app/                 # Expo Router (Filesystem-based routing)
-│   ├── (tabs)/          # Tab navigation group
-│   ├── (auth)/          # Authentication group
-│   └── _layout.tsx      # Root layout and providers
-│
-├── components/          # Reusable UI components
-│   ├── ui/              # Primitive components (Button, Text, Input) - The Design System
-│   └── features/        # Complex, feature-specific components (e.g., UserProfileCard)
-│
-├── hooks/               # Global custom hooks (e.g., useTheme, useAuth)
-│
-├── services/            # External services and API integrations
-│   ├── api/             # Backend API clients (Axios/Fetch)
-│   └── auth/            # Auth services (Supabase/Firebase/Native)
-│
-├── stores/              # Global state management (Zustand/Context)
-│
-├── types/               # TypeScript type definitions and interfaces
-│
-├── utils/               # Helper functions and utilities
-│
-└── constants/           # Global constants (Colors, config)
-```
+The system consists of a mobile application (Frontend) and a backend API server.
 
-## Layers
+![High Level Overview](assets/docs/images/high-level.png)
 
-1.  **App Layer (`/app`)**:
-    *   Contains only Screens and Layouts.
-    *   Responsible for Routing and composing Components.
-    *   Should allow minimal logic (delegate to Hooks/Stores).
+## Frontend Architecture
 
-2.  **UI Layer (`/components`)**:
-    *   **`/ui`**: Dumb components. Receive props, render UI. No business logic.
-    *   **`/features`**: Smart components. Can connect to stores or hooks.
+The frontend is built with **Expo (React Native)** using **Expo Router** for navigation. It follows a layered architecture to separate UI, business logic, and data access.
 
-3.  **Logic Layer (`/hooks`, `/stores`)**:
-    *   Encapsulates state and business logic.
-    *   Hooks for local/reusable logic.
-    *   Stores for global app state.
+### Key Technologies
+- **Framework**: React Native with Expo
+- **Routing**: Expo Router (File-system based)
+- **State Management**: 
+  - **Server State**: TanStack Query (React Query)
+  - **Global Client State**: Zustand
+- **Styling**: NativeWind (Tailwind CSS)
 
-4.  **Data Layer (`/services`)**:
-    *   Handles communication with the Backend and Native APIs.
-    *   **Offline-First**: Use TanStack Query in `/app/_layout.tsx` to handle caching and offline states.
+### Layered Structure
 
-## Best Practices
+![Frontend Architecture](assets/docs/images/frontend-arch.png)
 
-*   **Absolute Imports**: Use `@/components/...` instead of `../../components`.
-*   **Separation of Concerns**: UI components shouldn't know about API calls directly.
-*   **Feature Parity**: Ensure Android and iOS are tested.
+### Directory Structure Explanation
+- **`app/`**: Contains screens and routing logic.
+- **`components/`**: Reusable UI components (dumb components).
+- **`features/`**: Feature-specific components (smart components).
+- **`hooks/`**: Custom hooks for logic reuse.
+- **`services/`**: API calls and external service integrations.
+- **`stores/`**: Global state management.
+
+## Backend Architecture
+
+The backend follows **Clean Architecture** principles to ensure independence of frameworks, UI, and databases.
+
+### Key Technologies
+- **Runtime**: Node.js
+- **Language**: TypeScript
+- **ORM**: Prisma
+- **Database**: PostgreSQL (via Supabase)
+
+### Clean Architecture Layers
+
+![Backend Clean Architecture](assets/docs/images/backend-clean-arch.png)
+
+### Detailed Data Flow
+
+![Backend Data Flow](assets/docs/images/backend-data-flow.png)
+
+### Modules
+
+- **Domain (`src/domain`)**: Core business logic, entities, and repository interfaces. NO external dependencies.
+- **Application (`src/application`)**: Application-specific business rules (Use Cases). Orchestrates the flow of data.
+- **Infrastructure (`src/infrastructure`)**: Frameworks and drivers. Implements interfaces defined in Domain/Application (e.g., Prisma repositories).
+- **Presentation (`src/presentation`)**: Entry points (HTTP Controllers). Adapts data for the Application layer.
+
+## Database Schema
+
+The database is managed via **Prisma ORM**.
+
+- **User**: Core user entity.
+- **Event**: Main entity for events.
+- **EventRegistration**: Manages user participation in events.
+- **EventReview**: Reviews and ratings for events.
+- **Notification**: User notifications.
+
+## Deployment
+
+- **Frontend**: EAS Build (Expo Application Services).
+- **Backend**: Dockerized Node.js application.

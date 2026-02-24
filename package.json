@@ -15,7 +15,7 @@
     "web": "expo start --web",
     "build:web": "expo export -p web",
     "lint": "expo lint",
-    "dev": "concurrently -n \"FRONT,BACK\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run expo:start --dev-client\" \"cd backend && npm run dev\""
+    "dev": "concurrently -n \"FRONT,BACK\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run expo:start -- --dev-client\" \"cd backend && npm run dev\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
