@@ -15,7 +15,7 @@
     "web": "expo start --web",
     "build:web": "expo export -p web",
     "lint": "expo lint",
-    "dev": "concurrently -n \"FRONT,BACK\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run expo:start\" \"cd backend && npm run dev\""
+    "dev": "concurrently -n \"FRONT,BACK\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run expo:start --dev-client\" \"cd backend && npm run dev\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -34,6 +34,7 @@
     "expo-blur": "^15.0.8",
     "expo-constants": "~18.0.11",
     "expo-crypto": "^15.0.8",
+    "expo-dev-client": "~6.0.20",
     "expo-device": "^8.0.10",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",

@@ -63,6 +63,12 @@ async function registerForPushNotificationsAsync() {
         console.log('Expo Push Token (Hooks):', pushTokenString);
         return pushTokenString;
     } catch (error: any) {
+        // Handle Expo Go limitation gracefully
+        if (error.message.includes('removed from Expo Go') || error.message.includes('development build')) {
+            console.warn('Push Notifications are not supported in Expo Go (SDK 53+). Use a development build to test notifications.');
+            return null;
+        }
+
         console.error('Error getting push token:', error);
 
         if (error.message.includes('No "projectId" found')) {
