@@ -2,6 +2,18 @@
 
 O **Easypanel** é um painel de controle moderno baseado em Docker que facilita muito o deploy.
 
+---
+
+## Pré-requisitos
+
+- Uma VPS na Hostinger com Easypanel instalado
+- Um domínio configurado (opcional, mas recomendado)
+- Repositório no GitHub com o código do projeto
+
+---
+
+# Parte 1: Deploy do Backend
+
 ## 1. Configurando o Projeto no Easypanel
 
 1. Acesse seu painel Easypanel (geralmente `http://seu_ip:3000` ou seu domínio configurado).
@@ -36,34 +48,59 @@ O **Easypanel** é um painel de controle moderno baseado em Docker que facilita 
 
 # Parte 2: Deploy do Frontend (Versão Web)
 
-Como seus amigos estão distantes, a maneira mais fácil deles testarem é acessando o app pelo navegador (como um site).
+## IMPORTANTE: Variáveis de Ambiente em Tempo de Build
+
+O Expo usa variáveis `EXPO_PUBLIC_*` que são **embutidas no código em tempo de build**. Isso significa que você DEVE configurar os **Build Arguments** no Easypanel, não apenas Environment Variables.
 
 ## 1. Configurando o Serviço (Frontend)
 
 1. Crie um **novo serviço** do tipo **App** no mesmo projeto.
-2. Nomeie como `Wellcome Web`.
+2. Nomeie como `Wellcome Web` ou `Wellcome Frontend`.
+
+### Configurações do Serviço:
 
 - **Source**:
     - Repositório: `wellcome` (mesmo do backend).
     - **Build Path**: `.` (raiz, deixe vazio ou ponto).
     - **Docker Image**: Deixe vazio.
-    - **Arquivo (Dockerfile)**: `Dockerfile` (agora é o padrão, pois renomeamos o arquivo).
+    - **Dockerfile**: `Dockerfile` (arquivo na raiz do projeto).
 
-- **Environment Variables**:
-    - `EXPO_PUBLIC_API_URL`: `https://api.seudominio.com` (A URL do seu backend que você configurou acima).
+### Build Arguments (CRÍTICO):
 
-- **Domains**:
-    - Adicione o domínio para o app, ex: `app.seudominio.com`.
+No Easypanel, procure a seção **Build Arguments** ou **Build Args** e adicione:
+
+| Nome | Valor |
+|------|-------|
+| `EXPO_PUBLIC_API_URL` | `https://api.seudominio.com` |
+| `EXPO_PUBLIC_SUPABASE_URL` | `https://cmkknuvydqetzmdpzzqv.supabase.co` |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_NcU_Jp3xZY6SKd-x5uY0gg_AXXWZvM2` |
+
+> ⚠️ **Atenção**: Substitua `https://api.seudominio.com` pela URL real do seu backend deployado na Parte 1.
+
+### Domains:
+
+- Adicione o domínio para o app, ex: `app.seudominio.com` ou `wellcome.seudominio.com`.
+- O Easypanel configurará automaticamente o SSL (HTTPS).
 
 ## 2. Deploy
 
 1. Clique em **Deploy**.
 2. O Easypanel vai construir a versão web do seu app Expo e servi-la usando Nginx.
-3. Seus amigos poderão acessar `https://app.seudominio.com` e usar o app direto no navegador (celular ou PC).
+3. Acesse `https://app.seudominio.com` para usar o app direto no navegador (celular ou PC).
 
 ---
 
-# Parte 3: App Nativo (Opcional)
+# Parte 3: Atualizando o Frontend
+
+Quando você precisar atualizar o frontend com uma nova URL de backend:
+
+1. Vá nas configurações do serviço no Easypanel
+2. Atualize o **Build Argument** `EXPO_PUBLIC_API_URL`
+3. Clique em **Deploy** novamente (é necessário um novo build para as variáveis serem atualizadas)
+
+---
+
+# Parte 4: App Nativo (Opcional)
 
 Se você quiser que eles testem o app **nativo** (instalar no Android):
 
@@ -73,5 +110,30 @@ Se você quiser que eles testem o app **nativo** (instalar no Android):
    ```
 2. Isso vai gerar um link para baixar o arquivo `.apk`.
 3. Envie esse link para seus amigos com Android.
+
+---
+
+# Troubleshooting
+
+## Erro de CORS
+
+Se você receber erros de CORS no navegador:
+1. Verifique se o `EXPO_PUBLIC_API_URL` está correto (incluindo `https://`)
+2. Verifique se o backend está rodando e acessível
+3. Verifique os logs do backend para erros
+
+## Tela Branca
+
+Se o app carregar com tela branca:
+1. Abra o DevTools do navegador (F12)
+2. Verifique o Console por erros
+3. Verifique se as variáveis de ambiente foram configuradas corretamente nos Build Arguments
+
+## Build Falhando
+
+Se o build do frontend falhar:
+1. Verifique os logs do build no Easypanel
+2. Certifique-se de que os Build Arguments estão configurados
+3. Verifique se o Dockerfile está na raiz do projeto
 
 

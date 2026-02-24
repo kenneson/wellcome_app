@@ -3,6 +3,17 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
+# Argumentos de build para variáveis de ambiente do Expo
+# Estas variáveis são embutidas no código em tempo de build
+ARG EXPO_PUBLIC_API_URL
+ARG EXPO_PUBLIC_SUPABASE_URL
+ARG EXPO_PUBLIC_SUPABASE_ANON_KEY
+
+# Definir as variáveis de ambiente para o build
+ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
+ENV EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL
+ENV EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY
+
 # Copiar arquivos de dependência
 COPY package*.json ./
 
