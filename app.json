@@ -11,7 +11,10 @@
     "ios": {
       "bundleIdentifier": "com.wellcome.app",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.wellcome.app",
