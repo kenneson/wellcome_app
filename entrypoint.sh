@@ -17,5 +17,9 @@ echo "Healthcheck Server running."
 # Agora roda o Expo na porta 8081 (para não conflitar com a 80) e com túnel
 # O túnel vai gerar a URL exp:// que você precisa
 echo "Starting Expo Tunnel (using unbuffer to force TTY output)..."
+
+# Inicia o monitor de URL em background
+node print-url.js &
+
 # Usa 'unbuffer' do pacote 'expect' para enganar o Expo e mostrar QR Code e URL coloridos
 unbuffer npx expo start --tunnel --port 8081 --dev-client --clear

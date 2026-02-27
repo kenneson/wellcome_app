@@ -10,6 +10,7 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 COPY entrypoint.sh .
+COPY print-url.js .
 RUN chmod +x entrypoint.sh
 
 # Expor porta 80 para padrão EasyPanel (Fake Server) e 8081 para Expo
