@@ -5,6 +5,10 @@ ENV EXPO_NO_TELEMETRY=1
 COPY package*.json ./
 RUN npm ci
 COPY . .
-# Expor porta 80 para padrão EasyPanel
-EXPOSE 80
-CMD ["npx","expo","start","--tunnel","--port","80","--dev-client"]
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
+# Expor porta 80 para padrão EasyPanel (Fake Server) e 8081 para Expo
+EXPOSE 80 8081
+
+CMD ["./entrypoint.sh"]
