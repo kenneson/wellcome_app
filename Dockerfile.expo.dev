@@ -2,7 +2,8 @@ FROM node:20-bullseye
 WORKDIR /app
 ENV CI=1
 ENV EXPO_NO_TELEMETRY=1
+RUN npm i -g @expo/ngrok@^4.1.0
 COPY package*.json ./
 RUN npm ci
 COPY . .
-CMD ["npx","expo","start","--tunnel","--non-interactive","--clear"]
+CMD ["npx","expo","start","--tunnel","--clear"]
