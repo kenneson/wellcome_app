@@ -1,0 +1,8 @@
+FROM node:20-bullseye
+WORKDIR /app
+ENV CI=1
+ENV EXPO_NO_TELEMETRY=1
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["npx","expo","start","--tunnel","--non-interactive","--clear"]
