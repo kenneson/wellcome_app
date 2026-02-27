@@ -2,6 +2,10 @@ FROM node:20-bullseye
 WORKDIR /app
 ENV CI=1
 ENV EXPO_NO_TELEMETRY=1
+
+# Instalar 'expect' para forçar output de terminal (QR Code/URL)
+RUN apt-get update && apt-get install -y expect && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 RUN npm ci
 COPY . .

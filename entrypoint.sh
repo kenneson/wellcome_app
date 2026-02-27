@@ -16,7 +16,6 @@ echo "Healthcheck Server running."
 
 # Agora roda o Expo na porta 8081 (para não conflitar com a 80) e com túnel
 # O túnel vai gerar a URL exp:// que você precisa
-echo "Starting Expo Tunnel (CI=0 to show QR Code)..."
-# Força CI=0 para exibir QR Code e URL, mas usa --non-interactive se possível para não travar
-# Na verdade, sem CI=1 e com ngrok instalado, ele deve mostrar o link.
-CI=0 npx expo start --tunnel --port 8081 --dev-client --clear
+echo "Starting Expo Tunnel (using unbuffer to force TTY output)..."
+# Usa 'unbuffer' do pacote 'expect' para enganar o Expo e mostrar QR Code e URL coloridos
+unbuffer npx expo start --tunnel --port 8081 --dev-client --clear
