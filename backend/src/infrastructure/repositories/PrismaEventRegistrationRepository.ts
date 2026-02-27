@@ -115,6 +115,7 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 languages: prismaBooking.guest.languages,
                 dietaryRestrictions: prismaBooking.guest.dietaryRestrictions,
                 expoPushToken: prismaBooking.guest.expoPushToken,
+                phoneNumber: prismaBooking.guest.phoneNumber, // Added phone number mapping
                 updatedAt: prismaBooking.guest.updatedAt
             } : undefined,
             event: prismaBooking.event ? {
