@@ -14,25 +14,11 @@ fi
 
 echo "Healthcheck Server running."
 
-# Agora roda o Expo na porta 8081 (para não conflitar com a 80) e com túnel
-# O túnel vai gerar a URL exp:// que você precisa
-echo "Starting Expo Tunnel (output to expo.log and console)..."
-
-# Debug de login
-if [ -n "$EXPO_TOKEN" ]; then
-  echo "🔑 EXPO_TOKEN detectado. Tentando login..."
-  # Tenta login com o token explicitamente
-  # Se o comando falhar, não interrompe o script
-  npx expo login -t "$EXPO_TOKEN" || echo "❌ Login com token falhou!"
-  
-  echo "👤 Usuário logado:"
-  npx expo whoami || echo "⚠️  Nenhum usuário logado!"
-else
-  echo "⚠️  ATENÇÃO: EXPO_TOKEN não configurado! O túnel pode falhar ou não aparecer no dashboard."
-fi
-
-# Inicia o monitor de URL em background
-node print-url.js &
+# Agora roda o Expo na porta 8081 em modo LAN (para acessar via IP direto)
+# Você deve abrir a porta 8081 no Firewall da VPS
+echo "Starting Expo in LAN Mode (port 8081)..."
 
 # Redireciona output para arquivo e console (tee)
-unbuffer npx expo start --tunnel --port 8081 --dev-client --clear | tee expo.log
+# Remove --tunnel e adiciona --host lan
+# O unbuffer garante que o QR code apareça
+unbuffer npx expo start --host lan --port 8081 --dev-client --clear | tee expo.log
