@@ -18,6 +18,19 @@ echo "Healthcheck Server running."
 # O túnel vai gerar a URL exp:// que você precisa
 echo "Starting Expo Tunnel (output to expo.log and console)..."
 
+# Debug de login
+if [ -n "$EXPO_TOKEN" ]; then
+  echo "🔑 EXPO_TOKEN detectado. Tentando login..."
+  # Tenta login com o token explicitamente
+  # Se o comando falhar, não interrompe o script
+  npx expo login -t "$EXPO_TOKEN" || echo "❌ Login com token falhou!"
+  
+  echo "👤 Usuário logado:"
+  npx expo whoami || echo "⚠️  Nenhum usuário logado!"
+else
+  echo "⚠️  ATENÇÃO: EXPO_TOKEN não configurado! O túnel pode falhar ou não aparecer no dashboard."
+fi
+
 # Inicia o monitor de URL em background
 node print-url.js &
 
