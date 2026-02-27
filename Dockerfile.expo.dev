@@ -1,7 +1,10 @@
 FROM node:20-bullseye
 WORKDIR /app
+ENV CI=1
 ENV EXPO_NO_TELEMETRY=1
 COPY package*.json ./
 RUN npm ci
 COPY . .
-CMD ["npx","expo","start","--tunnel","--clear"]
+# Expor porta 8081 para healthcheck do EasyPanel
+EXPOSE 8081
+CMD ["npx","expo","start","--tunnel","--dev-client"]
