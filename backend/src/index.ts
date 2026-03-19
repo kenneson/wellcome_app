@@ -56,9 +56,24 @@ const start = async () => {
                 },
                 servers: [{ url: 'http://localhost:3000' }],
                 tags: [
+                    { name: 'Auth', description: 'Authentication endpoints' },
+                    { name: 'Bookings', description: 'Event registration and approval endpoints' },
                     { name: 'Events', description: 'Event management endpoints' },
-                    { name: 'General', description: 'General endpoints' }
-                ]
+                    { name: 'Notifications', description: 'Push and in-app notification endpoints' },
+                    { name: 'Reviews', description: 'Event review endpoints' },
+                    { name: 'Users', description: 'User profile endpoints' },
+                    { name: 'General', description: 'General and health endpoints' }
+                ],
+                components: {
+                    schemas: {
+                        ErrorResponse: {
+                            type: 'object',
+                            properties: {
+                                message: { type: 'string' }
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -69,6 +84,23 @@ const start = async () => {
                 deepLinking: false
             },
             staticCSP: true,
+        });
+
+        fastify.get('/docs-spec/json', {
+            schema: {
+                hide: true
+            }
+        }, async (_req, reply) => {
+            return reply.send(fastify.swagger());
+        });
+
+        fastify.get('/docs-spec/yaml', {
+            schema: {
+                hide: true
+            }
+        }, async (_req, reply) => {
+            reply.type('application/yaml');
+            return reply.send(fastify.swagger({ yaml: true }));
         });
 
 
@@ -119,6 +151,7 @@ const start = async () => {
         // Auth Routes
         fastify.post('/auth/login', {
             schema: {
+                summary: 'Authenticate with email and password',
                 description: 'Login user',
                 tags: ['Auth'],
                 body: {
@@ -144,6 +177,7 @@ const start = async () => {
 
         fastify.post('/auth/register', {
             schema: {
+                summary: 'Register a new user account',
                 description: 'Register user',
                 tags: ['Auth'],
                 body: {
@@ -171,6 +205,7 @@ const start = async () => {
         // Routes
         fastify.post('/events', {
             schema: {
+                summary: 'Create event',
                 description: 'Create a new event',
                 tags: ['Events'],
                 body: {
@@ -224,6 +259,7 @@ const start = async () => {
 
         fastify.get('/events', {
             schema: {
+                summary: 'List events',
                 description: 'List events with optional filtering',
                 tags: ['Events'],
                 querystring: {
@@ -267,6 +303,7 @@ const start = async () => {
 
         fastify.post('/reviews', {
             schema: {
+                summary: 'Create review',
                 description: 'Create a review',
                 tags: ['Reviews'],
                 body: {
@@ -299,6 +336,7 @@ const start = async () => {
 
         fastify.get('/', {
             schema: {
+                summary: 'Health check',
                 description: 'Health check endpoint',
                 tags: ['General'],
                 response: {
@@ -316,6 +354,7 @@ const start = async () => {
 
         fastify.post('/bookings', {
             schema: {
+                summary: 'Create event booking',
                 description: 'Join an event',
                 tags: ['Bookings'],
                 body: {
@@ -363,6 +402,7 @@ const start = async () => {
         // Get registrations for an event (for host to manage)
         fastify.get('/bookings/event/:eventId', {
             schema: {
+                summary: 'List event bookings',
                 description: 'Get all registrations for an event',
                 tags: ['Bookings'],
                 params: {
@@ -418,6 +458,7 @@ const start = async () => {
         // Approval endpoints
         fastify.post('/bookings/approve', {
             schema: {
+                summary: 'Approve booking',
                 description: 'Approve a registration',
                 tags: ['Bookings'],
                 body: {
@@ -436,6 +477,7 @@ const start = async () => {
 
         fastify.post('/bookings/reject', {
             schema: {
+                summary: 'Reject booking',
                 description: 'Reject a registration',
                 tags: ['Bookings'],
                 body: {
@@ -464,8 +506,9 @@ const start = async () => {
 
         fastify.post<{ Body: NotificationTestBody }>('/notifications/test', {
             schema: {
+                summary: 'Send test push notification',
                 description: 'Send a test push notification',
-                tags: ['General'],
+                tags: ['Notifications'],
                 body: {
                     type: 'object',
                     required: ['token', 'title', 'body'],
@@ -494,8 +537,9 @@ const start = async () => {
         // Notification endpoints
         fastify.get('/notifications', {
             schema: {
+                summary: 'List notifications',
                 description: 'Get user notifications',
-                tags: ['General'],
+                tags: ['Notifications'],
                 querystring: {
                     type: 'object',
                     properties: {
@@ -526,8 +570,9 @@ const start = async () => {
 
         fastify.put<{ Params: { id: string } }>('/notifications/:id/read', {
             schema: {
+                summary: 'Mark notification as read',
                 description: 'Mark notification as read',
-                tags: ['General'],
+                tags: ['Notifications'],
                 params: {
                     type: 'object',
                     properties: {
@@ -546,6 +591,7 @@ const start = async () => {
 
         fastify.get('/users/:id', {
             schema: {
+                summary: 'Get user profile',
                 description: 'Get user profile',
                 tags: ['Users'],
                 params: {
@@ -590,6 +636,7 @@ const start = async () => {
 
         fastify.put('/users/:id', {
             schema: {
+                summary: 'Update user profile',
                 description: 'Update user profile',
                 tags: ['Users'],
                 params: {
@@ -628,6 +675,7 @@ const start = async () => {
 
         fastify.delete('/bookings', {
             schema: {
+                summary: 'Cancel booking',
                 description: 'Cancel booking',
                 tags: ['Bookings'],
                 body: {
@@ -646,6 +694,7 @@ const start = async () => {
 
         fastify.get('/events/:id', {
             schema: {
+                summary: 'Get event by id',
                 description: 'Get event details',
                 tags: ['Events'],
                 params: {
@@ -728,6 +777,7 @@ const start = async () => {
         // Update Event
         fastify.put('/events/:id', {
             schema: {
+                summary: 'Update event',
                 description: 'Update an event',
                 tags: ['Events'],
                 params: {
@@ -804,6 +854,7 @@ const start = async () => {
         // Delete Event
         fastify.delete('/events/:id', {
             schema: {
+                summary: 'Delete event',
                 description: 'Delete an event',
                 tags: ['Events'],
                 params: {
@@ -832,6 +883,45 @@ const start = async () => {
                 }
             }
         }, (req, reply) => eventController.delete(req, reply));
+
+        fastify.delete('/reviews/:id', {
+            schema: {
+                summary: 'Delete review',
+                description: 'Delete a review authored by the requesting user',
+                tags: ['Reviews'],
+                params: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: {
+                        id: { type: 'string' }
+                    }
+                },
+                body: {
+                    type: 'object',
+                    required: ['userId'],
+                    properties: {
+                        userId: { type: 'string' }
+                    }
+                },
+                response: {
+                    204: { description: 'Review deleted successfully' },
+                    403: {
+                        description: 'Only review author can delete',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    },
+                    404: {
+                        description: 'Review not found',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => reviewController.delete(req, reply));
 
 
 
