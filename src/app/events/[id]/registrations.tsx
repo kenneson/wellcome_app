@@ -1,16 +1,15 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, Linking, TextInput, StatusBar, Platform } from 'react-native';
-import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
-import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { registrationService } from '@/services/api/RegistrationService';
 import { RegistrationStatus } from '@/entities/event/types';
-import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
+import { registrationService } from '@/services/api/RegistrationService';
+import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
+import { supabase } from '@/shared/lib/supabase';
 import { formatPrice } from '@/utils/formatters';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Linking, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EventRegistrationsScreen() {
     const { id } = useLocalSearchParams();
@@ -120,6 +119,11 @@ export default function EventRegistrationsScreen() {
         return { confirmedCount, pendingCount, revenue, occupancy };
     }, [registrations, event]);
 
+    const isEventPast = useMemo(() => {
+        if (!event || !event.event_date) return false;
+        return new Date(event.event_date) < new Date();
+    }, [event]);
+
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -164,19 +168,21 @@ export default function EventRegistrationsScreen() {
             </View>
 
             <View style={styles.actions}>
-                <TouchableOpacity 
-                    style={styles.secondaryButton}
-                    onPress={() => item.status === RegistrationStatus.APPROVED ? handleReject(item.id) : handleApprove(item.id)} // For demo, allow cancel/approve toggle or logic
-                >
-                    <Ionicons 
-                        name={item.status === RegistrationStatus.APPROVED ? "close-circle-outline" : "reload-outline"} 
-                        size={18} 
-                        color="#666" 
-                    />
-                    <Text style={styles.secondaryButtonText}>
-                        {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Reenviar'}
-                    </Text>
-                </TouchableOpacity>
+                {!isEventPast && (
+                    <TouchableOpacity 
+                        style={styles.secondaryButton}
+                        onPress={() => item.status === RegistrationStatus.APPROVED ? handleReject(item.id) : handleApprove(item.id)} // For demo, allow cancel/approve toggle or logic
+                    >
+                        <Ionicons 
+                            name={item.status === RegistrationStatus.APPROVED ? "close-circle-outline" : "reload-outline"} 
+                            size={18} 
+                            color="#666" 
+                        />
+                        <Text style={styles.secondaryButtonText}>
+                            {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Reenviar'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity 
                     style={[styles.secondaryButton, styles.contactButton]}
@@ -203,7 +209,7 @@ export default function EventRegistrationsScreen() {
                     <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Chat</Text>
                 </TouchableOpacity>
 
-                {item.status === RegistrationStatus.PENDING && (
+                {!isEventPast && item.status === RegistrationStatus.PENDING && (
                     <TouchableOpacity 
                         style={styles.primaryButton}
                         onPress={() => handleApprove(item.id)}

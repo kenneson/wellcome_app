@@ -13,6 +13,10 @@ export class CancelEventRegistrationUseCase {
     async execute(eventId: string, userId: string): Promise<void> {
         // Fetch event to get host token
         const event = await this.eventRepository.findById(eventId);
+
+        if (event && new Date(event.eventDate) < new Date()) {
+            throw new Error('Cannot cancel registration for past events');
+        }
         
         const registrations = await this.eventRegistrationRepository.findByUserId(userId);
         const registration = registrations.find(r => r.eventId === eventId);

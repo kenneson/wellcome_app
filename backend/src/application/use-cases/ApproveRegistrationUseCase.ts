@@ -21,6 +21,10 @@ export class ApproveRegistrationUseCase {
             throw new Error('Unauthorized: You are not the host of this event');
         }
 
+        if (registration.event && new Date(registration.event.eventDate) < new Date()) {
+            throw new Error('Cannot change registration status for past events');
+        }
+
         const updatedRegistration = await this.eventRegistrationRepository.updateStatus(registrationId, 'APPROVED');
 
         // Send Push Notification
