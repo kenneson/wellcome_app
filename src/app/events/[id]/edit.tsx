@@ -178,17 +178,23 @@ function EditEventForm() {
                     <DateTimePicker
                         value={data.details.date || new Date()}
                         mode="date"
-                        display="default"
+                        display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                        themeVariant="light"
+                        textColor="#000000"
                         onChange={onDateChange}
                         minimumDate={new Date()}
+                        style={Platform.OS === 'ios' ? { height: 320, width: '100%' } : undefined}
                     />
                 )}
                 {showTimePicker && (
                     <DateTimePicker
                         value={data.details.date || new Date()}
                         mode="time"
-                        display="default"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        themeVariant="light"
+                        textColor="#000000"
                         onChange={onTimeChange}
+                        style={Platform.OS === 'ios' ? { height: 200, width: '100%' } : undefined}
                     />
                 )}
 

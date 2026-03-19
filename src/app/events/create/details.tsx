@@ -1,24 +1,24 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-    View,
-    Text,
-    ScrollView,
-    TouchableOpacity,
-    TextInput,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Alert,
-    useWindowDimensions,
-    Modal,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Ionicons } from '@expo/vector-icons';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { useEventDetailsViewModel } from '@/features/events/create/useEventDetailsViewModel';
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ============================================================================
 // Types
@@ -178,18 +178,24 @@ function IOSPickerModal({ visible, title, value, mode, minimumDate, onConfirm, o
                             <Text className="text-base text-[#FF8C42] font-bold">Confirmar</Text>
                         </TouchableOpacity>
                     </View>
-                    <View className="items-center pb-8">
+                    <View className="items-center pb-8 w-full px-4">
                         <DateTimePicker
                             value={tempDate}
                             mode={mode}
-                            display="spinner"
+                            display={mode === 'date' ? 'inline' : 'spinner'}
+                            themeVariant="light"
+                            textColor="#000000"
                             is24Hour={true}
                             minimumDate={minimumDate}
                             onChange={(_event: any, selectedDate?: Date) => {
                                 if (selectedDate) setTempDate(selectedDate);
                             }}
                             locale="pt-BR"
-                            style={{ height: 200 }}
+                            style={{ 
+                                height: mode === 'date' ? 320 : 200, 
+                                width: '100%',
+                                backgroundColor: 'transparent'
+                            }}
                         />
                     </View>
                 </View>
