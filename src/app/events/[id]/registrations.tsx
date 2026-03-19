@@ -187,8 +187,7 @@ export default function EventRegistrationsScreen() {
                 <TouchableOpacity 
                     style={[styles.secondaryButton, styles.contactButton]}
                     onPress={() => {
-                        // Check for phone number (phoneNumber or phone)
-                        const phone = item.user?.phoneNumber || item.user?.phone;
+                        const phone = item.user?.phoneNumber || item.user?.phone_number || item.user?.phone;
                         
                         if (phone) {
                             // Format phone number for WhatsApp
