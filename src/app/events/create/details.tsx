@@ -182,7 +182,7 @@ function IOSPickerModal({ visible, title, value, mode, minimumDate, onConfirm, o
                         <DateTimePicker
                             value={tempDate}
                             mode={mode}
-                            display={mode === 'date' ? 'inline' : 'spinner'}
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                             themeVariant="light"
                             textColor="#000000"
                             is24Hour={true}
@@ -192,7 +192,7 @@ function IOSPickerModal({ visible, title, value, mode, minimumDate, onConfirm, o
                             }}
                             locale="pt-BR"
                             style={{ 
-                                height: mode === 'date' ? 320 : 200, 
+                                height: 200, 
                                 width: '100%',
                                 backgroundColor: 'transparent'
                             }}
@@ -581,6 +581,7 @@ export default function EventCreateStep4() {
                     value={eventDate || new Date()}
                     mode="date"
                     display="default"
+                    themeVariant="light"
                     onChange={handleAndroidChange('date')}
                     minimumDate={new Date()}
                 />
@@ -590,6 +591,7 @@ export default function EventCreateStep4() {
                     value={eventDate || new Date()}
                     mode="time"
                     display="default"
+                    themeVariant="light"
                     is24Hour={true}
                     onChange={handleAndroidChange('startTime')}
                 />
@@ -599,6 +601,7 @@ export default function EventCreateStep4() {
                     value={endTimeDate || defaultEndTime}
                     mode="time"
                     display="default"
+                    themeVariant="light"
                     is24Hour={true}
                     onChange={handleAndroidChange('endTime')}
                 />
@@ -608,6 +611,7 @@ export default function EventCreateStep4() {
                     value={deadlineDate || new Date()}
                     mode="date"
                     display="default"
+                    themeVariant="light"
                     onChange={handleAndroidChange('deadline')}
                 />
             )}
