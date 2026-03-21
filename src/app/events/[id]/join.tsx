@@ -142,7 +142,7 @@ export default function JoinEventScreen() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView contentContainerStyle={styles.content}>
+                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                     <Text style={styles.eventTitle}>{event.title}</Text>
                     <Text style={styles.subtitle}>
                         {event.questions && event.questions.length > 0

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, useWindowDimensions, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { SelectionCard } from '@/components/ui/SelectionCard';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { SelectionCard } from '@/components/ui/SelectionCard';
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventCreateSettings() {
     const router = useRouter();
@@ -25,6 +25,8 @@ export default function EventCreateSettings() {
     const [submitting, setSubmitting] = useState(false);
     const [newQuestion, setNewQuestion] = useState('');
     const [isRequired, setIsRequired] = useState(false);
+    const scrollViewRef = useRef<ScrollView>(null);
+    const questionInputRef = useRef<TextInput>(null);
 
     const handleBack = () => router.back();
 
@@ -62,6 +64,7 @@ export default function EventCreateSettings() {
                 style={{ flex: 1 }}
             >
             <ScrollView
+                ref={scrollViewRef}
                 className="flex-1"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
                 showsVerticalScrollIndicator={false}
@@ -121,12 +124,18 @@ export default function EventCreateSettings() {
                 <View className="bg-gray-50 rounded-2xl" style={{ padding: isSmallScreen ? 14 : 20 }}>
                     <Text className="text-sm font-bold text-gray-900 mb-3">Adicionar nova pergunta</Text>
                     <TextInput
+                        ref={questionInputRef}
                         className="bg-white border border-gray-200 rounded-xl text-base mb-4 text-[#1A1A1A]"
                         style={{ padding: isSmallScreen ? 12 : 16 }}
                         placeholder="Ex: Qual seu perfil no Instagram?"
                         placeholderTextColor="#D1D5DB"
                         value={newQuestion}
                         onChangeText={setNewQuestion}
+                        onFocus={() => {
+                            setTimeout(() => {
+                                scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }, 300);
+                        }}
                     />
 
                     <View className={`${isSmallScreen ? 'flex-col gap-3' : 'flex-row'} justify-between items-center`}>

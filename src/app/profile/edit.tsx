@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { supabase } from '@/shared/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
     StyleSheet,
-    View,
     Text,
     TextInput,
     TouchableOpacity,
-    Alert,
-    ScrollView,
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
-import * as ImagePicker from 'expo-image-picker';
 
 const occupations = [
     'Estudante',
@@ -212,7 +212,7 @@ export default function EditProfileScreen() {
                 style={{ flex: 1 }}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Adjust offset if needed
             >
-                <ScrollView contentContainerStyle={styles.content}>
+                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                     <View style={styles.avatarContainer}>
                         <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
                             {avatarUrl ? (
