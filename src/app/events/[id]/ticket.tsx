@@ -1,24 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ActivityIndicator,
-    Alert,
-    TouchableOpacity,
-    ScrollView,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Event, RegistrationStatus } from '@/entities/event/types';
+import { eventService } from '@/services/api/EventService';
+import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
+import { supabase } from '@/shared/lib/supabase';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import QRCode from 'react-native-qrcode-svg';
-import { supabase } from '@/shared/lib/supabase';
-import { eventService } from '@/services/api/EventService';
-import { formatEventDate } from '@/utils/formatters';
-import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
-import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
-import { Event, RegistrationStatus } from '@/entities/event/types';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Dynamic import to avoid crashing if react-native-qrcode-svg has issues
+let QRCode: any = null;
+try {
+    QRCode = require('react-native-qrcode-svg').default || require('react-native-qrcode-svg');
+} catch {
+    // QR code library not available
+}
 
 export default function TicketScreen() {
     const { id } = useLocalSearchParams();
@@ -141,12 +147,19 @@ export default function TicketScreen() {
                     <View style={styles.qrSection}>
                         <Text style={styles.qrLabel}>Apresente este QR Code ao anfitrião</Text>
                         <View style={styles.qrContainer}>
-                            <QRCode
-                                value={qrData}
-                                size={200}
-                                color="#1A1A1A"
-                                backgroundColor="#FFFFFF"
-                            />
+                            {QRCode ? (
+                                <QRCode
+                                    value={qrData}
+                                    size={200}
+                                    color="#1A1A1A"
+                                    backgroundColor="#FFFFFF"
+                                />
+                            ) : (
+                                <View style={{ width: 200, height: 200, backgroundColor: '#F3F4F6', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
+                                    <Ionicons name="qr-code-outline" size={64} color="#9CA3AF" />
+                                    <Text style={{ color: '#6B7280', marginTop: 8, fontSize: 12 }}>QR Code indisponível</Text>
+                                </View>
+                            )}
                         </View>
                         <Text style={styles.bookingId}>#{booking.id.slice(0, 8).toUpperCase()}</Text>
                     </View>

@@ -568,7 +568,7 @@ export default function EventDetailsScreen() {
             </KeyboardAwareScrollView>
 
             {/* Action Bar - Participant: View Ticket (approved) */}
-            {isParticipant && myBookingStatus === 'APPROVED' && !isPastEvent && (
+            {isParticipant && myBookingStatus === 'APPROVED' && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
                     <TouchableOpacity
                         className="bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"
@@ -581,7 +581,7 @@ export default function EventDetailsScreen() {
             )}
 
             {/* Action Bar - Host: Scan Tickets */}
-            {isHost && !isPastEvent && (
+            {isHost && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
                     <View className="flex-row gap-3">
                         <TouchableOpacity

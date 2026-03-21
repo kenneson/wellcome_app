@@ -26,12 +26,16 @@ export class JoinEventUseCase {
             throw new Error('Event not found');
         }
 
-        // Check if event has already passed
+        // Check if registration is still open
         const now = new Date();
-        const eventEndDate = event.endTime ? new Date(event.endTime) : new Date(event.eventDate);
+        const cutoffDate = event.reservationDeadline
+            ? new Date(event.reservationDeadline)
+            : event.endTime
+                ? new Date(event.endTime)
+                : new Date(event.eventDate);
         
-        if (eventEndDate < now) {
-            throw new Error('Cannot join events that have already passed');
+        if (cutoffDate < now) {
+            throw new Error('Registration deadline has passed');
         }
 
         if (event.hostId === data.userId) {

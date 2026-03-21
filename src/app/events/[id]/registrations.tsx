@@ -129,7 +129,11 @@ export default function EventRegistrationsScreen() {
             {/* Tappable profile area */}
             <TouchableOpacity 
                 style={styles.cardHeader}
-                onPress={() => router.push(`/profile/${item.user?.id}`)}
+                onPress={() => {
+                    if (!item.user?.id) return;
+                    router.dismiss();
+                    setTimeout(() => router.push(`/profile/${item.user.id}` as any), 100);
+                }}
                 activeOpacity={0.7}
             >
                 <Image

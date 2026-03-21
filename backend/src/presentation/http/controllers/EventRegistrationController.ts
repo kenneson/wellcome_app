@@ -50,6 +50,9 @@ export class EventRegistrationController {
             if (error.message === 'Event is full' || error.message === 'User already registered for this event') {
                 return reply.code(409).send({ message: error.message });
             }
+            if (error.message === 'Registration deadline has passed' || error.message === 'Host cannot join their own event') {
+                return reply.code(400).send({ message: error.message });
+            }
             return reply.code(500).send({ message: 'Internal server error', error });
         }
     }
