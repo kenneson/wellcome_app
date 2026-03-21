@@ -190,8 +190,15 @@ export default function EventRegistrationsScreen() {
                         // Log para debugar a estrutura do usuário que está vindo da API
                         console.log('User data for contact:', item.user);
                         
-                        // Busca o telefone. Se não achar no objeto mapeado, vamos buscar direto no Supabase em background
-                        const phone = item.user?.phoneNumber || item.user?.phone_number || item.user?.phone || item.user?.whatsapp;
+                        // Check all possible variations from different data shapes
+                        const phone = 
+                            item.user?.phoneNumber || 
+                            item.user?.phone_number || 
+                            item.user?.phone || 
+                            item.user?.whatsapp ||
+                            item.guest?.phoneNumber ||
+                            item.guest?.phone_number ||
+                            item.guest?.phone;
                         
                         const initiateChat = (phoneNumber: string) => {
                             let formattedPhone = phoneNumber.replace(/\D/g, '');
@@ -206,18 +213,25 @@ export default function EventRegistrationsScreen() {
                             initiateChat(phone);
                         } else {
                             // Fallback de segurança: busca direto no banco caso o backend não tenha retornado no payload
-                            supabase
-                                .from('profiles')
-                                .select('phone_number')
-                                .eq('id', item.user.id)
-                                .single()
-                                .then(({ data, error }) => {
-                                    if (!error && data?.phone_number) {
-                                        initiateChat(data.phone_number);
-                                    } else {
-                                        Alert.alert('Contato', 'Telefone não disponível para este usuário.');
-                                    }
-                                });
+                            const targetUserId = item.user?.id || item.guest?.id || item.userId || item.user_id;
+                            
+                            if (targetUserId) {
+                                supabase
+                                    .from('profiles')
+                                    .select('phone_number, phone, whatsapp')
+                                    .eq('id', targetUserId)
+                                    .single()
+                                    .then(({ data, error }) => {
+                                        const dbPhone = data?.phone_number || data?.phone || data?.whatsapp;
+                                        if (!error && dbPhone) {
+                                            initiateChat(dbPhone);
+                                        } else {
+                                            Alert.alert('Contato', 'Telefone não disponível para este usuário.');
+                                        }
+                                    });
+                            } else {
+                                Alert.alert('Erro', 'Não foi possível identificar o usuário.');
+                            }
                         }
                     }}
                 >
