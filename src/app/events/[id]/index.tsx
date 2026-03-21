@@ -47,6 +47,7 @@ export default function EventDetailsScreen() {
     const [participantCount, setParticipantCount] = useState(0);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [submittingReview, setSubmittingReview] = useState(false);
+    const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
 
     const isPastEvent = React.useMemo(() => {
         if (!event) return false;
@@ -80,6 +81,7 @@ export default function EventDetailsScreen() {
             if (userId && eventData.bookings) {
                 const myParticipation = eventData.bookings.find(b => b.userId === userId);
                 setIsParticipant(!!myParticipation);
+                setMyBookingStatus(myParticipation?.status || null);
                 const validBookings = eventData.bookings.filter(b => b.status === 'APPROVED' || b.status === 'PENDING');
                 setParticipantCount(validBookings.length);
             } else {
@@ -563,7 +565,42 @@ export default function EventDetailsScreen() {
                 </View>
             </KeyboardAwareScrollView>
 
-            {/* Action Bar (Join Event) */}
+            {/* Action Bar - Participant: View Ticket (approved) */}
+            {isParticipant && myBookingStatus === 'APPROVED' && !isPastEvent && (
+                <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
+                    <TouchableOpacity
+                        className="bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"
+                        onPress={() => router.push(`/events/${id}/ticket`)}
+                    >
+                        <Ionicons name="qr-code-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text className="text-white font-bold text-[16px]">Ver Ingresso</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Action Bar - Host: Scan Tickets */}
+            {isHost && !isPastEvent && (
+                <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
+                    <View className="flex-row gap-3">
+                        <TouchableOpacity
+                            className="flex-1 bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"
+                            onPress={() => router.push(`/events/${id}/scanner`)}
+                        >
+                            <Ionicons name="scan-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text className="text-white font-bold text-[16px]">Escanear</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            className="flex-1 bg-white border border-gray-200 py-3.5 rounded-2xl flex-row items-center justify-center"
+                            onPress={() => router.push(`/events/${id}/registrations`)}
+                        >
+                            <Ionicons name="people-outline" size={20} color="#333" style={{ marginRight: 8 }} />
+                            <Text className="text-gray-700 font-bold text-[16px]">Inscrições</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
+            {/* Action Bar - Join Event (not participant, not host) */}
             {!isHost && !isParticipant && !isPastEvent && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
                     <View className="flex-row items-center justify-between">

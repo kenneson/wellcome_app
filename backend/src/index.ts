@@ -143,7 +143,8 @@ const start = async () => {
             joinEventUseCase,
             cancelEventRegistrationUseCase,
             approveRegistrationUseCase,
-            rejectRegistrationUseCase
+            rejectRegistrationUseCase,
+            eventRegistrationRepository
         );
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
         const notificationController = new NotificationController(notificationRepository);
@@ -515,7 +516,55 @@ const start = async () => {
             }
         }, (req, reply) => eventRegistrationController.reject(req, reply));
 
-
+        fastify.post('/bookings/validate-ticket', {
+            schema: {
+                summary: 'Validate event ticket',
+                description: 'Host scans QR code to validate participant ticket',
+                tags: ['Bookings'],
+                body: {
+                    type: 'object',
+                    required: ['bookingId', 'hostId'],
+                    properties: {
+                        bookingId: { type: 'string' },
+                        hostId: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Ticket validation result',
+                        type: 'object',
+                        properties: {
+                            valid: { type: 'boolean' },
+                            message: { type: 'string' },
+                            booking: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    status: { type: 'string' },
+                                    user: {
+                                        type: 'object',
+                                        nullable: true,
+                                        properties: {
+                                            id: { type: 'string' },
+                                            fullName: { type: 'string' },
+                                            avatarUrl: { type: 'string', nullable: true }
+                                        }
+                                    },
+                                    event: {
+                                        type: 'object',
+                                        nullable: true,
+                                        properties: {
+                                            id: { type: 'string' },
+                                            title: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => eventRegistrationController.validateTicket(req, reply));
 
         interface NotificationTestBody {
             token: string;

@@ -1,26 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-    StyleSheet,
-    View,
-    Text,
-    TouchableOpacity,
-    Alert,
-    ScrollView,
-    ActivityIndicator,
-    useColorScheme
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useQuery } from '@tanstack/react-query';
-import { userService } from '@/services/api/UserService';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
-import { Colors, Spacing, Dimensions, BorderRadius } from '@/shared/constants/theme';
+import { userService } from '@/services/api/UserService';
+import { Colors, Dimensions } from '@/shared/constants/theme';
+import { supabase } from '@/shared/lib/supabase';
 import { formatFirstName, formatShortDate } from '@/utils/formatters';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
     const router = useRouter();
@@ -301,7 +300,12 @@ export default function ProfileScreen() {
                 {/* Events List */}
                 {hasBookings ? (
                     currentBookings.map((booking: any) => (
-                        <View key={booking.id} style={styles.experienceCard}>
+                        <TouchableOpacity
+                            key={booking.id}
+                            style={styles.experienceCard}
+                            onPress={() => router.push(`/events/${booking.event?.id}`)}
+                            activeOpacity={0.7}
+                        >
                             <Image
                                 source={{ uri: booking.event?.coverImageUrl }}
                                 style={styles.expImagePlaceholder}
@@ -316,6 +320,18 @@ export default function ProfileScreen() {
                                     <StatusBadge status={booking.status} />
                                 </View>
                             </View>
+                            {activeTab === 'upcoming' && booking.status === 'APPROVED' && (
+                                <TouchableOpacity
+                                    style={styles.ticketButton}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`/events/${booking.event?.id}/ticket`);
+                                    }}
+                                >
+                                    <Ionicons name="qr-code-outline" size={16} color="#FF8C42" />
+                                    <Text style={styles.ticketButtonText}>Ingresso</Text>
+                                </TouchableOpacity>
+                            )}
                             {activeTab === 'history' && (
                                 <TouchableOpacity style={styles.rateButton}>
                                     <Text style={styles.rateButtonText}>Avaliar</Text>
@@ -324,12 +340,15 @@ export default function ProfileScreen() {
                             {activeTab === 'upcoming' && booking.status === 'pending' && (
                                 <TouchableOpacity
                                     style={styles.cancelButton}
-                                    onPress={() => handleCancelBooking(booking.event?.id)}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelBooking(booking.event?.id);
+                                    }}
                                 >
                                     <Text style={styles.cancelButtonText}>Cancelar</Text>
                                 </TouchableOpacity>
                             )}
-                        </View>
+                        </TouchableOpacity>
                     ))
                 ) : (
                     <View style={styles.emptyState}>
@@ -679,6 +698,21 @@ const styles = StyleSheet.create({
     },
     cancelButtonText: {
         color: '#FF3B30',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    ticketButton: {
+        backgroundColor: '#FFF3E0',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginLeft: 8,
+    },
+    ticketButtonText: {
+        color: '#FF8C42',
         fontSize: 12,
         fontWeight: '600',
     },

@@ -1,9 +1,10 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { JoinEventUseCase } from '../../../application/use-cases/JoinEventUseCase';
-import { CancelEventRegistrationUseCase } from '../../../application/use-cases/CancelEventRegistrationUseCase';
-import { ApproveRegistrationUseCase } from '../../../application/use-cases/ApproveRegistrationUseCase';
-import { RejectRegistrationUseCase } from '../../../application/use-cases/RejectRegistrationUseCase';
 import { z } from 'zod';
+import { ApproveRegistrationUseCase } from '../../../application/use-cases/ApproveRegistrationUseCase';
+import { CancelEventRegistrationUseCase } from '../../../application/use-cases/CancelEventRegistrationUseCase';
+import { JoinEventUseCase } from '../../../application/use-cases/JoinEventUseCase';
+import { RejectRegistrationUseCase } from '../../../application/use-cases/RejectRegistrationUseCase';
+import { EventRegistrationRepository } from '../../../domain/repositories/EventRegistrationRepository';
 
 const createRegistrationSchema = z.object({
     eventId: z.string(),
@@ -20,12 +21,18 @@ const approveRejectSchema = z.object({
     reason: z.string().optional()
 });
 
+const validateTicketSchema = z.object({
+    bookingId: z.string().uuid(),
+    hostId: z.string().uuid()
+});
+
 export class EventRegistrationController {
     constructor(
         private joinEventUseCase: JoinEventUseCase,
         private cancelEventRegistrationUseCase: CancelEventRegistrationUseCase,
         private approveRegistrationUseCase: ApproveRegistrationUseCase,
-        private rejectRegistrationUseCase: RejectRegistrationUseCase
+        private rejectRegistrationUseCase: RejectRegistrationUseCase,
+        private eventRegistrationRepository: EventRegistrationRepository
     ) { }
 
     async create(request: FastifyRequest, reply: FastifyReply) {
@@ -80,6 +87,49 @@ export class EventRegistrationController {
             return reply.send(registration);
         } catch (error) {
             return reply.code(500).send({ message: 'Internal server error', error });
+        }
+    }
+
+    async validateTicket(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            const { bookingId, hostId } = validateTicketSchema.parse(request.body);
+
+            const registration = await this.eventRegistrationRepository.findById(bookingId);
+
+            if (!registration) {
+                return reply.code(404).send({ valid: false, message: 'Ingresso não encontrado' });
+            }
+
+            if (registration.event?.hostId !== hostId) {
+                return reply.code(403).send({ valid: false, message: 'Você não é o anfitrião deste evento' });
+            }
+
+            if (registration.status !== 'APPROVED') {
+                return reply.code(400).send({ valid: false, message: `Inscrição com status: ${registration.status}` });
+            }
+
+            return reply.send({
+                valid: true,
+                message: 'Ingresso válido!',
+                booking: {
+                    id: registration.id,
+                    status: registration.status,
+                    user: registration.user ? {
+                        id: registration.user.id,
+                        fullName: registration.user.fullName,
+                        avatarUrl: registration.user.avatarUrl,
+                    } : null,
+                    event: registration.event ? {
+                        id: registration.event.id,
+                        title: registration.event.title,
+                    } : null,
+                }
+            });
+        } catch (error: any) {
+            if (error instanceof z.ZodError) {
+                return reply.code(400).send({ valid: false, message: 'Dados inválidos' });
+            }
+            return reply.code(500).send({ valid: false, message: 'Erro interno' });
         }
     }
 }

@@ -104,6 +104,16 @@ export class RegistrationService {
     async rejectBooking(registrationId: string, hostId: string, reason: string) {
         return this.rejectRegistration(registrationId, reason);
     }
+
+    async validateTicket(bookingId: string, hostId: string) {
+        const response = await fetch(`${API_URL}/bookings/validate-ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingId, hostId })
+        });
+
+        return response.json();
+    }
 }
 
 export const registrationService = new RegistrationService();
