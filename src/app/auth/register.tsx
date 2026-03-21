@@ -1,21 +1,19 @@
+import { authService } from '@/services/api/AuthService';
+import { supabase } from '@/shared/lib/supabase';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { makeRedirectUri } from 'expo-auth-session';
+import { Link, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
+    Alert,
     StyleSheet,
-    View,
     Text,
     TextInput,
     TouchableOpacity,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
+    View,
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
-import { authService } from '@/services/api/AuthService';
-import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -100,12 +98,13 @@ export default function RegisterScreen() {
     }
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAwareScrollView
+            enableOnAndroid={true}
+            extraScrollHeight={20}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.scrollContent}
             style={styles.container}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                         <Ionicons name="chevron-back" size={24} color="#333" />
@@ -235,8 +234,7 @@ export default function RegisterScreen() {
                         </TouchableOpacity>
                     </Link>
                 </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
     );
 }
 

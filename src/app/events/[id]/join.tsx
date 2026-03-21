@@ -3,7 +3,8 @@ import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function JoinEventScreen() {
@@ -138,11 +139,13 @@ export default function JoinEventScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.content}
                 style={{ flex: 1 }}
             >
-                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                     <Text style={styles.eventTitle}>{event.title}</Text>
                     <Text style={styles.subtitle}>
                         {event.questions && event.questions.length > 0
@@ -167,8 +170,7 @@ export default function JoinEventScreen() {
                     ))}
 
                     <View style={{ height: 100 }} />
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
 
             <View style={styles.footer}>
                 <TouchableOpacity

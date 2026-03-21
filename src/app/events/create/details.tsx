@@ -8,16 +8,15 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
     Alert,
     Image,
-    KeyboardAvoidingView,
     Modal,
     Platform,
-    ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
     useWindowDimensions,
     View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ============================================================================
@@ -344,17 +343,14 @@ export default function EventCreateStep4() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
             <CreateEventHeader />
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="flex-1"
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 120 }}
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
             >
-                <ScrollView
-                    className="flex-1"
-                    contentContainerStyle={{ paddingBottom: 120 }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
                     {/* Wizard Progress */}
                     <View style={{ paddingHorizontal: horizontalPadding }} className="py-3">
                         <WizardProgress currentStep={3} />
@@ -532,8 +528,7 @@ export default function EventCreateStep4() {
                             )}
                         </View>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
 
             {/* Bottom CTA */}
             <View

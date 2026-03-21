@@ -13,7 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Map facilities/rules to icons/labels
@@ -240,11 +241,13 @@ export default function EventDetailsScreen() {
     return (
         <View className="flex-1 bg-white">
             <StatusBar style="light" />
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 100 }}
                 style={{ flex: 1 }}
             >
-            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
                 {/* Hero Image */}
                 <View className="relative h-[300px] w-full">
                     <Image
@@ -558,8 +561,7 @@ export default function EventDetailsScreen() {
                         </View>
                     </View>
                 </View>
-            </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
 
             {/* Action Bar (Join Event) */}
             {!isHost && !isParticipant && !isPastEvent && (

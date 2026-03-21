@@ -5,7 +5,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventCreateSettings() {
@@ -25,7 +26,6 @@ export default function EventCreateSettings() {
     const [submitting, setSubmitting] = useState(false);
     const [newQuestion, setNewQuestion] = useState('');
     const [isRequired, setIsRequired] = useState(false);
-    const scrollViewRef = useRef<ScrollView>(null);
     const questionInputRef = useRef<TextInput>(null);
 
     const handleBack = () => router.back();
@@ -59,16 +59,13 @@ export default function EventCreateSettings() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
             <CreateEventHeader title="Ajustes finais" />
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
-            >
-            <ScrollView
-                ref={scrollViewRef}
-                className="flex-1"
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
                 showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+                style={{ flex: 1 }}
             >
                 <View className="mb-6">
                     <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
@@ -131,11 +128,7 @@ export default function EventCreateSettings() {
                         placeholderTextColor="#D1D5DB"
                         value={newQuestion}
                         onChangeText={setNewQuestion}
-                        onFocus={() => {
-                            setTimeout(() => {
-                                scrollViewRef.current?.scrollToEnd({ animated: true });
-                            }, 300);
-                        }}
+
                     />
 
                     <View className={`${isSmallScreen ? 'flex-col gap-3' : 'flex-row'} justify-between items-center`}>
@@ -158,8 +151,7 @@ export default function EventCreateSettings() {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
 
             <View
                 className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"

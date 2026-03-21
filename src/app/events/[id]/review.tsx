@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
 import { reviewService } from '@/services/api/ReviewService';
+import { supabase } from '@/shared/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReviewEventScreen() {
@@ -46,15 +47,14 @@ export default function ReviewEventScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white">
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="flex-1"
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ padding: 24, flexGrow: 1 }}
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
             >
-                <ScrollView
-                    contentContainerStyle={{ padding: 24, flexGrow: 1 }}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
             <View className="flex-row items-center mb-6">
                 <TouchableOpacity onPress={() => router.back()} className="mr-4">
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
@@ -100,8 +100,7 @@ export default function ReviewEventScreen() {
                     <Text className="text-white font-bold text-base">Enviar Avaliação</Text>
                 )}
             </TouchableOpacity>
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

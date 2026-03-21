@@ -1,13 +1,13 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { WizardProgress } from '@/components/ui/WizardProgress';
-import { DishInputCard } from '@/components/ui/DishInputCard';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { DishInputCard } from '@/components/ui/DishInputCard';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Alert, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventCreateStep2() {
     const router = useRouter();

@@ -7,15 +7,13 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const occupations = [
@@ -207,12 +205,13 @@ export default function EditProfileScreen() {
                 <View style={{ width: 60 }} />
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.content}
                 style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Adjust offset if needed
             >
-                <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                     <View style={styles.avatarContainer}>
                         <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
                             {avatarUrl ? (
@@ -341,8 +340,7 @@ export default function EditProfileScreen() {
                             )}
                         </TouchableOpacity>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

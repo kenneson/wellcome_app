@@ -1,18 +1,16 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-    View,
-    TextInput,
-    Text,
-    TouchableOpacity,
-    StyleSheet,
-    FlatList,
-    ActivityIndicator,
-    Modal,
-    KeyboardAvoidingView,
-    Platform,
-} from 'react-native';
+import { GeocodingResult, locationService, Municipality } from '@/services/api/LocationService';
 import { Ionicons } from '@expo/vector-icons';
-import { locationService, Municipality, GeocodingResult } from '@/services/api/LocationService';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -209,8 +207,7 @@ export function LocationAutocomplete({
                 transparent={false}
                 onRequestClose={onClose}
             >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                <View
                     style={styles.modalContainer}
                 >
                     <View style={styles.modalHeader}>
@@ -223,7 +220,7 @@ export function LocationAutocomplete({
                         <View style={{ width: 40 }} />
                     </View>
                     {content}
-                </KeyboardAvoidingView>
+                </View>
             </Modal>
         );
     }

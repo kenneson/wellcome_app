@@ -1,21 +1,20 @@
+import { authService } from '@/services/api/AuthService';
+import { supabase } from '@/shared/lib/supabase';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as Linking from 'expo-linking';
+import { Link, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
+    Alert,
     StyleSheet,
-    View,
     Text,
     TextInput,
     TouchableOpacity,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
+    View,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { useRouter, Link } from 'expo-router';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
-import { authService } from '@/services/api/AuthService';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -85,10 +84,12 @@ export default function LoginScreen() {
     }
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <KeyboardAwareScrollView
+            enableOnAndroid={true}
+            extraScrollHeight={20}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ flexGrow: 1 }}
             style={styles.container}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
             <View style={styles.content}>
                 <View style={styles.logoContainer}>
@@ -174,7 +175,7 @@ export default function LoginScreen() {
                     </Link>
                 </View>
             </View>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
     );
 }
 

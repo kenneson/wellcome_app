@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export interface FilterCriteria {
     priceMin?: string;
@@ -75,10 +75,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.modalContainer}
-                >
+                <View style={styles.modalContainer}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={onClose}>
                             <Ionicons name="close" size={24} color="#333" />
@@ -89,7 +86,12 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+                    <KeyboardAwareScrollView
+                        enableOnAndroid={true}
+                        extraScrollHeight={20}
+                        keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={styles.content}
+                    >
                         {/* Price Range */}
                         <Text style={styles.sectionTitle}>Faixa de Preço</Text>
                         <View style={styles.row}>
@@ -163,14 +165,14 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                         </View>
 
                         <View style={{ height: 40 }} />
-                    </ScrollView>
+                    </KeyboardAwareScrollView>
 
                     <View style={styles.footer}>
                         <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
                             <Text style={styles.applyButtonText}>Aplicar Filtros</Text>
                         </TouchableOpacity>
                     </View>
-                </KeyboardAvoidingView>
+                </View>
             </View>
         </Modal>
     );

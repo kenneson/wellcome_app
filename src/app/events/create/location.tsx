@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView, useWindowDimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
-import { WizardProgress } from '@/components/ui/WizardProgress';
-import { SelectionSection } from '@/components/ui/SelectionSection';
-import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { SelectionSection } from '@/components/ui/SelectionSection';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FACILITIES = [
     'Estacionamento para visitantes',

@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, TextInput, Switch, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { EventCreationProvider, useEventCreation } from '@/shared/context/EventCreationContext';
-import { eventService } from '@/services/api/EventService';
 import { SelectionSection } from '@/components/ui/SelectionSection';
-import { supabase } from '@/shared/lib/supabase';
+import { eventService } from '@/services/api/EventService';
+import { EventCreationProvider, useEventCreation } from '@/shared/context/EventCreationContext';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Reusing constants from create flow (ideally should be shared)
 const EVENT_TYPES = [
@@ -126,11 +126,13 @@ function EditEventForm() {
                 </TouchableOpacity>
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.content}
                 style={{ flex: 1 }}
             >
-            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 {/* Basic Info */}
                 <Text style={styles.sectionHeader}>Informações Básicas</Text>
 
@@ -267,8 +269,7 @@ function EditEventForm() {
                 />
 
                 <View style={{ height: 40 }} />
-            </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

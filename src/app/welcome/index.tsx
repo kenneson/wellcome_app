@@ -1,24 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { useUserProfile } from '@/context/UserProfileContext';
+import { supabase } from '@/shared/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Dimensions,
     StyleSheet,
-    View,
     Text,
     TextInput,
     TouchableOpacity,
-    Alert,
-    ScrollView,
-    KeyboardAvoidingView,
-    Platform,
-    ActivityIndicator,
-    Animated,
-    Dimensions
+    View
 } from 'react-native';
-import { Image } from 'expo-image';
-import { supabase } from '@/shared/lib/supabase';
-import { useUserProfile } from '@/context/UserProfileContext';
-import { Ionicons } from '@expo/vector-icons';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 
 const { width } = Dimensions.get('window');
 
@@ -354,16 +352,15 @@ export default function WelcomeScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="dark" />
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardView}
-            >
                 {step > 0 && renderProgressIndicator()}
 
-                <ScrollView
+                <KeyboardAwareScrollView
+                    enableOnAndroid={true}
+                    extraScrollHeight={20}
+                    keyboardShouldPersistTaps="handled"
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
+                    style={styles.keyboardView}
                 >
                     <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
                         {step === 0 && renderWelcomeStep()}
@@ -371,7 +368,7 @@ export default function WelcomeScreen() {
                         {step === 2 && renderBioStep()}
                         {step === 3 && renderLocationStep()}
                     </Animated.View>
-                </ScrollView>
+                </KeyboardAwareScrollView>
 
                 <View style={styles.footer}>
                     {step > 0 && (
@@ -406,7 +403,6 @@ export default function WelcomeScreen() {
                         )}
                     </TouchableOpacity>
                 </View>
-            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

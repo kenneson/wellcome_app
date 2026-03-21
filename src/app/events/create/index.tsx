@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, KeyboardAvoidingView, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, TextInput, useWindowDimensions } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
@@ -80,17 +81,14 @@ export default function EventCreateStep1() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
             <CreateEventHeader />
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                className="flex-1"
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120, paddingTop: 0 }}
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
             >
-                <ScrollView
-                    className="flex-1"
-                    contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120, paddingTop: 0 }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
                     <WizardProgress currentStep={0} />
 
                     <View className="mt-6 mb-6">
@@ -142,8 +140,7 @@ export default function EventCreateStep1() {
                             />
                         </View>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
 
             <View
                 className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
