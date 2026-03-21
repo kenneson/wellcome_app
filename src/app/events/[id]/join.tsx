@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
 import { registrationService } from '@/services/api/RegistrationService';
-import { WizardProgress } from '@/components/ui/WizardProgress'; // Reusing wizard style for steps if needed, or simple header
+import { supabase } from '@/shared/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function JoinEventScreen() {
     const { id } = useLocalSearchParams();
@@ -25,7 +24,7 @@ export default function JoinEventScreen() {
             const { data, error } = await supabase
                 .from('events')
                 .select(`
-                    id, title, access_type,
+                    id, title, access_type, event_date,
                     questions:event_questions(id, question, required, order, question_type)
                 `)
                 .eq('id', id)
@@ -36,6 +35,17 @@ export default function JoinEventScreen() {
             // Sort questions by order
             if (data.questions) {
                 data.questions.sort((a: any, b: any) => a.order - b.order);
+            }
+
+            // Check if event is past
+            const eventDateStr = data.event_date || (data as any).eventDate;
+            if (eventDateStr) {
+                const eventTime = new Date(eventDateStr).getTime();
+                if (eventTime < Date.now()) {
+                    Alert.alert('Evento Encerrado', 'Este evento já aconteceu e não aceita mais inscrições.');
+                    router.back();
+                    return;
+                }
             }
 
             setEvent(data);

@@ -26,6 +26,20 @@ export class JoinEventUseCase {
             throw new Error('Event not found');
         }
 
+        if (event.hostId === data.userId) {
+            throw new Error('Host cannot join their own event');
+        }
+
+        // Bloqueia inscrições em eventos passados
+        if (new Date(event.eventDate).getTime() < new Date().getTime()) {
+            throw new Error('Cannot join past events');
+        }
+
+        // Verifica o prazo de inscrição (se existir)
+        if (event.reservationDeadline && new Date(event.reservationDeadline).getTime() < new Date().getTime()) {
+            throw new Error('Registration deadline has passed');
+        }
+
         // Check if event is full
         const isFull = event.maxGuests && (event.bookings?.length || 0) >= event.maxGuests;
 

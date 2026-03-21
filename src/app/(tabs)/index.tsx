@@ -1,20 +1,18 @@
-import { Image } from 'expo-image';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, StatusBar, RefreshControl, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
-import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/shared/lib/supabase';
-import { SideMenu } from '@/components/ui/SideMenu';
-import { FilterModal, FilterCriteria } from '@/components/ui/events/FilterModal';
-import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
-import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
-import { Colors, Spacing, Dimensions, BorderRadius } from '@/shared/constants/theme';
-import { formatPrice, formatEventDate, formatSpotsAvailable } from '@/utils/formatters';
-import { QuickStats } from '@/components/ui/QuickStats';
 import { EnhancedEventCard } from '@/components/ui/EnhancedEventCard';
+import { FilterCriteria, FilterModal } from '@/components/ui/events/FilterModal';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
+import { QuickStats } from '@/components/ui/QuickStats';
+import { SideMenu } from '@/components/ui/SideMenu';
+import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
+import { supabase } from '@/shared/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_LOCATION_KEY = '@user_location';
 
@@ -219,10 +217,18 @@ export default function HomeScreen() {
              data = data.filter((e: any) => e.host_id !== currentUserId);
            }
            
-           // Filter out past events - Fix para lidar com timezone local e forçar inicio do dia atual
-           const now = new Date();
-           const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-           data = data.filter((e: any) => new Date(e.event_date) >= todayStart);
+           // Filter out past events - Fix absoluto usando timestamp para evitar bugs de fuso horário
+           const nowTime = new Date().getTime();
+           data = data.filter((e: any) => {
+               const eventDateStr = e.event_date || e.eventDate;
+               if (!eventDateStr) return false;
+               
+               // Considera até o final do dia do evento como válido para exibição no dia
+               const eventDate = new Date(eventDateStr);
+               eventDate.setHours(23, 59, 59, 999);
+               
+               return eventDate.getTime() >= nowTime;
+           });
            
            if (filters.priceMin && filters.priceMin.trim() !== '') {
              data = data.filter((e: any) => e.price >= parseFloat(filters.priceMin!));

@@ -202,11 +202,23 @@ export default function EventRegistrationsScreen() {
                         
                         const initiateChat = (phoneNumber: string) => {
                             let formattedPhone = phoneNumber.replace(/\D/g, '');
-                            if (formattedPhone.length >= 10 && formattedPhone.length <= 11) {
+                            // Simple heuristic for BR numbers: se tiver 10 ou 11 dígitos, adiciona 55 (igual ao host)
+                            if (formattedPhone.length === 10 || formattedPhone.length === 11) {
                                 formattedPhone = `55${formattedPhone}`;
                             }
-                            const message = `Olá ${item.user?.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
-                            Linking.openURL(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`);
+                            
+                            const message = `Olá ${item.user?.fullName?.split(' ')[0] || item.guest?.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
+                            const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+                            
+                            Linking.canOpenURL(url).then(supported => {
+                                if (supported) {
+                                    Linking.openURL(url);
+                                } else {
+                                    Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
+                                }
+                            }).catch(() => {
+                                Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
+                            });
                         };
 
                         if (phone) {

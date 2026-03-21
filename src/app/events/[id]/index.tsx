@@ -573,6 +573,10 @@ export default function EventDetailsScreen() {
                     >
                         <Text className="text-base font-bold text-gray-900">Gerenciar inscrições</Text>
                     </TouchableOpacity>
+                ) : isPastEvent && !isParticipant ? (
+                    <View className="px-6 py-3.5 rounded-2xl bg-gray-100">
+                        <Text className="text-base font-bold text-gray-500">Evento encerrado</Text>
+                    </View>
                 ) : (
                     <TouchableOpacity 
                         className={`px-8 py-3.5 rounded-2xl ${isFull && !isParticipant ? 'bg-gray-300' : 'bg-[#FF8C42]'}`}
