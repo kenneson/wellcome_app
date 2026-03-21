@@ -126,7 +126,12 @@ export default function EventRegistrationsScreen() {
 
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
-            <View style={styles.cardHeader}>
+            {/* Tappable profile area */}
+            <TouchableOpacity 
+                style={styles.cardHeader}
+                onPress={() => router.push(`/profile/${item.user?.id}`)}
+                activeOpacity={0.7}
+            >
                 <Image
                     source={{ uri: getOptimizedImageUrl(item.user?.avatarUrl, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
                     style={styles.avatar}
@@ -149,29 +154,71 @@ export default function EventRegistrationsScreen() {
                         </View>
                     </View>
                     
-                    <Text style={styles.subInfo}>
-                        {item.status === RegistrationStatus.APPROVED ? 
-                            `Pago • ${item.guestsCount || 1} convite${(item.guestsCount || 1) > 1 ? 's' : ''}` : 
-                            'Aguardando Pagamento'
-                        }
-                    </Text>
+                    {item.user?.occupation && (
+                        <Text style={styles.occupationText}>{item.user.occupation}</Text>
+                    )}
 
-                    {item.user?.dietaryRestrictions && item.user.dietaryRestrictions.length > 0 && (
-                        <View style={styles.warningBox}>
-                            <Ionicons name="alert-circle" size={16} color="#B45309" />
-                            <Text style={styles.warningText}>
-                                Restrição alimentar: {item.user.dietaryRestrictions.join(', ')}.
+                    {(item.user?.city || item.user?.neighborhood) && (
+                        <View style={styles.locationRow}>
+                            <Ionicons name="location-outline" size={12} color="#9CA3AF" />
+                            <Text style={styles.locationText}>
+                                {[item.user.city, item.user.neighborhood].filter(Boolean).join(' • ')}
                             </Text>
                         </View>
                     )}
+
+                    <View style={styles.viewProfileRow}>
+                        <Ionicons name="person-circle-outline" size={14} color="#FF8C42" />
+                        <Text style={styles.viewProfileText}>Ver perfil completo</Text>
+                        <Ionicons name="chevron-forward" size={12} color="#FF8C42" />
+                    </View>
                 </View>
-            </View>
+            </TouchableOpacity>
+
+            {/* Bio snippet */}
+            {item.user?.bio && (
+                <View style={styles.bioSection}>
+                    <Text style={styles.bioLabel}>Sobre</Text>
+                    <Text style={styles.bioText} numberOfLines={2}>{item.user.bio}</Text>
+                </View>
+            )}
+
+            {/* Languages */}
+            {item.user?.languages && item.user.languages.length > 0 && (
+                <View style={styles.tagsSection}>
+                    <Ionicons name="globe-outline" size={14} color="#6B7280" />
+                    <Text style={styles.tagsText}>{item.user.languages.join(', ')}</Text>
+                </View>
+            )}
+
+            {/* Dietary Restrictions */}
+            {item.user?.dietaryRestrictions && item.user.dietaryRestrictions.length > 0 && (
+                <View style={styles.warningBox}>
+                    <Ionicons name="alert-circle" size={16} color="#B45309" />
+                    <Text style={styles.warningText}>
+                        Restrição alimentar: {item.user.dietaryRestrictions.join(', ')}
+                    </Text>
+                </View>
+            )}
+
+            {/* Answers to questions */}
+            {item.answers && item.answers.length > 0 && (
+                <View style={styles.answersSection}>
+                    <Text style={styles.answersTitle}>Respostas</Text>
+                    {item.answers.map((a: any, idx: number) => (
+                        <View key={idx} style={styles.answerItem}>
+                            <Text style={styles.questionText}>{a.question}</Text>
+                            <Text style={styles.answerText}>{a.answer}</Text>
+                        </View>
+                    ))}
+                </View>
+            )}
 
             <View style={styles.actions}>
                 {!isEventPast && (
                     <TouchableOpacity 
                         style={styles.secondaryButton}
-                        onPress={() => item.status === RegistrationStatus.APPROVED ? handleReject(item.id) : handleApprove(item.id)} // For demo, allow cancel/approve toggle or logic
+                        onPress={() => item.status === RegistrationStatus.APPROVED ? handleReject(item.id) : handleApprove(item.id)}
                     >
                         <Ionicons 
                             name={item.status === RegistrationStatus.APPROVED ? "close-circle-outline" : "reload-outline"} 
@@ -187,13 +234,10 @@ export default function EventRegistrationsScreen() {
                 <TouchableOpacity 
                     style={[styles.secondaryButton, styles.contactButton]}
                     onPress={() => {
-                        // Check for phone number (phoneNumber or phone_number)
                         const phone = item.user?.phoneNumber || item.user?.phone_number || item.user?.phone;
                         
                         if (phone) {
-                            // Format phone number for WhatsApp
                             let formattedPhone = phone.replace(/\D/g, '');
-                            // If it's a Brazilian number without country code, add 55
                             if (formattedPhone.length >= 10 && formattedPhone.length <= 11) {
                                 formattedPhone = `55${formattedPhone}`;
                             }
@@ -499,7 +543,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     userName: {
         fontSize: 16,
@@ -507,6 +551,62 @@ const styles = StyleSheet.create({
         color: '#1F2937',
         flex: 1,
         marginRight: 8,
+    },
+    occupationText: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginBottom: 2,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        marginBottom: 4,
+    },
+    locationText: {
+        fontSize: 12,
+        color: '#9CA3AF',
+    },
+    viewProfileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 3,
+        marginTop: 4,
+    },
+    viewProfileText: {
+        fontSize: 12,
+        color: '#FF8C42',
+        fontWeight: '600',
+    },
+    bioSection: {
+        backgroundColor: '#F9FAFB',
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 10,
+    },
+    bioLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 4,
+    },
+    bioText: {
+        fontSize: 13,
+        color: '#4B5563',
+        lineHeight: 18,
+    },
+    tagsSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 10,
+        paddingHorizontal: 2,
+    },
+    tagsText: {
+        fontSize: 13,
+        color: '#6B7280',
     },
     statusBadge: {
         paddingHorizontal: 8,
@@ -527,26 +627,49 @@ const styles = StyleSheet.create({
         color: '#166534', // Green-800
     },
     textPending: {
-        color: '#C2410C', // Orange-800
-    },
-    subInfo: {
-        fontSize: 13,
-        color: '#6B7280',
-        marginBottom: 8,
+        color: '#C2410C',
     },
     warningBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FEF3C7', // Amber-100
+        backgroundColor: '#FEF3C7',
         padding: 8,
         borderRadius: 8,
-        marginTop: 4,
+        marginBottom: 10,
     },
     warningText: {
         fontSize: 12,
-        color: '#92400E', // Amber-800
+        color: '#92400E',
         marginLeft: 6,
         flex: 1,
+    },
+    answersSection: {
+        backgroundColor: '#F0F9FF',
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 10,
+    },
+    answersTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#3B82F6',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+    },
+    answerItem: {
+        marginBottom: 8,
+    },
+    questionText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#4B5563',
+        marginBottom: 2,
+    },
+    answerText: {
+        fontSize: 13,
+        color: '#1F2937',
+        lineHeight: 18,
     },
     actions: {
         flexDirection: 'row',

@@ -1,39 +1,39 @@
-import path from 'path';
-import dotenv from 'dotenv';
-
-// Explicitly load .env from backend root
-dotenv.config({ path: path.join(__dirname, '../.env') });
-import Fastify from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
-import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
-import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
-import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
-import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
-import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
-import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
-import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
+import dotenv from 'dotenv';
+import Fastify from 'fastify';
+import path from 'path';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
-import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
-import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
-import { EventController } from './presentation/http/controllers/EventController';
-import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
-import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
-import { UserController } from './presentation/http/controllers/UserController';
-import { AuthController } from './presentation/http/controllers/AuthController';
-import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
-import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
-import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
-import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
+import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
+import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
+import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
 import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
-import { ReviewController } from './presentation/http/controllers/ReviewController';
-import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
+import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
+import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
+import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
+import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
+import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
+import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
+import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
+import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
+import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
+import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
+import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
+import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
+import { AuthController } from './presentation/http/controllers/AuthController';
+import { EventController } from './presentation/http/controllers/EventController';
+import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
+import { ReviewController } from './presentation/http/controllers/ReviewController';
+import { UserController } from './presentation/http/controllers/UserController';
+
+// Explicitly load .env from backend root
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const fastify = Fastify({
     logger: true
@@ -430,6 +430,7 @@ const start = async () => {
                                         avatarUrl: { type: 'string', nullable: true },
                                         occupation: { type: 'string', nullable: true },
                                         bio: { type: 'string', nullable: true },
+                                        lookingFor: { type: 'string', nullable: true },
                                         city: { type: 'string', nullable: true },
                                         neighborhood: { type: 'string', nullable: true },
                                         languages: { type: 'array', items: { type: 'string' } },
@@ -439,7 +440,18 @@ const start = async () => {
                                         updatedAt: { type: 'string', nullable: true }
                                     }
                                 },
-                                createdAt: { type: 'string' }
+                                createdAt: { type: 'string' },
+                                answers: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            questionId: { type: 'string' },
+                                            question: { type: 'string' },
+                                            answer: { type: 'string' }
+                                        }
+                                    }
+                                }
                             }
                         }
                     },

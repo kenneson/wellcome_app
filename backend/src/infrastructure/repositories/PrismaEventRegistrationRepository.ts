@@ -29,7 +29,12 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
         const bookings = await prisma.booking.findMany({
             where: { eventId },
             include: {
-                guest: true
+                guest: true,
+                answers: {
+                    include: {
+                        question: true
+                    }
+                }
             },
             orderBy: {
                 createdAt: 'desc'
@@ -125,7 +130,12 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 eventDate: prismaBooking.event.eventDate,
                 location: prismaBooking.event.location,
                 updatedAt: prismaBooking.event.updatedAt
-            } as any : undefined, // Casting as any to avoid mapping full event for now
+            } as any : undefined,
+            answers: prismaBooking.answers ? prismaBooking.answers.map((a: any) => ({
+                questionId: a.questionId,
+                question: a.question?.question || '',
+                answer: a.answer
+            })) : [],
             createdAt: prismaBooking.createdAt,
             updatedAt: prismaBooking.updatedAt
         };
