@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, StatusBar, Platform } from 'react-native';
-import { Image } from 'expo-image';
-import { Stack, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
-import { DEFAULT_PLACEHOLDER_IMAGE, shadows } from '@/shared/lib/styles';
 import { eventService } from '@/services/api/EventService';
-import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
-import { LinearGradient } from 'expo-linear-gradient';
+import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
+import { supabase } from '@/shared/lib/supabase';
 import { formatPrice } from '@/utils/formatters';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type EventFilter = 'todos' | 'ativos' | 'concluidos';
 
@@ -34,7 +34,7 @@ export default function MyEventsScreen() {
                 .from('events')
                 .select(`
                     *,
-                    event_participants(count)
+                    event_participants(status)
                 `)
                 .eq('host_id', session.user.id)
                 .order('event_date', { ascending: false });
@@ -44,7 +44,9 @@ export default function MyEventsScreen() {
             // Map the data to include participant count directly
             const formattedEvents = data?.map(event => ({
                 ...event,
-                participants_count: event.event_participants?.[0]?.count || 0
+                participants_count: event.event_participants?.filter(
+                    (p: any) => p.status !== 'REJECTED' && p.status !== 'CANCELLED'
+                ).length || 0
             })) || [];
 
             setEvents(formattedEvents);

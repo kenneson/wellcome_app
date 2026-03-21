@@ -15,7 +15,10 @@ export class CreateEventRegistrationUseCase {
             throw new Error('Event not found');
         }
 
-        if (event.maxGuests && (event.bookings?.length || 0) >= event.maxGuests) {
+        const activeBookings = event.bookings?.filter(
+            b => b.status !== 'REJECTED' && b.status !== 'CANCELLED'
+        ) || [];
+        if (event.maxGuests && activeBookings.length >= event.maxGuests) {
             throw new Error('Event is full');
         }
 

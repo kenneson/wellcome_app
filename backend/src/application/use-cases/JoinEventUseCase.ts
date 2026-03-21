@@ -38,8 +38,11 @@ export class JoinEventUseCase {
             throw new Error('Host cannot join their own event');
         }
 
-        // Check if event is full
-        const isFull = event.maxGuests && (event.bookings?.length || 0) >= event.maxGuests;
+        // Check if event is full (only count active registrations)
+        const activeBookings = event.bookings?.filter(
+            b => b.status !== RegistrationStatus.REJECTED && b.status !== RegistrationStatus.CANCELLED
+        ) || [];
+        const isFull = event.maxGuests && activeBookings.length >= event.maxGuests;
 
         if (isFull && !event.allowWaitlist) {
             throw new Error('Event is full');
