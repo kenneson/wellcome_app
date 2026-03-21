@@ -1,14 +1,14 @@
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Session } from '@supabase/supabase-js';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
-import { useEffect, useState, useRef } from 'react';
-import { Session } from '@supabase/supabase-js';
 import './global.css';
 
 
 import { supabase } from '@/shared/lib/supabase';
-import { View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const unstable_settings = {
@@ -16,9 +16,9 @@ export const unstable_settings = {
 };
 
 import { UserProfileContext } from '@/context/UserProfileContext';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '@/shared/lib/react-query';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
+import { queryClient } from '@/shared/lib/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 
 export default function RootLayout() {
 
@@ -176,6 +176,7 @@ export default function RootLayout() {
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
+                <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/notifications" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen
                   name="welcome"
