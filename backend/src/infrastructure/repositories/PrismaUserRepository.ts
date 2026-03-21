@@ -64,6 +64,7 @@ export class PrismaUserRepository implements UserRepository {
             neighborhood: prismaUser.neighborhood ?? null,
             languages: prismaUser.languages ?? [],
             dietaryRestrictions: prismaUser.dietaryRestrictions ?? prismaUser.dietary_restrictions ?? [],
+            phoneNumber: prismaUser.phoneNumber ?? prismaUser.phone_number ?? prismaUser.phone ?? null,
             events: prismaUser.events ?? [],
             bookings: prismaUser.bookings ? prismaUser.bookings.map((b: any) => ({
                 id: b.id,

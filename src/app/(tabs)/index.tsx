@@ -218,6 +218,11 @@ export default function HomeScreen() {
            if (currentUserId) {
              data = data.filter((e: any) => e.host_id !== currentUserId);
            }
+           
+           // Filter out past events
+           const now = new Date();
+           data = data.filter((e: any) => new Date(e.event_date) >= now);
+           
            if (filters.priceMin && filters.priceMin.trim() !== '') {
              data = data.filter((e: any) => e.price >= parseFloat(filters.priceMin!));
            }

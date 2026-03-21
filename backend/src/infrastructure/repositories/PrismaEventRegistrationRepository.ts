@@ -1,5 +1,5 @@
+import { CreateRegistrationDTO, EventRegistration } from '../../domain/entities/EventRegistration';
 import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
-import { EventRegistration, CreateRegistrationDTO } from '../../domain/entities/EventRegistration';
 import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
 import { prisma } from '../database/prismaClient';
 
@@ -115,7 +115,7 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 languages: prismaBooking.guest.languages,
                 dietaryRestrictions: prismaBooking.guest.dietaryRestrictions,
                 expoPushToken: prismaBooking.guest.expoPushToken,
-                phoneNumber: prismaBooking.guest.phoneNumber, // Added phone number mapping
+                phoneNumber: prismaBooking.guest.phoneNumber || prismaBooking.guest.phone_number || prismaBooking.guest.phone || null,
                 updatedAt: prismaBooking.guest.updatedAt
             } : undefined,
             event: prismaBooking.event ? {
