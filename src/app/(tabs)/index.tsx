@@ -219,8 +219,9 @@ export default function HomeScreen() {
              data = data.filter((e: any) => e.host_id !== currentUserId);
            }
            
-           // Filter out past events
+           // Filter out past events - Fix para lidar com timezone local e forçar inicio do dia atual
            const now = new Date();
+           now.setHours(0, 0, 0, 0); // Considera "passado" apenas eventos de ontem pra trás
            data = data.filter((e: any) => new Date(e.event_date) >= now);
            
            if (filters.priceMin && filters.priceMin.trim() !== '') {

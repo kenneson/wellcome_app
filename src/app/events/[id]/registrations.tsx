@@ -190,21 +190,34 @@ export default function EventRegistrationsScreen() {
                         // Log para debugar a estrutura do usuário que está vindo da API
                         console.log('User data for contact:', item.user);
                         
-                        // Check for phone number (phoneNumber or phone_number)
+                        // Busca o telefone. Se não achar no objeto mapeado, vamos buscar direto no Supabase em background
                         const phone = item.user?.phoneNumber || item.user?.phone_number || item.user?.phone || item.user?.whatsapp;
                         
-                        if (phone) {
-                            // Format phone number for WhatsApp
-                            let formattedPhone = phone.replace(/\D/g, '');
-                            // If it's a Brazilian number without country code, add 55
+                        const initiateChat = (phoneNumber: string) => {
+                            let formattedPhone = phoneNumber.replace(/\D/g, '');
                             if (formattedPhone.length >= 10 && formattedPhone.length <= 11) {
                                 formattedPhone = `55${formattedPhone}`;
                             }
-                            
-                            const message = `Olá ${item.user.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
+                            const message = `Olá ${item.user?.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
                             Linking.openURL(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`);
+                        };
+
+                        if (phone) {
+                            initiateChat(phone);
                         } else {
-                            Alert.alert('Contato', 'Telefone não disponível para este usuário.');
+                            // Fallback de segurança: busca direto no banco caso o backend não tenha retornado no payload
+                            supabase
+                                .from('profiles')
+                                .select('phone_number')
+                                .eq('id', item.user.id)
+                                .single()
+                                .then(({ data, error }) => {
+                                    if (!error && data?.phone_number) {
+                                        initiateChat(data.phone_number);
+                                    } else {
+                                        Alert.alert('Contato', 'Telefone não disponível para este usuário.');
+                                    }
+                                });
                         }
                     }}
                 >
