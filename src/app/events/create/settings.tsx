@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, useWindowDimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WizardProgress } from '@/components/ui/WizardProgress';
@@ -57,6 +57,10 @@ export default function EventCreateSettings() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
             <CreateEventHeader title="Ajustes finais" />
 
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
             <ScrollView
                 className="flex-1"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
@@ -146,6 +150,7 @@ export default function EventCreateSettings() {
                     </View>
                 </View>
             </ScrollView>
+            </KeyboardAvoidingView>
 
             <View
                 className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"

@@ -75,7 +75,10 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
-                <View style={styles.modalContainer}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalContainer}
+                >
                     <View style={styles.header}>
                         <TouchableOpacity onPress={onClose}>
                             <Ionicons name="close" size={24} color="#333" />
@@ -86,7 +89,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView contentContainerStyle={styles.content}>
+                    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                         {/* Price Range */}
                         <Text style={styles.sectionTitle}>Faixa de Preço</Text>
                         <View style={styles.row}>
@@ -167,7 +170,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                             <Text style={styles.applyButtonText}>Aplicar Filtros</Text>
                         </TouchableOpacity>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </View>
         </Modal>
     );

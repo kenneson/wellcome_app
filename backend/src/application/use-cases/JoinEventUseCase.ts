@@ -45,12 +45,17 @@ export class JoinEventUseCase {
             throw new Error('Event is full');
         }
 
-        // Check for existing registration
+        // Check for existing registration (allow re-registration if previously rejected)
         const existingRegistrations = await this.eventRegistrationRepository.findByUserId(data.userId);
-        const alreadyRegistered = existingRegistrations.some(r => r.eventId === data.eventId);
+        const existingForEvent = existingRegistrations.find(r => r.eventId === data.eventId);
 
-        if (alreadyRegistered) {
-            throw new Error('User already registered for this event');
+        if (existingForEvent) {
+            if (existingForEvent.status === RegistrationStatus.REJECTED) {
+                // Remove rejected registration so user can re-apply
+                await this.eventRegistrationRepository.deleteByEventAndUser(data.eventId, data.userId);
+            } else {
+                throw new Error('User already registered for this event');
+            }
         }
 
         // Determine initial status

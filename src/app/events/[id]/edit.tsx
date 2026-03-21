@@ -126,7 +126,11 @@ function EditEventForm() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 {/* Basic Info */}
                 <Text style={styles.sectionHeader}>Informações Básicas</Text>
 
@@ -264,6 +268,7 @@ function EditEventForm() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

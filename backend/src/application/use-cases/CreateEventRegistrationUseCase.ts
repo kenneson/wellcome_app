@@ -1,6 +1,6 @@
+import { CreateRegistrationDTO, EventRegistration } from '../../domain/entities/EventRegistration';
 import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
 import { EventRepository } from '../../domain/repositories/EventRepository';
-import { EventRegistration, CreateRegistrationDTO } from '../../domain/entities/EventRegistration';
 
 export class CreateEventRegistrationUseCase {
     constructor(
@@ -20,10 +20,15 @@ export class CreateEventRegistrationUseCase {
         }
 
         const existingRegistrations = await this.eventRegistrationRepository.findByUserId(data.userId);
-        const alreadyRegistered = existingRegistrations.some(b => b.eventId === data.eventId);
+        const existingForEvent = existingRegistrations.find(b => b.eventId === data.eventId);
 
-        if (alreadyRegistered) {
-            throw new Error('User already registered for this event');
+        if (existingForEvent) {
+            if (existingForEvent.status === 'REJECTED') {
+                // Remove rejected registration so user can re-apply
+                await this.eventRegistrationRepository.deleteByEventAndUser(data.eventId, data.userId);
+            } else {
+                throw new Error('User already registered for this event');
+            }
         }
 
         // Logic for auto-approval or pending status will go here later
