@@ -1,12 +1,12 @@
+import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { SelectionSection } from '@/components/ui/SelectionSection';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, TextInput, useWindowDimensions } from 'react-native';
+import { Alert, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { WizardProgress } from '@/components/ui/WizardProgress';
-import { SelectionSection } from '@/components/ui/SelectionSection';
-import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 
 // ============================================================================
 // Constants
@@ -83,7 +83,9 @@ export default function EventCreateStep1() {
 
             <KeyboardAwareScrollView
                 enableOnAndroid={true}
-                extraScrollHeight={20}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120, paddingTop: 0 }}
                 showsVerticalScrollIndicator={false}

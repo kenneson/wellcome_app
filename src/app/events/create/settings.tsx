@@ -5,7 +5,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -61,7 +61,9 @@ export default function EventCreateSettings() {
 
             <KeyboardAwareScrollView
                 enableOnAndroid={true}
-                extraScrollHeight={20}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
                 showsVerticalScrollIndicator={false}

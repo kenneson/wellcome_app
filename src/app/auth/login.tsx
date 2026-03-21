@@ -86,7 +86,9 @@ export default function LoginScreen() {
     return (
         <KeyboardAwareScrollView
             enableOnAndroid={true}
-            extraScrollHeight={20}
+            extraScrollHeight={40}
+            extraHeight={120}
+            enableResetScrollToCoords={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ flexGrow: 1 }}
             style={styles.container}

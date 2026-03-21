@@ -48,7 +48,13 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir acesso à câmera para escanear QR Codes de ingressos"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

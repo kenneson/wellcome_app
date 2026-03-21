@@ -49,7 +49,9 @@ export default function ReviewEventScreen() {
         <SafeAreaView className="flex-1 bg-white">
             <KeyboardAwareScrollView
                 enableOnAndroid={true}
-                extraScrollHeight={20}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ padding: 24, flexGrow: 1 }}
                 showsVerticalScrollIndicator={false}

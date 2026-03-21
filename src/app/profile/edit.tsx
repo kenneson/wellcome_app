@@ -207,7 +207,9 @@ export default function EditProfileScreen() {
 
             <KeyboardAwareScrollView
                 enableOnAndroid={true}
-                extraScrollHeight={20}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.content}
                 style={{ flex: 1 }}

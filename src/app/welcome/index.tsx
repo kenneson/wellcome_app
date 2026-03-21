@@ -356,7 +356,9 @@ export default function WelcomeScreen() {
 
                 <KeyboardAwareScrollView
                     enableOnAndroid={true}
-                    extraScrollHeight={20}
+                    extraScrollHeight={40}
+                    extraHeight={120}
+                    enableResetScrollToCoords={false}
                     keyboardShouldPersistTaps="handled"
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}

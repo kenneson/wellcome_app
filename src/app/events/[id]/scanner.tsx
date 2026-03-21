@@ -1,19 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    TouchableOpacity,
-    Alert,
-    ActivityIndicator,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Image } from 'expo-image';
-import { supabase } from '@/shared/lib/supabase';
 import { registrationService } from '@/services/api/RegistrationService';
+import { supabase } from '@/shared/lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Dynamic import to avoid breaking other routes if expo-camera isn't available
+let CameraView: any = null;
+let useCameraPermissions: any = null;
+
+try {
+    const cameraModule = require('expo-camera');
+    CameraView = cameraModule.CameraView;
+    useCameraPermissions = cameraModule.useCameraPermissions;
+} catch {
+    // expo-camera not available - will show fallback UI
+}
 
 type ScanResult = {
     valid: boolean;
@@ -29,10 +39,36 @@ type ScanResult = {
 export default function ScannerScreen() {
     const { id: eventId } = useLocalSearchParams();
     const router = useRouter();
-    const [permission, requestPermission] = useCameraPermissions();
+    const permissionResult = useCameraPermissions ? useCameraPermissions() : [null, () => {}];
+    const [permission, requestPermission] = permissionResult;
     const [scanned, setScanned] = useState(false);
     const [validating, setValidating] = useState(false);
     const [result, setResult] = useState<ScanResult | null>(null);
+
+    // expo-camera not available
+    if (!CameraView || !useCameraPermissions) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Escanear Ingresso</Text>
+                    <View style={{ width: 40 }} />
+                </View>
+                <View style={styles.centerContainer}>
+                    <Ionicons name="camera-outline" size={64} color="#CCC" />
+                    <Text style={styles.permissionTitle}>Câmera Indisponível</Text>
+                    <Text style={styles.permissionText}>
+                        O módulo de câmera não está disponível nesta versão do app. É necessário um novo build para usar o scanner.
+                    </Text>
+                    <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
+                        <Text style={styles.backLinkText}>Voltar</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     if (!permission) {
         return (

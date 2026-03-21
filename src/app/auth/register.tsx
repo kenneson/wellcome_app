@@ -100,7 +100,9 @@ export default function RegisterScreen() {
     return (
         <KeyboardAwareScrollView
             enableOnAndroid={true}
-            extraScrollHeight={20}
+            extraScrollHeight={40}
+            extraHeight={120}
+            enableResetScrollToCoords={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
             style={styles.container}

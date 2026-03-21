@@ -88,7 +88,9 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
 
                     <KeyboardAwareScrollView
                         enableOnAndroid={true}
-                        extraScrollHeight={20}
+                        extraScrollHeight={40}
+                        extraHeight={120}
+                        enableResetScrollToCoords={false}
                         keyboardShouldPersistTaps="handled"
                         contentContainerStyle={styles.content}
                     >

@@ -245,7 +245,9 @@ export default function EventDetailsScreen() {
             <StatusBar style="light" />
             <KeyboardAwareScrollView
                 enableOnAndroid={true}
-                extraScrollHeight={20}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ paddingBottom: 100 }}
                 style={{ flex: 1 }}
