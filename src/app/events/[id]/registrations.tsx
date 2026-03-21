@@ -187,63 +187,21 @@ export default function EventRegistrationsScreen() {
                 <TouchableOpacity 
                     style={[styles.secondaryButton, styles.contactButton]}
                     onPress={() => {
-                        // Log para debugar a estrutura do usuário que está vindo da API
-                        console.log('User data for contact:', item.user);
+                        // Check for phone number (phoneNumber or phone_number)
+                        const phone = item.user?.phoneNumber || item.user?.phone_number || item.user?.phone;
                         
-                        // Check all possible variations from different data shapes
-                        const phone = 
-                            item.user?.phoneNumber || 
-                            item.user?.phone_number || 
-                            item.user?.phone || 
-                            item.user?.whatsapp ||
-                            item.guest?.phoneNumber ||
-                            item.guest?.phone_number ||
-                            item.guest?.phone;
-                        
-                        const initiateChat = (phoneNumber: string) => {
-                            let formattedPhone = phoneNumber.replace(/\D/g, '');
-                            // Simple heuristic for BR numbers: se tiver 10 ou 11 dígitos, adiciona 55 (igual ao host)
-                            if (formattedPhone.length === 10 || formattedPhone.length === 11) {
+                        if (phone) {
+                            // Format phone number for WhatsApp
+                            let formattedPhone = phone.replace(/\D/g, '');
+                            // If it's a Brazilian number without country code, add 55
+                            if (formattedPhone.length >= 10 && formattedPhone.length <= 11) {
                                 formattedPhone = `55${formattedPhone}`;
                             }
                             
-                            const message = `Olá ${item.user?.fullName?.split(' ')[0] || item.guest?.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
-                            const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
-                            
-                            Linking.canOpenURL(url).then(supported => {
-                                if (supported) {
-                                    Linking.openURL(url);
-                                } else {
-                                    Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
-                                }
-                            }).catch(() => {
-                                Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
-                            });
-                        };
-
-                        if (phone) {
-                            initiateChat(phone);
+                            const message = `Olá ${item.user.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
+                            Linking.openURL(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`);
                         } else {
-                            // Fallback de segurança: busca direto no banco caso o backend não tenha retornado no payload
-                            const targetUserId = item.user?.id || item.guest?.id || item.userId || item.user_id;
-                            
-                            if (targetUserId) {
-                                supabase
-                                    .from('profiles')
-                                    .select('phone_number, phone, whatsapp')
-                                    .eq('id', targetUserId)
-                                    .single()
-                                    .then(({ data, error }) => {
-                                        const dbPhone = data?.phone_number || data?.phone || data?.whatsapp;
-                                        if (!error && dbPhone) {
-                                            initiateChat(dbPhone);
-                                        } else {
-                                            Alert.alert('Contato', 'Telefone não disponível para este usuário.');
-                                        }
-                                    });
-                            } else {
-                                Alert.alert('Erro', 'Não foi possível identificar o usuário.');
-                            }
+                            Alert.alert('Contato', 'Telefone não disponível para este usuário.');
                         }
                     }}
                 >

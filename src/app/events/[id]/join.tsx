@@ -24,7 +24,7 @@ export default function JoinEventScreen() {
             const { data, error } = await supabase
                 .from('events')
                 .select(`
-                    id, title, access_type, event_date,
+                    id, title, access_type,
                     questions:event_questions(id, question, required, order, question_type)
                 `)
                 .eq('id', id)
@@ -35,17 +35,6 @@ export default function JoinEventScreen() {
             // Sort questions by order
             if (data.questions) {
                 data.questions.sort((a: any, b: any) => a.order - b.order);
-            }
-
-            // Check if event is past
-            const eventDateStr = data.event_date || (data as any).eventDate;
-            if (eventDateStr) {
-                const eventTime = new Date(eventDateStr).getTime();
-                if (eventTime < Date.now()) {
-                    Alert.alert('Evento Encerrado', 'Este evento já aconteceu e não aceita mais inscrições.');
-                    router.back();
-                    return;
-                }
             }
 
             setEvent(data);

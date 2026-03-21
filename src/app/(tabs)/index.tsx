@@ -217,18 +217,9 @@ export default function HomeScreen() {
              data = data.filter((e: any) => e.host_id !== currentUserId);
            }
            
-           // Filter out past events - Fix absoluto usando timestamp para evitar bugs de fuso horário
-           const nowTime = new Date().getTime();
-           data = data.filter((e: any) => {
-               const eventDateStr = e.event_date || e.eventDate;
-               if (!eventDateStr) return false;
-               
-               // Considera até o final do dia do evento como válido para exibição no dia
-               const eventDate = new Date(eventDateStr);
-               eventDate.setHours(23, 59, 59, 999);
-               
-               return eventDate.getTime() >= nowTime;
-           });
+           // Filter out past events
+           const now = new Date();
+           data = data.filter((e: any) => new Date(e.event_date) >= now);
            
            if (filters.priceMin && filters.priceMin.trim() !== '') {
              data = data.filter((e: any) => e.price >= parseFloat(filters.priceMin!));

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Share, Platform, Linking } from 'react-native';
-import { Image } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '@/shared/lib/supabase';
-import { DEFAULT_PLACEHOLDER_IMAGE, DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
-import { formatPrice } from '@/utils/formatters';
-import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
+import { Event } from '@/entities/event/types';
+import { ReviewForm } from '@/features/reviews/ReviewForm';
+import { ReviewList } from '@/features/reviews/ReviewList';
 import { eventService } from '@/services/api/EventService';
 import { reviewService } from '@/services/api/ReviewService';
-import { ReviewList } from '@/features/reviews/ReviewList';
-import { ReviewForm } from '@/features/reviews/ReviewForm';
-import { Event } from '@/entities/event/types';
+import { DEFAULT_AVATAR_PLACEHOLDER, DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
+import { supabase } from '@/shared/lib/supabase';
+import { formatPrice } from '@/utils/formatters';
+import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Map facilities/rules to icons/labels
 const FACILITY_ICONS: Record<string, { icon: string, label: string }> = {
@@ -556,39 +556,30 @@ export default function EventDetailsScreen() {
                 </View>
             </ScrollView>
 
-            {/* Footer */}
-            <View 
-                className="bg-white border-t border-gray-100 px-6 py-4 flex-row items-center justify-between shadow-lg"
-                style={{ paddingBottom: Math.max(insets.bottom, 20) }}
-            >
-                <View>
-                    <Text className="text-[20px] font-bold text-[#1A1A1A]">{formatPrice(event.price)}</Text>
-                    <Text className="text-xs text-gray-500">por convidado</Text>
-                </View>
-                
-                {isHost ? (
-                    <TouchableOpacity 
-                        className="bg-gray-100 px-8 py-3.5 rounded-2xl"
-                        onPress={() => router.push(`/events/${id}/registrations`)}
-                    >
-                        <Text className="text-base font-bold text-gray-900">Gerenciar inscrições</Text>
-                    </TouchableOpacity>
-                ) : isPastEvent && !isParticipant ? (
-                    <View className="px-6 py-3.5 rounded-2xl bg-gray-100">
-                        <Text className="text-base font-bold text-gray-500">Evento encerrado</Text>
+            {/* Action Bar (Join Event) */}
+            {!isHost && !isParticipant && !isPastEvent && (
+                <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
+                    <View className="flex-row items-center justify-between">
+                        <View>
+                            <Text className="text-[15px] text-gray-500 font-medium">Total</Text>
+                            <View className="flex-row items-baseline">
+                                <Text className="text-[24px] font-bold text-[#1A1A1A]">R$ {event.price}</Text>
+                                <Text className="text-[14px] text-gray-500 ml-1">/ pessoa</Text>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity 
+                            className={`px-8 py-3.5 rounded-2xl shadow-sm ${participantCount >= event.maxGuests ? 'bg-gray-400' : 'bg-[#FF8C42]'}`}
+                            onPress={handleJoin}
+                            disabled={participantCount >= event.maxGuests}
+                        >
+                            <Text className="text-white font-bold text-[16px]">
+                                {participantCount >= event.maxGuests ? 'Esgotado' : 'Participar'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
-                ) : (
-                    <TouchableOpacity 
-                        className={`px-8 py-3.5 rounded-2xl ${isFull && !isParticipant ? 'bg-gray-300' : 'bg-[#FF8C42]'}`}
-                        onPress={handleJoin}
-                        disabled={isFull && !isParticipant}
-                    >
-                        <Text className="text-base font-bold text-white">
-                            {isParticipant ? 'Ver ingresso' : isFull ? 'Esgotado' : 'Pedir para participar'}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+                </View>
+            )}
         </View>
     );
 }

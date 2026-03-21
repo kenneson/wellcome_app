@@ -1,10 +1,10 @@
+import { EventRegistration } from '../../domain/entities/EventRegistration';
 import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
 import { EventRepository } from '../../domain/repositories/EventRepository';
-import { EventRegistration } from '../../domain/entities/EventRegistration';
-import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
 import { EventAccessType } from '../../domain/value-objects/EventAccessType';
-import { SendNotificationUseCase } from './SendNotificationUseCase';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
+import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
+import { SendNotificationUseCase } from './SendNotificationUseCase';
 
 export interface JoinEventDTO {
     eventId: string;
@@ -26,18 +26,16 @@ export class JoinEventUseCase {
             throw new Error('Event not found');
         }
 
+        // Check if event has already passed
+        const now = new Date();
+        const eventEndDate = event.endTime ? new Date(event.endTime) : new Date(event.eventDate);
+        
+        if (eventEndDate < now) {
+            throw new Error('Cannot join events that have already passed');
+        }
+
         if (event.hostId === data.userId) {
             throw new Error('Host cannot join their own event');
-        }
-
-        // Bloqueia inscrições em eventos passados
-        if (new Date(event.eventDate).getTime() < new Date().getTime()) {
-            throw new Error('Cannot join past events');
-        }
-
-        // Verifica o prazo de inscrição (se existir)
-        if (event.reservationDeadline && new Date(event.reservationDeadline).getTime() < new Date().getTime()) {
-            throw new Error('Registration deadline has passed');
         }
 
         // Check if event is full

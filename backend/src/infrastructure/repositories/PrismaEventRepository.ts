@@ -1,5 +1,5 @@
+import { CreateEventDTO, Event, UpdateEventDTO } from '../../domain/entities/Event';
 import { EventRepository } from '../../domain/repositories/EventRepository';
-import { CreateEventDTO, UpdateEventDTO, Event } from '../../domain/entities/Event';
 import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRepository implements EventRepository {
@@ -72,6 +72,16 @@ export class PrismaEventRepository implements EventRepository {
         excludeHostId?: string;
     }): Promise<Event[]> {
         const where: any = {};
+
+        // Filter out past events by default (only show upcoming events)
+        const now = new Date();
+        where.OR = [
+            { endTime: { gt: now } },
+            {
+                endTime: null,
+                eventDate: { gt: now }
+            }
+        ];
 
         if (filters?.priceMin !== undefined) where.price = { ...where.price, gte: filters.priceMin };
         if (filters?.priceMax !== undefined) where.price = { ...where.price, lte: filters.priceMax };
