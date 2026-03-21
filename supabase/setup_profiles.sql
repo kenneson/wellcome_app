@@ -40,6 +40,12 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_number TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS languages TEXT[];
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS dietary_restrictions TEXT[];
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS birth_decade TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS pets TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_superhost BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
@@ -81,21 +87,26 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 -- =============================================
 -- 5. FUNÇÃO DE GEOLOCALIZAÇÃO (GET_EVENTS_NEARBY)
 -- =============================================
-CREATE OR REPLACE FUNCTION public.get_events_nearby(lat float, long float, radius_km float)
+DROP FUNCTION IF EXISTS get_events_nearby;
+
+CREATE OR REPLACE FUNCTION public.get_events_nearby(lat float, long float, radius_km float DEFAULT 60)
 RETURNS SETOF events
 LANGUAGE sql
 STABLE
 AS $$
   SELECT *
   FROM events
-  WHERE (
-    6371 * ACOS(
-      LEAST(1.0, GREATEST(-1.0, 
-        COS(RADIANS(lat)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(long)) +
-        SIN(RADIANS(lat)) * SIN(RADIANS(latitude))
-      ))
-    )
-  ) <= radius_km;
+  WHERE 
+    event_date >= now()
+    AND (
+      6371 * ACOS(
+        LEAST(1.0, GREATEST(-1.0, 
+          COS(RADIANS(lat)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(long)) +
+          SIN(RADIANS(lat)) * SIN(RADIANS(latitude))
+        ))
+      )
+    ) <= radius_km
+  ORDER BY event_date;
 $$;
 
 -- =============================================

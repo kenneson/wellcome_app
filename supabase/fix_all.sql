@@ -1,19 +1,24 @@
 -- 1. Função get_events_nearby (Geolocalização simples)
-CREATE OR REPLACE FUNCTION public.get_events_nearby(lat float, long float, radius_km float)
+DROP FUNCTION IF EXISTS get_events_nearby;
+
+CREATE OR REPLACE FUNCTION public.get_events_nearby(lat float, long float, radius_km float DEFAULT 60)
 RETURNS SETOF events
 LANGUAGE sql
 STABLE
 AS $$
   SELECT *
   FROM events
-  WHERE (
-    6371 * ACOS(
-      LEAST(1.0, GREATEST(-1.0, 
-        COS(RADIANS(lat)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(long)) +
-        SIN(RADIANS(lat)) * SIN(RADIANS(latitude))
-      ))
-    )
-  ) <= radius_km;
+  WHERE 
+    event_date >= now()
+    AND (
+      6371 * ACOS(
+        LEAST(1.0, GREATEST(-1.0, 
+          COS(RADIANS(lat)) * COS(RADIANS(latitude)) * COS(RADIANS(longitude) - RADIANS(long)) +
+          SIN(RADIANS(lat)) * SIN(RADIANS(latitude))
+        ))
+      )
+    ) <= radius_km
+  ORDER BY event_date;
 $$;
 
 -- 2. Corrigir permissões gerais

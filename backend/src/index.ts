@@ -426,9 +426,17 @@ const start = async () => {
                                     type: 'object',
                                     properties: {
                                         id: { type: 'string' },
-                                        fullName: { type: 'string' },
-                                        avatarUrl: { type: 'string' },
-                                        occupation: { type: 'string' }
+                                        fullName: { type: 'string', nullable: true },
+                                        avatarUrl: { type: 'string', nullable: true },
+                                        occupation: { type: 'string', nullable: true },
+                                        bio: { type: 'string', nullable: true },
+                                        city: { type: 'string', nullable: true },
+                                        neighborhood: { type: 'string', nullable: true },
+                                        languages: { type: 'array', items: { type: 'string' } },
+                                        dietaryRestrictions: { type: 'array', items: { type: 'string' } },
+                                        phoneNumber: { type: 'string', nullable: true },
+                                        expoPushToken: { type: 'string', nullable: true },
+                                        updatedAt: { type: 'string', nullable: true }
                                     }
                                 },
                                 createdAt: { type: 'string' }
