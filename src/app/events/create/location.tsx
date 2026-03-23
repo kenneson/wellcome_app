@@ -7,7 +7,8 @@ import { useEventCreation } from '@/shared/context/EventCreationContext';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FACILITIES = [
@@ -117,11 +118,15 @@ export default function EventCreateStep3() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
             <CreateEventHeader />
 
-            <ScrollView
-                className="flex-1"
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
+                keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
                 showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+                style={{ flex: 1 }}
             >
                 <View className="mb-6">
                     <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
@@ -205,7 +210,7 @@ export default function EventCreateStep3() {
                         variant="pill"
                     />
                 </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View
                 className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"

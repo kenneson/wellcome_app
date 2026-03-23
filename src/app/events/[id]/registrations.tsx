@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Linking, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EventRegistrationsScreen() {
@@ -270,7 +270,10 @@ export default function EventRegistrationsScreen() {
     );
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
             <StatusBar barStyle="light-content" backgroundColor="#FF8C42" />
             
             {/* Orange Header Background */}
@@ -372,7 +375,7 @@ export default function EventRegistrationsScreen() {
                     />
                 )}
             </View>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 

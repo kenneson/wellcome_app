@@ -6,7 +6,8 @@ import { WizardProgress } from '@/components/ui/WizardProgress';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventCreateStep2() {
@@ -54,11 +55,15 @@ export default function EventCreateStep2() {
         <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
             <CreateEventHeader />
 
-            <ScrollView
-                className="flex-1"
+            <KeyboardAwareScrollView
+                enableOnAndroid={true}
+                extraScrollHeight={40}
+                extraHeight={120}
+                enableResetScrollToCoords={false}
+                keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
                 showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+                style={{ flex: 1 }}
             >
                 <View className="mb-6">
                     <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
@@ -123,7 +128,7 @@ export default function EventCreateStep2() {
                         onChange={setMenuAlterations}
                     />
                 </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View
                 className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
