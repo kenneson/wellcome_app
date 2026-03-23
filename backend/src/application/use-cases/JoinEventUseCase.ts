@@ -34,6 +34,11 @@ export class JoinEventUseCase {
                 ? new Date(event.endTime)
                 : new Date(event.eventDate);
         
+        // When deadline is a date-only value (midnight), allow registration until end of that day
+        if (event.reservationDeadline) {
+            cutoffDate.setHours(23, 59, 59, 999);
+        }
+
         if (cutoffDate < now) {
             throw new Error('Registration deadline has passed');
         }
