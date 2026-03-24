@@ -15,12 +15,22 @@ export class EfiPixService {
     private efiPay: any;
 
     constructor() {
-        let certPath = process.env.EFI_CERT_PATH
-            || path.join(__dirname, '../../../../homologacao-560634-wellcomeapp.p12');
+        let certPath: string;
 
-        // Resolver para caminho absoluto se for relativo
-        if (!path.isAbsolute(certPath)) {
-            certPath = path.resolve(process.cwd(), certPath);
+        // Suporte a certificado via base64 (ideal para Docker/EasyPanel)
+        if (process.env.EFI_CERT_BASE64) {
+            const tmpDir = '/tmp';
+            certPath = path.join(tmpDir, 'efi-cert.p12');
+            const certBuffer = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
+            fs.writeFileSync(certPath, certBuffer);
+            console.log('[EfiPixService] Certificado carregado via EFI_CERT_BASE64');
+        } else {
+            certPath = process.env.EFI_CERT_PATH
+                || path.join(__dirname, '../../../../homologacao-560634-wellcomeapp.p12');
+
+            if (!path.isAbsolute(certPath)) {
+                certPath = path.resolve(process.cwd(), certPath);
+            }
         }
 
         console.log('[EfiPixService] Cert path:', certPath);
