@@ -22,9 +22,12 @@ export class PixPaymentController {
     async createCharge(request: FastifyRequest, reply: FastifyReply) {
         try {
             const body = createPixChargeSchema.parse(request.body);
+            console.log('[PixPaymentController] Criando cobrança PIX para:', JSON.stringify(body));
             const result = await this.createPixChargeUseCase.execute(body);
+            console.log('[PixPaymentController] Cobrança criada com sucesso, txid:', result.txid);
             return reply.code(201).send(result);
         } catch (error: any) {
+            console.error('[PixPaymentController] ERRO:', error?.message || error);
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Dados inválidos', errors: error.issues });
             }
@@ -40,8 +43,8 @@ export class PixPaymentController {
             if (error.message === 'Booking does not belong to this user') {
                 return reply.code(403).send({ message: error.message });
             }
-            console.error('Error creating PIX charge:', error);
-            return reply.code(500).send({ message: 'Erro ao gerar cobrança PIX' });
+            console.error('[PixPaymentController] Stack:', error?.stack);
+            return reply.code(500).send({ message: error?.message || 'Erro ao gerar cobrança PIX' });
         }
     }
 
