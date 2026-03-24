@@ -9,6 +9,7 @@ export default function EventLayout() {
             <Stack.Screen name="registrations" options={{ presentation: 'modal' }} />
             <Stack.Screen name="review" options={{ presentation: 'modal' }} />
             <Stack.Screen name="ticket" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="payment" options={{ presentation: 'modal' }} />
             <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
         </Stack>
     );

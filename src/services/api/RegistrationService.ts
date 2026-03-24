@@ -114,6 +114,33 @@ export class RegistrationService {
 
         return response.json();
     }
+
+    // PIX Payment methods
+    async createPixCharge(data: { bookingId: string; eventId: string; userId: string }) {
+        const response = await fetch(`${API_URL}/payments/pix`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Falha ao gerar cobrança PIX');
+        }
+
+        return response.json();
+    }
+
+    async checkPixPayment(bookingId: string) {
+        const response = await fetch(`${API_URL}/payments/pix/${bookingId}`);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Falha ao verificar pagamento');
+        }
+
+        return response.json();
+    }
 }
 
 export const registrationService = new RegistrationService();

@@ -8,7 +8,9 @@ import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegis
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
+import { CheckPixPaymentUseCase } from './application/use-cases/CheckPixPaymentUseCase';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
+import { CreatePixChargeUseCase } from './application/use-cases/CreatePixChargeUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
 import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
 import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
@@ -19,16 +21,19 @@ import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistr
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
+import { EfiPixService } from './infrastructure/external/EfiPixService';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
 import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
+import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
+import { PixPaymentController } from './presentation/http/controllers/PixPaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
 
@@ -62,6 +67,7 @@ const start = async () => {
                     { name: 'Notifications', description: 'Push and in-app notification endpoints' },
                     { name: 'Reviews', description: 'Event review endpoints' },
                     { name: 'Users', description: 'User profile endpoints' },
+                    { name: 'Payments', description: 'PIX payment endpoints' },
                     { name: 'General', description: 'General and health endpoints' }
                 ],
                 components: {
@@ -114,6 +120,8 @@ const start = async () => {
         const sendNotificationUseCase = new SendNotificationUseCase(notificationRepository, notificationService);
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
         const eventReviewRepository = new PrismaEventReviewRepository();
+        const paymentRepository = new PrismaPaymentRepository();
+        const efiPixService = new EfiPixService();
 
         // Use Cases
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
@@ -125,6 +133,9 @@ const start = async () => {
         const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
         const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
+
+        const createPixChargeUseCase = new CreatePixChargeUseCase(efiPixService, eventRepository, eventRegistrationRepository, paymentRepository);
+        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository);
 
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
@@ -148,6 +159,7 @@ const start = async () => {
         );
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
         const notificationController = new NotificationController(notificationRepository);
+        const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
 
         // Auth Routes
         fastify.post('/auth/login', {
@@ -992,7 +1004,63 @@ const start = async () => {
             }
         }, (req, reply) => reviewController.delete(req, reply));
 
+        // PIX Payment Routes
+        fastify.post('/payments/pix', {
+            schema: {
+                summary: 'Create PIX charge',
+                description: 'Generate a PIX QR code for event registration payment',
+                tags: ['Payments'],
+                body: {
+                    type: 'object',
+                    required: ['bookingId', 'eventId', 'userId'],
+                    properties: {
+                        bookingId: { type: 'string' },
+                        eventId: { type: 'string' },
+                        userId: { type: 'string' }
+                    }
+                },
+                response: {
+                    201: {
+                        description: 'PIX charge created',
+                        type: 'object',
+                        properties: {
+                            paymentId: { type: 'string' },
+                            txid: { type: 'string' },
+                            qrcode: { type: 'string' },
+                            pixCopiaECola: { type: 'string' },
+                            valor: { type: 'string' },
+                            status: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => pixPaymentController.createCharge(req, reply));
 
+        fastify.get('/payments/pix/:bookingId', {
+            schema: {
+                summary: 'Check PIX payment status',
+                description: 'Check if a PIX payment has been confirmed',
+                tags: ['Payments'],
+                params: {
+                    type: 'object',
+                    properties: {
+                        bookingId: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Payment status',
+                        type: 'object',
+                        properties: {
+                            paymentId: { type: 'string' },
+                            txid: { type: 'string' },
+                            status: { type: 'string' },
+                            paid: { type: 'boolean' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => pixPaymentController.checkPayment(req, reply));
 
         const port = Number(process.env.PORT) || 3000;
         const address = await fastify.listen({ port, host: '0.0.0.0' });
