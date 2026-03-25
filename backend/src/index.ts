@@ -135,7 +135,7 @@ const start = async () => {
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
 
         const createPixChargeUseCase = new CreatePixChargeUseCase(efiPixService, eventRepository, eventRegistrationRepository, paymentRepository);
-        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository);
+        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository, eventRepository, sendNotificationUseCase);
 
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);

@@ -1,7 +1,10 @@
 import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
+import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
+import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { EfiPixService } from '../../infrastructure/external/EfiPixService';
+import { SendNotificationUseCase } from './SendNotificationUseCase';
 
 export interface CheckPixPaymentResult {
     paymentId: string;
@@ -14,7 +17,9 @@ export class CheckPixPaymentUseCase {
     constructor(
         private efiPixService: EfiPixService,
         private paymentRepository: PaymentRepository,
-        private eventRegistrationRepository: EventRegistrationRepository
+        private eventRegistrationRepository: EventRegistrationRepository,
+        private eventRepository: EventRepository,
+        private sendNotificationUseCase: SendNotificationUseCase
     ) {}
 
     async execute(bookingId: string): Promise<CheckPixPaymentResult> {
@@ -58,6 +63,19 @@ export class CheckPixPaymentUseCase {
                 bookingId,
                 'APPROVED'
             );
+
+            // Notificar o host que o pagamento foi confirmado
+            const event = await this.eventRepository.findById(payment.eventId);
+            if (event?.host) {
+                await this.sendNotificationUseCase.execute(
+                    event.host.id,
+                    event.host.expoPushToken || null,
+                    'Pagamento confirmado! 💰',
+                    `Um participante confirmou o pagamento para "${event.title}".`,
+                    NotificationType.NEW_REGISTRATION_CONFIRMED,
+                    { eventId: event.id }
+                );
+            }
         } else if (
             efiStatus.status === 'REMOVIDA_PELO_USUARIO_RECEBEDOR' ||
             efiStatus.status === 'REMOVIDA_PELO_PSP'

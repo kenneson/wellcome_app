@@ -88,8 +88,9 @@ export class JoinEventUseCase {
             answers: data.answers
         });
 
-        // Notify Host
-        if (event.host) {
+        // Notify Host (skip if event requires payment — notification will be sent after payment confirmation)
+        const requiresPayment = Number(event.price) > 0;
+        if (event.host && !requiresPayment) {
             const isPending = initialStatus === RegistrationStatus.PENDING;
             const notificationTitle = isPending ? 'Solicitação de inscrição!' : 'Nova inscrição confirmada!';
             const notificationBody = isPending
