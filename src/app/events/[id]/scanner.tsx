@@ -252,7 +252,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingTop: 16, // Adiciona espaçamento extra no topo para afastar do HUD
+        paddingBottom: 12,
     },
     backButton: {
         width: 40,
