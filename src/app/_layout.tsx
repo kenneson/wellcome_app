@@ -166,7 +166,7 @@ export default function RootLayout() {
             {!isEventDetails && (
               <>
                 <StatusBar style="light" backgroundColor="#FF8C42" />
-                <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000 }} />
+                <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000, pointerEvents: 'none' }} />
               </>
             )}
             {isEventDetails && <StatusBar style="light" />}

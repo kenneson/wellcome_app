@@ -1,9 +1,20 @@
+import { Colors, Dimensions, Spacing } from '@/shared/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Dimensions, Spacing } from '@/shared/constants/theme';
+
+function TabButton(props: any) {
+  const { children, delayLongPress, ...rest } = props;
+  // normalize null -> undefined for props that TouchableOpacity doesn't accept as null
+  const safeProps = { ...rest, delayLongPress: delayLongPress ?? undefined };
+  return (
+    <TouchableOpacity {...safeProps} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      {children}
+    </TouchableOpacity>
+  );
+}
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -38,6 +49,7 @@ export default function TabLayout() {
             />
           ),
           tabBarAccessibilityLabel: 'Ir para página inicial',
+          tabBarButton: (props) => <TabButton {...props} />,
         }}
       />
       <Tabs.Screen
@@ -53,6 +65,7 @@ export default function TabLayout() {
             />
           ),
           tabBarAccessibilityLabel: 'Ir para perfil',
+          tabBarButton: (props) => <TabButton {...props} />,
         }}
       />
     </Tabs>

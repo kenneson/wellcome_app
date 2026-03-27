@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Dynamic import to avoid breaking other routes if expo-camera isn't available
 let CameraView: any = null;
@@ -39,6 +39,7 @@ type ScanResult = {
 export default function ScannerScreen() {
     const { id: eventId } = useLocalSearchParams();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const permissionResult = useCameraPermissions ? useCameraPermissions() : [null, () => {}];
     const [permission, requestPermission] = permissionResult;
     const [scanned, setScanned] = useState(false);
@@ -49,7 +50,7 @@ export default function ScannerScreen() {
     if (!CameraView || !useCameraPermissions) {
         return (
             <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
+                <View style={[styles.header, { paddingTop: insets.top + 8 }]}> 
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
@@ -146,7 +147,7 @@ export default function ScannerScreen() {
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 8 }]}> 
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingTop: 16, // Adiciona espaçamento extra no topo para afastar do HUD
+        
         paddingBottom: 12,
     },
     backButton: {
