@@ -5,6 +5,7 @@ import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { EfiPixService } from '../../infrastructure/external/EfiPixService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
+import { UserRepository } from '../../domain/repositories/UserRepository';
 
 export interface CheckPixPaymentResult {
     paymentId: string;
@@ -19,7 +20,8 @@ export class CheckPixPaymentUseCase {
         private paymentRepository: PaymentRepository,
         private eventRegistrationRepository: EventRegistrationRepository,
         private eventRepository: EventRepository,
-        private sendNotificationUseCase: SendNotificationUseCase
+        private sendNotificationUseCase: SendNotificationUseCase,
+        private userRepository: UserRepository
     ) {}
 
     async execute(bookingId: string): Promise<CheckPixPaymentResult> {
@@ -51,12 +53,29 @@ export class CheckPixPaymentUseCase {
             newStatus = PaymentStatus.CONFIRMED;
             paid = true;
 
-            // Atualizar pagamento
+            const feePercentage = Number(process.env.APP_FEE_PERCENTAGE || '10') / 100;
+            const platformFee = Number((payment.valor * feePercentage).toFixed(2));
+            const netAmount = Number((payment.valor - platformFee).toFixed(2));
+
+            // Atualizar pagamento e split
             await this.paymentRepository.updateStatus(
                 payment.id,
                 PaymentStatus.CONFIRMED,
-                new Date()
+                new Date(),
+                platformFee,
+                netAmount
             );
+
+            const event = await this.eventRepository.findById(payment.eventId);
+
+            // Adicionar saldo na carteira do organizador
+            if (event?.hostId) {
+                await this.userRepository.addWalletBalance(
+                    event.hostId,
+                    netAmount,
+                    payment.id
+                );
+            }
 
             // Aprovar automaticamente o booking
             await this.eventRegistrationRepository.updateStatus(
@@ -65,7 +84,6 @@ export class CheckPixPaymentUseCase {
             );
 
             // Notificar o host que o pagamento foi confirmado
-            const event = await this.eventRepository.findById(payment.eventId);
             if (event?.host) {
                 await this.sendNotificationUseCase.execute(
                     event.host.id,

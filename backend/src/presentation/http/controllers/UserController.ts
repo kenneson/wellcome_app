@@ -42,7 +42,9 @@ export class UserController {
                 dietaryRestrictions: body.dietary_restrictions,
                 avatarUrl: body.avatar_url,
                 username: body.username,
-                website: body.website
+                website: body.website,
+                pixKey: body.pix_key,
+                pixKeyType: body.pix_key_type
             };
 
             const user = await this.updateUserProfileUseCase.execute(id, updateData);

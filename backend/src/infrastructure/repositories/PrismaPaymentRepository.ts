@@ -45,12 +45,14 @@ export class PrismaPaymentRepository implements PaymentRepository {
         return payment ? this.toDomain(payment) : null;
     }
 
-    async updateStatus(id: string, status: string, paidAt?: Date): Promise<Payment> {
+    async updateStatus(id: string, status: string, paidAt?: Date, platformFee?: number, netAmount?: number): Promise<Payment> {
         const payment = await prisma.payment.update({
             where: { id },
             data: {
                 status: status as any,
                 ...(paidAt && { paidAt }),
+                ...(platformFee !== undefined && { platformFee }),
+                ...(netAmount !== undefined && { netAmount }),
             },
         });
 
@@ -69,6 +71,8 @@ export class PrismaPaymentRepository implements PaymentRepository {
             valor: Number(raw.valor),
             status: raw.status as PaymentStatus,
             paidAt: raw.paidAt ?? undefined,
+            platformFee: raw.platformFee ? Number(raw.platformFee) : undefined,
+            netAmount: raw.netAmount ? Number(raw.netAmount) : undefined,
             createdAt: raw.createdAt,
             updatedAt: raw.updatedAt,
         };

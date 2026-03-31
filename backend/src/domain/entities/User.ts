@@ -22,6 +22,9 @@ export interface User {
     events?: Event[];
     bookings?: EventRegistration[];
     expoPushToken?: string | null;
+    walletBalance?: number;
+    pixKey?: string | null;
+    pixKeyType?: string | null;
     updatedAt: Date;
 }
 

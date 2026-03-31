@@ -124,4 +124,40 @@ export class EfiPixService {
             valor: charge.valor?.original,
         };
     }
+
+    /**
+     * Envia um PIX da conta EFI para uma chave destino (Saque do host)
+     */
+    async sendPix(valor: number, chaveDestino: string, idEnvio: string): Promise<any> {
+        const pixKey = process.env.EFI_PIX_KEY;
+        if (!pixKey) {
+            throw new Error('EFI_PIX_KEY não configurada nas variáveis de ambiente');
+        }
+
+        const params = { idEnvio };
+
+        const body = {
+            valor: valor.toFixed(2),
+            pagador: {
+                chave: pixKey,
+            },
+            favorecido: {
+                chave: chaveDestino,
+            },
+        };
+
+        console.log('[EfiPixService] Iniciando envio de PIX:', JSON.stringify({ params, body }, null, 2));
+
+        try {
+            const response = await this.efiPay.pixSend(params, body);
+            console.log('[EfiPixService] Pix enviado com sucesso:', JSON.stringify(response, null, 2));
+            return response;
+        } catch (error: any) {
+            console.error('[EfiPixService] ERRO ao enviar PIX:', error?.message || error);
+            if (error?.response) {
+                console.error('[EfiPixService] Detalhes do erro:', JSON.stringify(error.response, null, 2));
+            }
+            throw error;
+        }
+    }
 }

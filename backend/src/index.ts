@@ -9,6 +9,8 @@ import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
 import { CheckPixPaymentUseCase } from './application/use-cases/CheckPixPaymentUseCase';
+import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
+import { ApproveWithdrawalUseCase } from './application/use-cases/ApproveWithdrawalUseCase';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { CreatePixChargeUseCase } from './application/use-cases/CreatePixChargeUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
@@ -29,6 +31,7 @@ import { PrismaEventReviewRepository } from './infrastructure/repositories/Prism
 import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
 import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
+import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories/PrismaWithdrawalRequestRepository';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
@@ -36,6 +39,7 @@ import { NotificationController } from './presentation/http/controllers/Notifica
 import { PixPaymentController } from './presentation/http/controllers/PixPaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
+import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
 
 // Explicitly load .env from backend root
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -65,9 +69,10 @@ const start = async () => {
                     { name: 'Bookings', description: 'Event registration and approval endpoints' },
                     { name: 'Events', description: 'Event management endpoints' },
                     { name: 'Notifications', description: 'Push and in-app notification endpoints' },
-                    { name: 'Reviews', description: 'Event review endpoints' },
+                    { name: 'Revews', description: 'Event review endpoints' },
                     { name: 'Users', description: 'User profile endpoints' },
                     { name: 'Payments', description: 'PIX payment endpoints' },
+                    { name: 'Withdrawals', description: 'Host Withdrawal endpoints' },
                     { name: 'General', description: 'General and health endpoints' }
                 ],
                 components: {
@@ -121,9 +126,12 @@ const start = async () => {
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
         const eventReviewRepository = new PrismaEventReviewRepository();
         const paymentRepository = new PrismaPaymentRepository();
+        const withdrawalRepository = new PrismaWithdrawalRequestRepository();
         const efiPixService = new EfiPixService();
 
         // Use Cases
+        const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
+        const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(withdrawalRepository, userRepository, efiPixService);
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository);
@@ -135,7 +143,7 @@ const start = async () => {
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
 
         const createPixChargeUseCase = new CreatePixChargeUseCase(efiPixService, eventRepository, eventRegistrationRepository, paymentRepository);
-        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository, eventRepository, sendNotificationUseCase);
+        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository, eventRepository, sendNotificationUseCase, userRepository);
 
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
@@ -160,6 +168,7 @@ const start = async () => {
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
         const notificationController = new NotificationController(notificationRepository);
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
+        const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository);
 
         // Auth Routes
         fastify.post('/auth/login', {
@@ -700,6 +709,9 @@ const start = async () => {
                             languages: { type: 'array', items: { type: 'string' } },
                             dietaryRestrictions: { type: 'array', items: { type: 'string' } },
                             avatarUrl: { type: 'string', nullable: true },
+                            walletBalance: { type: 'number' },
+                            pixKey: { type: 'string', nullable: true },
+                            pixKeyType: { type: 'string', nullable: true },
                             events: { type: 'array', items: { type: 'object', additionalProperties: true } },
                             bookings: { type: 'array', items: { type: 'object', additionalProperties: true } }
                         }
@@ -735,7 +747,9 @@ const start = async () => {
                         neighborhood: { type: 'string' },
                         languages: { type: 'array', items: { type: 'string' } },
                         dietary_restrictions: { type: 'array', items: { type: 'string' } },
-                        avatar_url: { type: 'string' }
+                        avatar_url: { type: 'string' },
+                        pix_key: { type: 'string' },
+                        pix_key_type: { type: 'string' }
                     }
                 },
                 response: {
@@ -753,6 +767,86 @@ const start = async () => {
                 }
             }
         }, (req, reply) => userController.updateProfile(req, reply));
+
+        // Withdrawals
+        fastify.post('/withdrawals', {
+            schema: {
+                summary: 'Request withdrawal',
+                description: 'Host request withdrawal of their available balance',
+                tags: ['Withdrawals'],
+                body: {
+                    type: 'object',
+                    required: ['userId', 'amount'],
+                    properties: {
+                        userId: { type: 'string' },
+                        amount: { type: 'number' }
+                    }
+                },
+                response: {
+                    201: {
+                        description: 'Withdrawal requested',
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            userId: { type: 'string' },
+                            amount: { type: 'number' },
+                            status: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => withdrawalController.requestWithdrawal(req, reply));
+
+        fastify.post('/admin/withdrawals/:id/approve', {
+            schema: {
+                summary: 'Approve withdrawal (Admin)',
+                description: 'Admin approves a pending withdrawal and sends the PIX',
+                tags: ['Withdrawals'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                },
+                response: {
+                    200: {
+                        description: 'Withdrawal approved',
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            status: { type: 'string' },
+                            efiEndToEndId: { type: 'string', nullable: true }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
+
+        // Get all withdrawals for Admin UI
+        fastify.get('/admin/withdrawals', {
+            schema: {
+                summary: 'List all withdrawals (Admin)',
+                description: 'List all withdrawals requests',
+                tags: ['Withdrawals'],
+                response: {
+                    200: {
+                        description: 'List of withdrawals',
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string' },
+                                userId: { type: 'string' },
+                                amount: { type: 'number' },
+                                status: { type: 'string' },
+                                pixKey: { type: 'string' },
+                                pixKeyType: { type: 'string', nullable: true },
+                                efiEndToEndId: { type: 'string', nullable: true },
+                                createdAt: { type: 'string' },
+                            }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => withdrawalController.listAll(req, reply));
 
         fastify.delete('/bookings', {
             schema: {

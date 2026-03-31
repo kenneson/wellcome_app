@@ -40,7 +40,9 @@ export class PrismaUserRepository implements UserRepository {
                 lookingFor: data.lookingFor,
                 dietaryRestrictions: data.dietaryRestrictions,
                 username: data.username,
-                website: data.website
+                website: data.website,
+                pixKey: data.pixKey,
+                pixKeyType: data.pixKeyType
             },
             include: {
                 events: true,
@@ -65,6 +67,9 @@ export class PrismaUserRepository implements UserRepository {
             languages: prismaUser.languages ?? [],
             dietaryRestrictions: prismaUser.dietaryRestrictions ?? prismaUser.dietary_restrictions ?? [],
             phoneNumber: prismaUser.phoneNumber ?? prismaUser.phone_number ?? prismaUser.phone ?? null,
+            walletBalance: prismaUser.walletBalance ? Number(prismaUser.walletBalance) : 0,
+            pixKey: prismaUser.pixKey ?? null,
+            pixKeyType: prismaUser.pixKeyType ?? null,
             events: prismaUser.events ?? [],
             bookings: prismaUser.bookings ? prismaUser.bookings.map((b: any) => ({
                 id: b.id,
@@ -91,5 +96,29 @@ export class PrismaUserRepository implements UserRepository {
             })) : [],
             updatedAt: prismaUser.updatedAt ?? prismaUser.updated_at ?? null
         };
+    }
+
+    async addWalletBalance(userId: string, amount: number, referenceId?: string): Promise<void> {
+        await prisma.$transaction(async (tx) => {
+            const user = await tx.user.findUnique({ where: { id: userId } });
+            if (!user) throw new Error('User not found');
+
+            const novoSaldo = Number(user.walletBalance || 0) + amount;
+
+            await tx.user.update({
+                where: { id: userId },
+                data: { walletBalance: novoSaldo }
+            });
+
+            await tx.walletTransaction.create({
+                data: {
+                    userId,
+                    amount,
+                    type: amount >= 0 ? 'CREDIT_EVENT_TICKET' : 'DEBIT_WITHDRAWAL',
+                    description: amount >= 0 ? 'Pagamento de inscrição' : 'Saque',
+                    referenceId
+                }
+            });
+        });
     }
 }

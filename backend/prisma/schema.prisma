@@ -35,6 +35,12 @@ model User {
   notifications       Notification[]
   pushTokens          PushToken[]
   eventReviews        EventReview[]
+  walletBalance       Decimal             @default(0) @map("wallet_balance") @db.Decimal(10, 2)
+  pixKey              String?             @map("pix_key")
+  pixKeyType          String?             @map("pix_key_type")
+  withdrawals         WithdrawalRequest[]
+  walletTransactions  WalletTransaction[]
+  role                Role                @default(USER)
 
   @@map("profiles")
   @@schema("public")
@@ -219,6 +225,8 @@ model Payment {
   valor          Decimal       @db.Decimal(10, 2)
   status         PaymentStatus @default(PENDING)
   paidAt         DateTime?     @map("paid_at") @db.Timestamptz(6)
+  platformFee    Decimal?      @default(0) @map("platform_fee") @db.Decimal(10, 2)
+  netAmount      Decimal?      @default(0) @map("net_amount") @db.Decimal(10, 2)
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -754,6 +762,60 @@ enum PaymentStatus {
   CONFIRMED
   EXPIRED
   REFUNDED
+
+  @@schema("public")
+}
+
+model WithdrawalRequest {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  amount        Decimal  @db.Decimal(10, 2)
+  pixKey        String   @map("pix_key")
+  pixKeyType    String?  @map("pix_key_type")
+  status        WithdrawalStatus @default(PENDING)
+  efiEndToEndId String?  @map("efi_end_to_end_id")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_withdrawals_user")
+  @@map("withdrawal_requests")
+  @@schema("public")
+}
+
+model WalletTransaction {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  amount        Decimal  @db.Decimal(10, 2)
+  type          TransactionType
+  description   String?
+  referenceId   String?  @map("reference_id")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_wallet_txs_user")
+  @@map("wallet_transactions")
+  @@schema("public")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+
+  @@schema("public")
+}
+
+enum TransactionType {
+  CREDIT_EVENT_TICKET
+  DEBIT_WITHDRAWAL
+  REFUND_WITHDRAWAL_FAILED
 
   @@schema("public")
 }

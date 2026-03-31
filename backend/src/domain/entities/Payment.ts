@@ -11,6 +11,8 @@ export interface Payment {
     valor: number;
     status: PaymentStatus;
     paidAt?: Date;
+    platformFee?: number;
+    netAmount?: number;
     createdAt: Date;
     updatedAt: Date;
 }

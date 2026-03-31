@@ -13,5 +13,5 @@ export interface PaymentRepository {
 
     findByBookingId(bookingId: string): Promise<Payment | null>;
     findByTxid(txid: string): Promise<Payment | null>;
-    updateStatus(id: string, status: string, paidAt?: Date): Promise<Payment>;
+    updateStatus(id: string, status: string, paidAt?: Date, platformFee?: number, netAmount?: number): Promise<Payment>;
 }

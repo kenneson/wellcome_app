@@ -29,6 +29,7 @@ describe('CreateEventUseCase', () => {
         mockUserRepository = {
             findById: jest.fn(),
             update: jest.fn(),
+            addWalletBalance: jest.fn(),
         };
         createEventUseCase = new CreateEventUseCase(
             mockEventRepository,
