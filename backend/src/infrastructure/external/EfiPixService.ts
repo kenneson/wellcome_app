@@ -26,7 +26,7 @@ export class EfiPixService {
             console.log('[EfiPixService] Certificado carregado via EFI_CERT_BASE64');
         } else {
             certPath = process.env.EFI_CERT_PATH
-                || path.join(__dirname, '../../../../homologacao-560634-wellcomeapp.p12');
+                || path.join(__dirname, '../../../../producao-560634-wellcome_prod.p12');
 
             if (!path.isAbsolute(certPath)) {
                 certPath = path.resolve(process.cwd(), certPath);
