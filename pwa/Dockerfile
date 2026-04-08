@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copia e instala as dependências
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copia o restante do código e executa o build de produção PWA
 COPY . .
