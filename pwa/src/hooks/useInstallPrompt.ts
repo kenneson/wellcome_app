@@ -14,12 +14,18 @@ export function useInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     // Check if it's already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsAppInstalled(true);
     }
+
+    // Detect iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isIosDevice);
 
     const readyToInstallHandler = (e: Event) => {
       e.preventDefault();
@@ -61,6 +67,7 @@ export function useInstallPrompt() {
   return {
     isInstallable,
     isAppInstalled,
+    isIOS,
     triggerInstall
   };
 }

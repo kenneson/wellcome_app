@@ -4,7 +4,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 export function Login() {
   const [loading, setLoading] = useState(false);
-  const { isInstallable, triggerInstall } = useInstallPrompt();
+  const { isInstallable, triggerInstall, isIOS, isAppInstalled } = useInstallPrompt();
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -44,15 +44,28 @@ export function Login() {
         </button>
       </div>
 
-      {isInstallable && (
+      {!isAppInstalled && (isInstallable || isIOS) && (
         <div className="card" style={{ backgroundColor: 'var(--secondary)', border: '1px solid var(--primary)', width: '100%' }}>
           <h3 style={{ color: 'var(--primary)', marginBottom: '8px' }}>Baixe nosso App!</h3>
-          <p style={{ fontSize: '14px', marginBottom: '16px' }}>
-            Instale o Wellcome na sua tela inicial para uma melhor experiência offline e mais rapidez.
-          </p>
-          <button className="btn-primary" onClick={triggerInstall}>
-            Instalar Aplicativo
-          </button>
+          
+          {isIOS ? (
+            <div style={{ fontSize: '14px', marginBottom: '16px', textAlign: 'left' }}>
+              Para instalar o Wellcome no seu iPhone:
+              <ol style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                <li>Toque no ícone de <strong>Compartilhar</strong> na barra do Safari (quadrado com uma seta p/ cima).</li>
+                <li>Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+              </ol>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: '14px', marginBottom: '16px' }}>
+                Instale o Wellcome na sua tela inicial para uma melhor experiência offline e mais rapidez.
+              </p>
+              <button className="btn-primary" onClick={triggerInstall}>
+                Instalar Aplicativo
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -6,7 +6,7 @@ import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 export function Home() {
   const navigate = useNavigate();
-  const { isInstallable, triggerInstall } = useInstallPrompt();
+  const { isInstallable, triggerInstall, isAppInstalled, isIOS } = useInstallPrompt();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,18 +61,29 @@ export function Home() {
       </header>
 
       {/* PWA Install Banner */}
-      {isInstallable && (
-        <div style={{ backgroundColor: 'var(--secondary)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--primary)' }}>
-          <div>
-            <h3 style={{ color: 'var(--primary)', margin: 0, fontSize: '16px' }}>Instalar Aplicativo</h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Acesso rápido e offline</span>
-          </div>
-          <button 
-            onClick={triggerInstall}
-            style={{ backgroundColor: 'var(--primary)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold' }}
-          >
-            Instalar
-          </button>
+      {!isAppInstalled && (isInstallable || isIOS) && (
+        <div style={{ backgroundColor: 'var(--secondary)', padding: '16px', borderBottom: '1px solid var(--primary)' }}>
+          {isIOS ? (
+             <div>
+               <h3 style={{ color: 'var(--primary)', margin: '0 0 8px 0', fontSize: '16px' }}>Instalar Aplicativo iOS</h3>
+               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                 Toque no botão de <strong>Compartilhar</strong> (quadrado com seta) na barra inferior e selecione <strong>Adicionar à Tela de Início</strong>.
+               </span>
+             </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ color: 'var(--primary)', margin: 0, fontSize: '16px' }}>Instalar Aplicativo</h3>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Acesso rápido e offline</span>
+              </div>
+              <button 
+                onClick={triggerInstall}
+                style={{ backgroundColor: 'var(--primary)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '20px', fontWeight: 'bold' }}
+              >
+                Instalar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
