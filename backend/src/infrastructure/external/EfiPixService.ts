@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import EfiPay from 'sdk-node-apis-efi';
 
 export interface PixChargeResult {
@@ -19,7 +20,7 @@ export class EfiPixService {
 
         // Suporte a certificado via base64 (ideal para Docker/EasyPanel)
         if (process.env.EFI_CERT_BASE64) {
-            const tmpDir = '/tmp';
+            const tmpDir = os.tmpdir();
             certPath = path.join(tmpDir, 'efi-cert.p12');
             const certBuffer = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
             fs.writeFileSync(certPath, certBuffer);

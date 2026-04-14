@@ -1,9 +1,8 @@
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
-import dotenv from 'dotenv';
+import './env';
 import Fastify from 'fastify';
-import path from 'path';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
@@ -41,8 +40,6 @@ import { ReviewController } from './presentation/http/controllers/ReviewControll
 import { UserController } from './presentation/http/controllers/UserController';
 import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
 
-// Explicitly load .env from backend root
-dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const fastify = Fastify({
     logger: true
@@ -63,7 +60,6 @@ const start = async () => {
                     description: 'API documentation for Wellcome application',
                     version: '1.0.0'
                 },
-                servers: [{ url: 'http://localhost:3000' }],
                 tags: [
                     { name: 'Auth', description: 'Authentication endpoints' },
                     { name: 'Bookings', description: 'Event registration and approval endpoints' },
