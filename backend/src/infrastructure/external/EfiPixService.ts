@@ -129,11 +129,15 @@ export class EfiPixService {
     /**
      * Envia um PIX da conta EFI para uma chave destino (Saque do host)
      */
-    async sendPix(valor: number, chaveDestino: string, idEnvio: string): Promise<any> {
+    async sendPix(valor: number, chaveDestino: string, withdrawalId: string): Promise<any> {
         const pixKey = process.env.EFI_PIX_KEY;
         if (!pixKey) {
             throw new Error('EFI_PIX_KEY não configurada nas variáveis de ambiente');
         }
+
+        // idEnvio: 1-35 chars, alphanumeric only (no hyphens)
+        // Usamos o withdrawalId sem hífens para garantir conformidade
+        const idEnvio = `WD${withdrawalId.replace(/[^a-zA-Z0-9]/g, '')}`.substring(0, 35);
 
         const params = { idEnvio };
 
