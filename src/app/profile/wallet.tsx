@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
 
     // Balance Card
     balanceCard: {
-        background: 'linear-gradient(135deg, #FF8C42, #FF6B00)',
         backgroundColor: '#FF8C42',
         borderRadius: 20,
         padding: 28,
