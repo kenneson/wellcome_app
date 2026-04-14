@@ -68,7 +68,10 @@ export default function ProfileScreen() {
                     languages: data.languages || [],
                     dietaryRestrictions: data.dietary_restrictions || [],
                     events: [],
-                    bookings: []
+                    bookings: [],
+                    walletBalance: data.wallet_balance ?? 0,
+                    pixKey: data.pix_key ?? null,
+                    pixKeyType: data.pix_key_type ?? null,
                 };
             }
         },
