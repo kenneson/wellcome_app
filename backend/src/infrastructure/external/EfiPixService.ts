@@ -164,6 +164,8 @@ export class EfiPixService {
             }
             throw error;
         }
+    }
+
     /**
      * Registra uma URL de Webhook para a chave PIX configurada
      */
