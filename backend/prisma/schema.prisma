@@ -801,6 +801,8 @@ model WalletTransaction {
 enum Role {
   USER
   ADMIN
+
+  @@schema("public")
 }
 
 enum WithdrawalStatus {
