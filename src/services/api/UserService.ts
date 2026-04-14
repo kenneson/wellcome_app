@@ -12,9 +12,12 @@ export interface UserProfile {
     neighborhood: string | null;
     dietaryRestrictions: string[];
     languages: string[];
-    events: any[]; // Define proper type if available
-    bookings: any[]; // Define proper type if available
-    averageRating?: number; // Not yet implemented in backend
+    events: any[];
+    bookings: any[];
+    averageRating?: number;
+    walletBalance?: number;
+    pixKey?: string | null;
+    pixKeyType?: string | null;
 }
 
 export class UserService {
@@ -24,6 +27,23 @@ export class UserService {
         const response = await fetch(`${this.apiUrl}/${userId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch profile');
+        }
+        return response.json();
+    }
+
+    async updateProfile(userId: string, data: {
+        pix_key?: string;
+        pix_key_type?: string;
+        [key: string]: any;
+    }): Promise<UserProfile> {
+        const response = await fetch(`${this.apiUrl}/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to update profile');
         }
         return response.json();
     }

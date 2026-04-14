@@ -293,6 +293,22 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
+                {/* Wallet Card */}
+                <TouchableOpacity style={styles.walletCard} onPress={() => router.push('/profile/wallet')}>
+                    <View style={styles.walletIconContainer}>
+                        <Ionicons name="wallet-outline" size={24} color="#fff" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.walletTitle}>Minha Carteira</Text>
+                        <Text style={styles.walletBalance}>
+                            R$ {Number(profile?.walletBalance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </Text>
+                    </View>
+                    <View style={styles.walletChevron}>
+                        <Ionicons name="chevron-forward" size={20} color="#fff" />
+                    </View>
+                </TouchableOpacity>
+
                 <Text style={styles.sectionTitle}>
                     {activeTab === 'history' ? 'ÚLTIMAS EXPERIÊNCIAS' : 'PRÓXIMOS EVENTOS'}
                 </Text>
@@ -362,11 +378,11 @@ export default function ProfileScreen() {
 
                 <Text style={styles.sectionTitle}>CONFIGURAÇÕES</Text>
 
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/pix-key')}>
                     <View style={styles.menuIconCircle}>
                         <Ionicons name="card-outline" size={20} color="#FF8C42" />
                     </View>
-                    <Text style={styles.menuText}>Métodos de Pagamento</Text>
+                    <Text style={styles.menuText}>Minha Chave PIX</Text>
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
@@ -650,7 +666,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         padding: 16,
         borderRadius: 16,
-        marginBottom: 24,
+        marginBottom: 12,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -674,6 +690,47 @@ const styles = StyleSheet.create({
     manageSubtitle: {
         fontSize: 12,
         color: '#666',
+    },
+    walletCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF8C42',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
+        shadowColor: '#FF8C42',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    walletIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    walletTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.85)',
+        marginBottom: 2,
+    },
+    walletBalance: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    walletChevron: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     emptyState: {
         padding: 24,
