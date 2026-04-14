@@ -40,14 +40,18 @@ export class ApproveWithdrawalUseCase {
             // Tentar extrair erro detalhado da EFI
             const detail = error?.response?.data?.mensagem || error?.response?.data?.error_description || error?.message;
 
-            // Se falhou, voltar o status para FAILED e estornar o valor na carteira
+            // Se falhou, marcar como FAILED
+            // Mas só estornar na carteira se já não estivesse como FAILED (para evitar estorno duplo em retentativas)
+            const wasAlreadyFailed = withdrawal.status === 'FAILED';
             await this.withdrawalRequestRepository.updateStatus(withdrawalId, 'FAILED');
-
-            await this.userRepository.addWalletBalance(
-                withdrawal.userId,
-                withdrawal.amount,
-                withdrawal.id
-            );
+            
+            if (!wasAlreadyFailed) {
+               await this.userRepository.addWalletBalance(
+                   withdrawal.userId,
+                   withdrawal.amount,
+                   withdrawal.id
+               ); 
+            }
 
             throw new Error(`Erro EFI: ${detail}`);
         }
