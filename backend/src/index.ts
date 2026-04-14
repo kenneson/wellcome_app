@@ -42,7 +42,8 @@ import { WithdrawalController } from './presentation/http/controllers/Withdrawal
 
 
 const fastify = Fastify({
-    logger: true
+    logger: true,
+    ignoreTrailingSlash: true
 });
 
 const start = async () => {
@@ -812,6 +813,19 @@ const start = async () => {
                             efiEndToEndId: { type: 'string', nullable: true }
                         }
                     }
+                }
+            }
+        }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
+
+        // Alias GET for approval to prevent 404 on weird redirects
+        fastify.get('/admin/withdrawals/:id/approve', {
+            schema: {
+                summary: 'Approve withdrawal (Admin - GET Alias)',
+                description: 'Alias for POST approval to handle cases where POST is converted to GET during redirects',
+                tags: ['Withdrawals'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
                 }
             }
         }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
