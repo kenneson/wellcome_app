@@ -16,7 +16,7 @@ export class ApproveWithdrawalUseCase {
             throw new Error('Pedido de saque não encontrado');
         }
 
-        if (withdrawal.status !== 'PENDING') {
+        if (withdrawal.status !== 'PENDING' && withdrawal.status !== 'FAILED') {
             throw new Error(`Este saque já foi processado. Status atual: ${withdrawal.status}`);
         }
 
@@ -39,16 +39,19 @@ export class ApproveWithdrawalUseCase {
         } catch (error: any) {
             console.error('[ApproveWithdrawalUseCase] Erro ao enviar PIX:', error?.message);
             
+            // Tentar extrair erro detalhado da EFI
+            const detail = error?.response?.data?.mensagem || error?.response?.data?.error_description || error?.message;
+
             // Se falhou, voltar o status para FAILED e estornar o valor na carteira
-            const failedWithdrawal = await this.withdrawalRequestRepository.updateStatus(withdrawalId, 'FAILED');
+            await this.withdrawalRequestRepository.updateStatus(withdrawalId, 'FAILED');
             
             await this.userRepository.addWalletBalance(
                 withdrawal.userId,
                 withdrawal.amount,
                 withdrawal.id
-            ); // O estorno (Refund) soma o dinheiro de volta
+            ); 
 
-            throw new Error(`Erro na integração EFI: ${error?.message || 'Falha desconhecida'}`);
+            throw new Error(`Erro EFI: ${detail}`);
         }
     }
 }
