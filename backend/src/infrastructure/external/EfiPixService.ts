@@ -164,5 +164,35 @@ export class EfiPixService {
             }
             throw error;
         }
+    /**
+     * Registra uma URL de Webhook para a chave PIX configurada
+     */
+    async configWebhook(url: string): Promise<any> {
+        const pixKey = process.env.EFI_PIX_KEY;
+        if (!pixKey) {
+            throw new Error('EFI_PIX_KEY não configurada');
+        }
+
+        const params = {
+            chave: pixKey,
+        };
+
+        const body = {
+            webhookUrl: url,
+        };
+
+        console.log(`[EfiPixService] Registrando Webhook para a chave ${pixKey} na URL: ${url}`);
+
+        try {
+            const response = await this.efiPay.pixConfigWebhook(params, body);
+            console.log('[EfiPixService] Webhook registrado com sucesso:', response);
+            return response;
+        } catch (error: any) {
+            console.error('[EfiPixService] ERRO ao registrar Webhook:', error?.message || error);
+            if (error?.response) {
+                console.error('[EfiPixService] Detalhes:', JSON.stringify(error.response, null, 2));
+            }
+            throw error;
+        }
     }
 }

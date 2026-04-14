@@ -165,7 +165,7 @@ const start = async () => {
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
         const notificationController = new NotificationController(notificationRepository);
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
-        const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository);
+        const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
 
         // Auth Routes
         fastify.post('/auth/login', {
@@ -859,6 +859,29 @@ const start = async () => {
                 }
             }
         }, (req, reply) => withdrawalController.listAll(req, reply));
+
+        // PIX Webhook (Recebe avisos da EFI)
+        fastify.post('/webhook/pix', {
+            schema: {
+                summary: 'EFI PIX Webhook',
+                description: 'Receives notifications from EFI regarding PIX transfers',
+                tags: ['Withdrawals'],
+                hide: true
+            }
+        }, (req, reply) => withdrawalController.handleWebhook(req, reply));
+
+        // Setup Webhook (Comando para registrar a URL na EFI)
+        fastify.get('/admin/setup-webhook', {
+            schema: {
+                summary: 'Setup EFI Webhook',
+                description: 'Registers the Webhook URL with EFI',
+                tags: ['Withdrawals'],
+                querystring: {
+                    type: 'object',
+                    properties: { url: { type: 'string' } }
+                }
+            }
+        }, (req, reply) => withdrawalController.setupWebhook(req, reply));
 
         fastify.delete('/bookings', {
             schema: {
