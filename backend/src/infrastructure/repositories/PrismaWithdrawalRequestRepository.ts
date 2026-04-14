@@ -1,6 +1,7 @@
 import { WithdrawalRequest, WithdrawalRequestRepository } from '../../domain/repositories/WithdrawalRequestRepository';
 import { prisma } from '../database/prismaClient';
 
+
 export class PrismaWithdrawalRequestRepository implements WithdrawalRequestRepository {
     async create(data: {
         userId: string;
@@ -49,6 +50,7 @@ export class PrismaWithdrawalRequestRepository implements WithdrawalRequestRepos
     async findAll(): Promise<WithdrawalRequest[]> {
         const withdrawals = await prisma.withdrawalRequest.findMany({
             orderBy: { createdAt: 'desc' },
+            include: { user: { select: { id: true, fullName: true, avatarUrl: true } } },
         });
         return withdrawals.map(w => this.toDomain(w));
     }
@@ -57,6 +59,8 @@ export class PrismaWithdrawalRequestRepository implements WithdrawalRequestRepos
         return {
             id: raw.id,
             userId: raw.userId,
+            userName: raw.user?.fullName ?? null,
+            userAvatarUrl: raw.user?.avatarUrl ?? null,
             amount: Number(raw.amount),
             pixKey: raw.pixKey,
             pixKeyType: raw.pixKeyType,

@@ -1,6 +1,8 @@
 export interface WithdrawalRequest {
     id: string;
     userId: string;
+    userName?: string | null;
+    userAvatarUrl?: string | null;
     amount: number;
     pixKey: string;
     pixKeyType: string | null;

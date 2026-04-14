@@ -831,12 +831,14 @@ const start = async () => {
                             properties: {
                                 id: { type: 'string' },
                                 userId: { type: 'string' },
+                                userName: { type: 'string', nullable: true },
+                                userAvatarUrl: { type: 'string', nullable: true },
                                 amount: { type: 'number' },
                                 status: { type: 'string' },
                                 pixKey: { type: 'string' },
                                 pixKeyType: { type: 'string', nullable: true },
                                 efiEndToEndId: { type: 'string', nullable: true },
-                                createdAt: { type: 'string' },
+                                createdAt: { type: 'string' }
                             }
                         }
                     }

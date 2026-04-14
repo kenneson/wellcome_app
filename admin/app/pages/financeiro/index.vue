@@ -29,8 +29,9 @@
           </thead>
           <tbody class="divide-y divide-slate-800">
             <tr v-for="wd in withdrawals" :key="wd.id" class="hover:bg-slate-800/30 transition-colors">
-              <td class="px-6 py-4 font-medium text-white truncate max-w-[200px]">
-                {{ wd.userId }}
+              <td class="px-6 py-4 font-medium text-white">
+                <div class="font-semibold">{{ wd.userName || 'Anfitrião desconhecido' }}</div>
+                <div class="text-xs text-slate-500 mt-0.5 font-mono">{{ wd.userId }}</div>
               </td>
               <td class="px-6 py-4 font-medium text-emerald-400">
                 R$ {{ Number(wd.amount).toFixed(2).replace('.', ',') }}
@@ -103,7 +104,8 @@ const baseURL = config.public.apiUrl;
 
 const fetchWithdrawals = async () => {
     try {
-        const res = await axios.get(`${baseURL}/admin/withdrawals`);
+        const url = `${baseURL}/admin/withdrawals`.replace(/([^:]\/)\/+/g, "$1");
+        const res = await axios.get(url);
         withdrawals.value = res.data;
     } catch (err) {
         error.value = 'Failed to load data';
@@ -118,7 +120,8 @@ const approveWithdrawal = async (id) => {
   processingId.value = id;
   
   try {
-    const res = await axios.post(`${baseURL}/admin/withdrawals/${id}/approve`);
+    const url = `${baseURL}/admin/withdrawals/${id}/approve`.replace(/([^:]\/)\/+/g, "$1");
+    const res = await axios.post(url);
     
     // Atualização Otimista UI
     const index = withdrawals.value.findIndex(w => w.id === id);
