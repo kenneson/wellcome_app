@@ -167,6 +167,11 @@ const start = async () => {
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
         const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
 
+        // Test route to verify deploy
+        fastify.get('/test-deploy', async () => {
+            return { deploy: 'OK', time: new Date().toISOString() };
+        });
+
         // Auth Routes
         fastify.post('/auth/login', {
             schema: {
