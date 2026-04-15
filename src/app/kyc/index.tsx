@@ -180,10 +180,20 @@ export default function KycVerificationScreen() {
                 }),
             });
 
-            const result = await response.json();
+            let result;
+            try {
+                // If the response is not valid JSON, we want to know what it is
+                result = await response.json();
+            } catch (parseError) {
+                // Read as text
+                const textResult = await response.text();
+                console.error("RAW EDGE FN ERR:", textResult);
+                throw new Error(`Servidor retornou erro inesperado: ${response.status}. Ver terminal.`);
+            }
 
             if (!response.ok) {
-                throw new Error(result.error || 'Erro na verificação');
+                console.error("EDGE FN API ERR:", result);
+                throw new Error(result.error || result.message || JSON.stringify(result));
             }
 
             setKycResult(result);

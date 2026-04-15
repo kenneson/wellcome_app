@@ -205,7 +205,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
-                <Stack.Screen name="profile/notifications" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="notifications/index" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen
                   name="welcome"
                   options={{
