@@ -45,3 +45,5 @@ app-example
 
 # Agent Skills
 .agent/skills
+
+/src/generated/prisma

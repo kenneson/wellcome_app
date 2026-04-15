@@ -15,7 +15,7 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-import { UserProfileContext } from '@/context/UserProfileContext';
+import { KycStatus, UserProfileContext } from '@/context/UserProfileContext';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 import { queryClient } from '@/shared/lib/react-query';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -29,6 +29,7 @@ export default function RootLayout() {
   const router = useRouter();
 
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatus>(null);
   const [profileCheckLoading, setProfileCheckLoading] = useState(true);
   const lastUserId = useRef<string | null>(null);
 
@@ -47,8 +48,7 @@ export default function RootLayout() {
       // Reset profile check on auth change/logout to force re-verify
       if (!session) {
         setIsProfileComplete(null);
-        lastUserId.current = null;
-        // Reset routing flag to allow redirection to login
+        setKycStatus(null);
         lastUserId.current = null;
       }
     });
@@ -75,27 +75,31 @@ export default function RootLayout() {
       console.log('Checking profile for user:', session.user.id);
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('full_name, occupation, looking_for, city, neighborhood')
+        .select('full_name, occupation, looking_for, city, neighborhood, kyc_status')
         .eq('id', session.user.id)
         .maybeSingle(); // Use maybeSingle to avoid error when no row exists
 
       if (error) {
         console.error('Error fetching profile:', error);
         setIsProfileComplete(false);
+        setKycStatus(null);
       } else if (!profile) {
         // No profile row exists - treat as incomplete
         console.log('No profile found for user');
         setIsProfileComplete(false);
+        setKycStatus(null);
       } else {
         console.log('Profile data:', profile);
         // full_name, occupation, city, neighborhood are REQUIRED
         const complete = !!(profile.full_name && profile.occupation && profile.city && profile.neighborhood);
         console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
+        setKycStatus(profile.kyc_status as KycStatus || 'NOT_SUBMITTED');
       }
     } catch (e) {
       console.error('Exception checking profile:', e);
       setIsProfileComplete(false);
+      setKycStatus(null);
     } finally {
       setProfileCheckLoading(false);
     }
@@ -115,7 +119,9 @@ export default function RootLayout() {
 
 
   // 3. Handle Navigation Protection
-  const inAuthGroup = segments[0] === 'auth';
+  const currentSegment = segments[0] as string;
+  const inAuthGroup = currentSegment === 'auth';
+  const inKycGroup = currentSegment === 'kyc';
 
   useEffect(() => {
     if (!initialized) return;
@@ -130,17 +136,39 @@ export default function RootLayout() {
     // Check for incomplete profile
     else if (session && isProfileComplete === false) {
       // Allow access to welcome screen
-      if (segments[0] === 'welcome') return;
+      if (currentSegment === 'welcome') return;
 
       // Force redirect to welcome/onboarding
       router.replace('/welcome');
       return;
     }
-    // Redirect to tabs if on welcome screen but profile is complete
-    else if (session && isProfileComplete === true && segments[0] === 'welcome') {
-      router.replace('/(tabs)');
+    // Profile complete — now check KYC
+    else if (session && isProfileComplete === true) {
+      // KYC not yet approved
+      if (kycStatus === 'NOT_SUBMITTED' || kycStatus === 'REJECTED') {
+        if (!inKycGroup) {
+          router.replace('/kyc' as any);
+        }
+        return;
+      }
+
+      // KYC pending — redirect to KYC screen (will show pending state)
+      if (kycStatus === 'PENDING') {
+        if (!inKycGroup) {
+          router.replace('/kyc' as any);
+        }
+        return;
+      }
+
+      // KYC approved — allow access to app
+      if (kycStatus === 'APPROVED') {
+        // Redirect away from welcome/kyc if profile is complete and KYC approved
+        if (currentSegment === 'welcome' || inKycGroup) {
+          router.replace('/(tabs)');
+        }
+      }
     }
-  }, [initialized, session, segments, isProfileComplete, inAuthGroup]);
+  }, [initialized, session, segments, isProfileComplete, kycStatus, inAuthGroup, inKycGroup]);
 
   if (
     !initialized ||
@@ -156,11 +184,11 @@ export default function RootLayout() {
     );
   }
 
-  const isEventDetails = segments[0] === 'events' && segments[1] === '[id]';
+  const isEventDetails = currentSegment === 'events' && segments[1] === '[id]';
 
   return (
     <QueryClientProvider client={queryClient}>
-      <UserProfileContext.Provider value={{ isProfileComplete, refetchProfile }}>
+      <UserProfileContext.Provider value={{ isProfileComplete, kycStatus, refetchProfile }}>
         <ThemeProvider value={DefaultTheme}>
           <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
             {!isEventDetails && (
@@ -180,6 +208,14 @@ export default function RootLayout() {
                 <Stack.Screen name="profile/notifications" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen
                   name="welcome"
+                  options={{
+                    presentation: 'transparentModal',
+                    animation: 'fade',
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="kyc"
                   options={{
                     presentation: 'transparentModal',
                     animation: 'fade',

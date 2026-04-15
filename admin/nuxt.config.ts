@@ -6,7 +6,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      apiUrl: process.env.API_URL || 'http://localhost:3000'
+      apiUrl: process.env.API_URL || 'http://localhost:3000',
+      supabaseUrl: process.env.SUPABASE_URL || 'https://cmkknuvydqetzmdpzzqv.supabase.co',
+      supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     }
   }
 })

@@ -41,6 +41,13 @@ model User {
   withdrawals         WithdrawalRequest[]
   walletTransactions  WalletTransaction[]
   role                Role                @default(USER)
+  kycStatus           KycStatus           @default(NOT_SUBMITTED) @map("kyc_status")
+  kycDocumentUrl      String?             @map("kyc_document_url")
+  kycSelfieUrl        String?             @map("kyc_selfie_url")
+  kycSimilarityScore  Float?              @map("kyc_similarity_score")
+  kycSubmittedAt      DateTime?           @map("kyc_submitted_at") @db.Timestamptz(6)
+  kycReviewedAt       DateTime?           @map("kyc_reviewed_at") @db.Timestamptz(6)
+  kycRejectionReason  String?             @map("kyc_rejection_reason")
 
   @@map("profiles")
   @@schema("public")
@@ -818,6 +825,15 @@ enum TransactionType {
   CREDIT_EVENT_TICKET
   DEBIT_WITHDRAWAL
   REFUND_WITHDRAWAL_FAILED
+
+  @@schema("public")
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
 
   @@schema("public")
 }
