@@ -171,9 +171,9 @@ useHead({
 
 const config = useRuntimeConfig();
 const supabaseUrl = config.public.supabaseUrl || 'https://cmkknuvydqetzmdpzzqv.supabase.co';
-const supabaseServiceKey = config.public.supabaseServiceKey || '';
+const supabaseAnonKey = config.public.supabaseAnonKey;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const users = ref([]);
 const loading = ref(true);

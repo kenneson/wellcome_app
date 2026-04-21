@@ -8,7 +8,7 @@ export default defineNuxtConfig({
     public: {
       apiUrl: process.env.API_URL || 'http://localhost:3000',
       supabaseUrl: process.env.SUPABASE_URL || 'https://cmkknuvydqetzmdpzzqv.supabase.co',
-      supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || 'sb_publishable_NcU_Jp3xZY6SKd-x5uY0gg_AXXWZvM2',
     }
   }
 })
