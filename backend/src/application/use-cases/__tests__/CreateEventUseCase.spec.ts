@@ -30,6 +30,8 @@ describe('CreateEventUseCase', () => {
             findById: jest.fn(),
             update: jest.fn(),
             addWalletBalance: jest.fn(),
+            getAccountDeletionBlockers: jest.fn(),
+            deleteAccount: jest.fn(),
         };
         createEventUseCase = new CreateEventUseCase(
             mockEventRepository,

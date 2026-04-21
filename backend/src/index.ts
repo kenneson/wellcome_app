@@ -14,6 +14,7 @@ import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { CreatePixChargeUseCase } from './application/use-cases/CreatePixChargeUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
 import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
+import { DeleteUserAccountUseCase } from './application/use-cases/DeleteUserAccountUseCase';
 import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
@@ -147,6 +148,7 @@ const start = async () => {
 
         const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
         const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
+        const deleteUserAccountUseCase = new DeleteUserAccountUseCase(userRepository);
 
         const loginUseCase = new LoginUseCase();
         const registerUseCase = new RegisterUseCase();
@@ -162,7 +164,7 @@ const start = async () => {
             rejectRegistrationUseCase,
             eventRegistrationRepository
         );
-        const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
+        const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
         const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
@@ -769,6 +771,37 @@ const start = async () => {
                 }
             }
         }, (req, reply) => userController.updateProfile(req, reply));
+
+        fastify.delete('/users/me/account', {
+            schema: {
+                summary: 'Delete current user account',
+                description: 'Deletes the authenticated account and anonymizes the public profile',
+                tags: ['Users'],
+                response: {
+                    204: {
+                        description: 'Account deleted successfully'
+                    },
+                    401: {
+                        description: 'Missing or invalid session',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    },
+                    409: {
+                        description: 'Account cannot be deleted yet',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' },
+                            blockers: {
+                                type: 'array',
+                                items: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => userController.deleteAccount(req, reply));
 
         // Withdrawals
         fastify.post('/withdrawals', {

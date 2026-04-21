@@ -2,6 +2,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
 import { userService } from '@/services/api/UserService';
+import { API_URL } from '@/shared/config/api';
 import { Colors, Dimensions } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { formatFirstName, formatShortDate } from '@/utils/formatters';
@@ -34,7 +35,7 @@ export default function ProfileScreen() {
         });
     }, []);
 
-    const { data: profile, isLoading, refetch, error } = useQuery({
+    const { data: profile, isLoading, refetch } = useQuery({
         queryKey: ['profile', session?.user?.id],
         queryFn: async () => {
             try {
@@ -83,7 +84,7 @@ export default function ProfileScreen() {
             if (session?.user?.id) {
                 refetch();
             }
-        }, [session?.user?.id])
+        }, [refetch, session?.user?.id])
     );
 
     async function handleSignOut() {
@@ -141,7 +142,7 @@ export default function ProfileScreen() {
                 return;
             }
 
-            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/test`, {
+            const response = await fetch(`${API_URL}/notifications/test`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -397,12 +398,12 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuItem}>
-                    <View style={[styles.menuIconCircle, { backgroundColor: '#F3E5F5' }]}>
-                        <Ionicons name="help-circle-outline" size={20} color="#9C27B0" />
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/delete-account')}>
+                    <View style={[styles.menuIconCircle, { backgroundColor: '#FFF1F0' }]}>
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                     </View>
-                    <Text style={styles.menuText}>Ajuda e Suporte</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                    <Text style={[styles.menuText, { color: '#FF3B30' }]}>Excluir conta</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#FF3B30" />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.menuItem, { marginTop: 20 }]} onPress={handleSignOut}>
@@ -410,10 +411,12 @@ export default function ProfileScreen() {
                     <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
 
+                {__DEV__ && (
                 <TouchableOpacity style={[styles.menuItem, { marginTop: 20, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, borderBottomWidth: 0 }]} onPress={handleTestNotification}>
                     <Text style={[styles.menuText, { color: '#666', fontSize: 14 }]}>Testar Notificação Push</Text>
                     <Ionicons name="paper-plane-outline" size={18} color="#666" />
                 </TouchableOpacity>
+                )}
 
                 <View style={{ height: 40 }} />
             </ScrollView>

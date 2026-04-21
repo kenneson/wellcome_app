@@ -3,7 +3,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
@@ -19,7 +19,6 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
-    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -137,10 +136,6 @@ export default function LoginScreen() {
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.forgotPassword}>
-                        <Text style={styles.forgotPasswordText}>forgot your password?</Text>
-                    </TouchableOpacity>
-
                     <TouchableOpacity
                         style={styles.loginButton}
                         onPress={signInWithEmail}
@@ -156,11 +151,6 @@ export default function LoginScreen() {
                         <Text style={styles.dividerText}>ou</Text>
                         <View style={styles.dividerLine} />
                     </View>
-
-                    <TouchableOpacity style={styles.socialButton}>
-                        <FontAwesome name="facebook" size={24} color="#1877F2" />
-                        <Text style={styles.socialButtonText}>Continuar com Facebook</Text>
-                    </TouchableOpacity>
 
                     <TouchableOpacity style={styles.socialButton} onPress={signInWithGoogle}>
                         <FontAwesome name="google" size={24} color="#DB4437" />
@@ -237,15 +227,6 @@ const styles = StyleSheet.create({
         paddingVertical: 10, // Reduced padding
         fontSize: 16,
         color: '#333',
-    },
-    forgotPassword: {
-        alignItems: 'flex-end',
-        marginBottom: 16,
-    },
-    forgotPasswordText: {
-        color: '#FF8C42',
-        fontSize: 14,
-        fontWeight: '500',
     },
     loginButton: {
         backgroundColor: '#FF8C42',

@@ -8,13 +8,24 @@ import Constants from 'expo-constants';
  * For Physical Device: Use your LAN IP (e.g., http://192.168.1.X:3000)
  */
 const getBaseUrl = () => {
-    if (process.env.EXPO_PUBLIC_API_URL) {
-        return process.env.EXPO_PUBLIC_API_URL;
+    const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+
+    if (configuredUrl) {
+        return configuredUrl;
     }
 
-    // Fallback for development if env var is missing
-    // For physical devices, set EXPO_PUBLIC_API_URL in your .env file with your LAN IP
-    return 'http://192.168.1.11:3000';
+    if (__DEV__) {
+        const developmentHost = Constants.expoConfig?.hostUri?.split(':')[0];
+
+        if (developmentHost) {
+            return `http://${developmentHost}:3000`;
+        }
+
+        return 'http://localhost:3000';
+    }
+
+    console.warn('EXPO_PUBLIC_API_URL is missing for this production build.');
+    return 'https://wellcome.invalid';
 };
 
 export const API_URL = getBaseUrl();

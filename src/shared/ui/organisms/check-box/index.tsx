@@ -66,14 +66,13 @@ const StrokePath: React.FC<IStrokePath> = ({
   );
 };
 
-export const Checkbox: React.FC<ICheckbox> = memo(
-  ({
+function CheckboxComponent({
     checked = false,
     checkmarkColor,
     stroke = 1.5,
     size,
     showBorder = false,
-  }: ICheckbox) => {
+  }: ICheckbox) {
     const animValue = useSharedValue(checked ? 1 : 0);
     const borderAnimValue = useSharedValue(showBorder ? 1 : 0);
     const scaleValue = useSharedValue(1);
@@ -164,7 +163,10 @@ export const Checkbox: React.FC<ICheckbox> = memo(
         </AnimatedG>
       </Svg>
     );
-  },
-);
+  }
 
-export default memo<React.FC<ICheckbox>>(Checkbox);
+export const Checkbox = memo(CheckboxComponent);
+
+Checkbox.displayName = "Checkbox";
+
+export default Checkbox;

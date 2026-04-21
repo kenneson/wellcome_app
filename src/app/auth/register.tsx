@@ -217,11 +217,6 @@ export default function RegisterScreen() {
                         <View style={styles.dividerLine} />
                     </View>
 
-                    <TouchableOpacity style={styles.socialButton}>
-                        <FontAwesome name="facebook" size={24} color="#1877F2" />
-                        <Text style={styles.socialButtonText}>Cadastrar com Facebook</Text>
-                    </TouchableOpacity>
-
                     <TouchableOpacity style={styles.socialButton} onPress={signInWithGoogle}>
                         <FontAwesome name="google" size={24} color="#DB4437" />
                         <Text style={styles.socialButtonText}>Cadastrar com Google</Text>

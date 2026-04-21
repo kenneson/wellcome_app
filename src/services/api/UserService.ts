@@ -1,4 +1,5 @@
 import { API_URL } from '@/shared/config/api';
+import { supabase } from '@/shared/lib/supabase';
 
 export interface UserProfile {
     id: string;
@@ -23,6 +24,19 @@ export interface UserProfile {
 export class UserService {
     private apiUrl = `${API_URL}/users`;
 
+    private async getAuthHeaders(includeJsonContentType: boolean = true): Promise<Record<string, string>> {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+            throw new Error('Sessao expirada. Faca login novamente.');
+        }
+
+        return {
+            ...(includeJsonContentType ? { 'Content-Type': 'application/json' } : {}),
+            Authorization: `Bearer ${session.access_token}`,
+        };
+    }
+
     async getProfile(userId: string): Promise<UserProfile> {
         const response = await fetch(`${this.apiUrl}/${userId}`);
         if (!response.ok) {
@@ -38,7 +52,7 @@ export class UserService {
     }): Promise<UserProfile> {
         const response = await fetch(`${this.apiUrl}/${userId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await this.getAuthHeaders(),
             body: JSON.stringify(data),
         });
         if (!response.ok) {
@@ -46,6 +60,18 @@ export class UserService {
             throw new Error(err.message || 'Failed to update profile');
         }
         return response.json();
+    }
+
+    async deleteAccount(): Promise<void> {
+        const response = await fetch(`${this.apiUrl}/me/account`, {
+            method: 'DELETE',
+            headers: await this.getAuthHeaders(false),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Nao foi possivel excluir a conta');
+        }
     }
 }
 

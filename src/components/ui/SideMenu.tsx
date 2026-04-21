@@ -1,14 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withTiming,
-    withSpring,
-    interpolate,
-    Extrapolate,
-    runOnJS
 } from 'react-native-reanimated';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useRouter } from 'expo-router';
@@ -23,7 +19,7 @@ const MENU_WIDTH = Math.min(width * 0.75, 280);
 interface SideMenuProps {
     visible: boolean;
     onClose: () => void;
-    user: any; // Add proper type if available
+    user: any;
 }
 
 export function SideMenu({ visible, onClose, user }: SideMenuProps) {
@@ -32,11 +28,6 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
     const translateX = useSharedValue(-MENU_WIDTH);
     const opacity = useSharedValue(0);
 
-    /* 
-       Synchronize animation with "visible" prop.
-       If visible = true, perform entry animation.
-       If visible = false, perform exit animation.
-    */
     useEffect(() => {
         if (visible) {
             translateX.value = withTiming(0, { duration: 300 });
@@ -45,22 +36,16 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
             translateX.value = withTiming(-MENU_WIDTH, { duration: 300 });
             opacity.value = withTiming(0, { duration: 300 });
         }
-    }, [visible]);
+    }, [opacity, translateX, visible]);
 
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ translateX: translateX.value }],
-        };
-    });
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }],
+    }));
 
-    const backdropStyle = useAnimatedStyle(() => {
-        return {
-            opacity: opacity.value,
-            // When opacity is 0, we want to hide it completely immediately after animation
-            // But pointerEvents 'none' is handled by the parent container logic usually or View behavior
-            zIndex: visible ? 999 : -1,
-        };
-    });
+    const backdropStyle = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+        zIndex: visible ? 999 : -1,
+    }));
 
     const handleNavigation = async (path: string) => {
         if (path === 'logout') {
@@ -72,19 +57,13 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
         onClose();
     };
 
-
-
     return (
-        /* Overlay Container */
         <View style={[styles.overlay, !visible && { pointerEvents: 'none' }]}>
-            {/* Backdrop */}
             <Animated.View style={[styles.backdrop, backdropStyle]}>
                 <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
             </Animated.View>
 
-            {/* Menu Content */}
             <Animated.View style={[styles.menuContainer, animatedStyle, { paddingTop: insets.top }]}>
-                {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.userInfo}>
                         <Image
@@ -95,7 +74,7 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                         />
                         <View style={styles.userText}>
                             <Text style={styles.userName} numberOfLines={1}>
-                                {user?.full_name || 'Usuário'}
+                                {user?.full_name || 'Usuario'}
                             </Text>
                             <Text style={styles.userRole}>
                                 {user?.current_occupation || 'Membro'}
@@ -107,10 +86,8 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Divider */}
                 <View style={styles.divider} />
 
-                {/* Menu Items */}
                 <View style={styles.menuItems}>
                     <MenuItem
                         icon="person"
@@ -129,17 +106,22 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                     />
                     <MenuItem
                         icon="bell"
-                        label="Notificações"
-                        onPress={() => handleNavigation('/notifications')} // Assuming route exists
+                        label="Notificacoes"
+                        onPress={() => handleNavigation('/notifications')}
                     />
                     <MenuItem
                         icon="gear"
-                        label="Configurações"
-                        onPress={() => handleNavigation('/settings')} // Assuming route exists
+                        label="Editar Perfil"
+                        onPress={() => handleNavigation('/profile/edit')}
+                    />
+                    <MenuItem
+                        icon="trash"
+                        label="Excluir Conta"
+                        color="#FF4242"
+                        onPress={() => handleNavigation('/profile/delete-account')}
                     />
                 </View>
 
-                {/* Footer */}
                 <View style={styles.footer}>
                     <MenuItem
                         icon="rectangle.portrait.and.arrow.right"
@@ -154,9 +136,17 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
     );
 }
 
-const MenuItem = ({ icon, label, onPress, color = '#333' }: { icon: string, label: string, onPress: () => void, color?: string }) => {
-    // We can use a pressable or just touchable opacity with state for "hover" effect if needed
-    // For now, simpler is using styling on the icon box
+const MenuItem = ({
+    icon,
+    label,
+    onPress,
+    color = '#333'
+}: {
+    icon: string;
+    label: string;
+    onPress: () => void;
+    color?: string;
+}) => {
     return (
         <TouchableOpacity
             style={styles.menuItem}
@@ -175,7 +165,7 @@ const MenuItem = ({ icon, label, onPress, color = '#333' }: { icon: string, labe
 const styles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        zIndex: 5000, // Ensure it's above everything
+        zIndex: 5000,
         elevation: 100,
     },
     backdrop: {
@@ -187,7 +177,7 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: '#FFF',
         ...createShadow({ offsetX: 2, offsetY: 0, opacity: 0.25, radius: 4, elevation: 5 }),
-        zIndex: 1000, // Ensure it is above the backdrop (zIndex 999)
+        zIndex: 1000,
     },
     header: {
         flexDirection: 'row',
@@ -228,7 +218,6 @@ const styles = StyleSheet.create({
     divider: {
         height: 1,
         backgroundColor: '#F0F0F0',
-        marginHorizontal: 0,
         marginBottom: 20,
     },
     menuItems: {
