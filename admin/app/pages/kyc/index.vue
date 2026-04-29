@@ -2,8 +2,8 @@
   <div>
     <div class="mb-8 flex justify-between items-end">
       <div>
-        <h2 class="text-3xl font-bold text-white tracking-tight">Verificação KYC</h2>
-        <p class="text-slate-400 mt-1">Gerencie verificações de identidade pendentes.</p>
+        <h2 class="text-3xl font-bold text-white tracking-tight">Verificacao KYC</h2>
+        <p class="text-slate-400 mt-1">Gerencie verificacoes de identidade pendentes.</p>
       </div>
       <div class="flex gap-3">
         <button 
@@ -23,20 +23,17 @@
       </div>
     </div>
 
-    <!-- Error/Loading states -->
-    <div v-if="loading" class="text-slate-400">Carregando verificações KYC...</div>
+    <div v-if="loading" class="text-slate-400">Carregando verificacoes KYC...</div>
     <div v-else-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl">
       {{ error }}
     </div>
 
-    <!-- KYC Cards Grid -->
     <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div 
         v-for="user in filteredUsers" 
         :key="user.id"
         class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl"
       >
-        <!-- Header -->
         <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img 
@@ -49,7 +46,7 @@
               {{ (user.fullName || '?').charAt(0).toUpperCase() }}
             </div>
             <div>
-              <p class="font-semibold text-white">{{ user.fullName || 'Usuário' }}</p>
+              <p class="font-semibold text-white">{{ user.fullName || 'Usuario' }}</p>
               <p class="text-xs text-slate-500">{{ user.email }} · {{ user.city || '' }}</p>
             </div>
           </div>
@@ -66,16 +63,15 @@
           </span>
         </div>
 
-        <!-- Images Side by Side -->
         <div class="p-6">
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
               <p class="text-xs text-slate-500 mb-2 uppercase tracking-wider font-semibold">Documento</p>
-              <div v-if="user.kycDocumentUrl" class="relative group">
-                <img 
-                  :src="getStorageUrl(user.kycDocumentUrl)" 
+              <div v-if="user.kycDocumentSignedUrl" class="relative group">
+                <img
+                  :src="user.kycDocumentSignedUrl"
                   class="w-full h-40 object-cover rounded-xl border border-slate-700 cursor-pointer hover:border-cyan-500/50 transition-colors"
-                  @click="openImage(getStorageUrl(user.kycDocumentUrl))"
+                  @click="openImage(user.kycDocumentSignedUrl)"
                 />
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-opacity">
                   <span class="text-white text-xs">Clique para ampliar</span>
@@ -87,11 +83,11 @@
             </div>
             <div>
               <p class="text-xs text-slate-500 mb-2 uppercase tracking-wider font-semibold">Selfie</p>
-              <div v-if="user.kycSelfieUrl" class="relative group">
-                <img 
-                  :src="getStorageUrl(user.kycSelfieUrl)" 
+              <div v-if="user.kycSelfieSignedUrl" class="relative group">
+                <img
+                  :src="user.kycSelfieSignedUrl"
                   class="w-full h-40 object-cover rounded-xl border border-slate-700 cursor-pointer hover:border-cyan-500/50 transition-colors"
-                  @click="openImage(getStorageUrl(user.kycSelfieUrl))"
+                  @click="openImage(user.kycSelfieSignedUrl)"
                 />
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-opacity">
                   <span class="text-white text-xs">Clique para ampliar</span>
@@ -103,7 +99,6 @@
             </div>
           </div>
 
-          <!-- Score & Info -->
           <div class="flex items-center justify-between text-sm mb-4">
             <div class="text-slate-400">
               Score de Similaridade: 
@@ -120,14 +115,12 @@
             </div>
           </div>
 
-          <!-- Rejection reason if any -->
           <div v-if="user.kycRejectionReason" class="bg-red-500/5 border border-red-500/20 rounded-xl p-3 mb-4">
             <p class="text-xs text-red-400">
-              <strong>Razão da rejeição:</strong> {{ user.kycRejectionReason }}
+              <strong>Razao da rejeicao:</strong> {{ user.kycRejectionReason }}
             </p>
           </div>
 
-          <!-- Actions -->
           <div v-if="user.kycStatus === 'PENDING'" class="flex gap-3">
             <button 
               @click="approveKyc(user.id)"
@@ -135,7 +128,7 @@
               class="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
             >
               <span v-if="processingId === user.id">Processando...</span>
-              <span v-else>✓ Aprovar</span>
+              <span v-else>Aprovar</span>
             </button>
             <button 
               @click="rejectKyc(user.id)"
@@ -143,18 +136,17 @@
               class="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 disabled:opacity-50 text-red-400 text-sm font-medium px-4 py-2.5 rounded-xl transition-all"
             >
               <span v-if="processingId === user.id">Processando...</span>
-              <span v-else>✕ Rejeitar</span>
+              <span v-else>Rejeitar</span>
             </button>
           </div>
         </div>
       </div>
 
       <div v-if="filteredUsers.length === 0 && !loading" class="col-span-2 text-center py-16">
-        <p class="text-slate-500 text-lg">Nenhuma verificação KYC encontrada.</p>
+        <p class="text-slate-500 text-lg">Nenhuma verificacao KYC encontrada.</p>
       </div>
     </div>
 
-    <!-- Image Modal -->
     <div v-if="selectedImage" @click="selectedImage = null" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center cursor-pointer">
       <img :src="selectedImage" class="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" />
     </div>
@@ -163,17 +155,15 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { createClient } from '@supabase/supabase-js';
+import { adminFetch } from '../../lib/admin-api';
 
-useHead({
-  title: 'KYC Verificações | Wellcome Admin',
+definePageMeta({
+  middleware: ['admin-auth'],
 })
 
-const config = useRuntimeConfig();
-const supabaseUrl = config.public.supabaseUrl || 'https://cmkknuvydqetzmdpzzqv.supabase.co';
-const supabaseAnonKey = config.public.supabaseAnonKey;
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+useHead({
+  title: 'KYC Verificacoes | Wellcome Admin',
+})
 
 const users = ref([]);
 const loading = ref(true);
@@ -191,17 +181,12 @@ const filteredUsers = computed(() => {
 
 const statusLabel = (status) => {
   const labels = {
-    'NOT_SUBMITTED': 'Não Enviado',
+    'NOT_SUBMITTED': 'Nao Enviado',
     'PENDING': 'Pendente',
     'APPROVED': 'Aprovado',
     'REJECTED': 'Rejeitado',
   };
   return labels[status] || status;
-};
-
-const getStorageUrl = (path) => {
-  if (!path) return '';
-  return `${supabaseUrl}/storage/v1/object/authenticated/kyc-documents/${path}`;
 };
 
 const openImage = (url) => {
@@ -210,82 +195,64 @@ const openImage = (url) => {
 
 const fetchUsers = async () => {
   try {
-    const { data, error: fetchError } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, avatar_url, city, kyc_status, kyc_document_url, kyc_selfie_url, kyc_similarity_score, kyc_submitted_at, kyc_reviewed_at, kyc_rejection_reason')
-      .neq('kyc_status', 'NOT_SUBMITTED')
-      .order('kyc_submitted_at', { ascending: false });
+    const response = await adminFetch('/admin/kyc?status=ALL');
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.message || 'Erro ao carregar verificacoes');
+    }
 
-    if (fetchError) throw fetchError;
-
-    users.value = (data || []).map(u => ({
-      id: u.id,
-      fullName: u.full_name,
-      email: u.email,
-      avatarUrl: u.avatar_url,
-      city: u.city,
-      kycStatus: u.kyc_status,
-      kycDocumentUrl: u.kyc_document_url,
-      kycSelfieUrl: u.kyc_selfie_url,
-      kycSimilarityScore: u.kyc_similarity_score,
-      kycSubmittedAt: u.kyc_submitted_at,
-      kycReviewedAt: u.kyc_reviewed_at,
-      kycRejectionReason: u.kyc_rejection_reason,
-    }));
+    users.value = await response.json();
   } catch (err) {
-    error.value = 'Erro ao carregar verificações: ' + (err.message || err);
+    error.value = err instanceof Error ? err.message : 'Erro ao carregar verificacoes';
   } finally {
     loading.value = false;
   }
 };
 
 const approveKyc = async (userId) => {
-  if (!confirm('Confirma a aprovação manual deste usuário?')) return;
-  
+  if (!confirm('Confirma a aprovacao manual deste usuario?')) return;
+
   processingId.value = userId;
   try {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        kyc_status: 'APPROVED',
-        kyc_reviewed_at: new Date().toISOString(),
-        kyc_rejection_reason: null,
-      })
-      .eq('id', userId);
+    const response = await adminFetch(`/admin/kyc/${userId}/approve`, {
+      method: 'POST',
+    });
 
-    if (updateError) throw updateError;
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.message || 'Erro ao aprovar');
+    }
 
-    // Update UI optimistically
     const index = users.value.findIndex(u => u.id === userId);
     if (index !== -1) {
       users.value[index].kycStatus = 'APPROVED';
       users.value[index].kycReviewedAt = new Date().toISOString();
       users.value[index].kycRejectionReason = null;
     }
-    alert('Usuário aprovado com sucesso!');
+
+    alert('Usuario aprovado com sucesso!');
   } catch (err) {
-    alert('Erro ao aprovar: ' + (err.message || err));
+    alert(`Erro ao aprovar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
   } finally {
     processingId.value = null;
   }
 };
 
 const rejectKyc = async (userId) => {
-  const reason = prompt('Informe o motivo da rejeição:');
+  const reason = prompt('Informe o motivo da rejeicao:');
   if (!reason) return;
-  
+
   processingId.value = userId;
   try {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        kyc_status: 'REJECTED',
-        kyc_reviewed_at: new Date().toISOString(),
-        kyc_rejection_reason: reason,
-      })
-      .eq('id', userId);
+    const response = await adminFetch(`/admin/kyc/${userId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
 
-    if (updateError) throw updateError;
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.message || 'Erro ao rejeitar');
+    }
 
     const index = users.value.findIndex(u => u.id === userId);
     if (index !== -1) {
@@ -293,9 +260,10 @@ const rejectKyc = async (userId) => {
       users.value[index].kycReviewedAt = new Date().toISOString();
       users.value[index].kycRejectionReason = reason;
     }
-    alert('Usuário rejeitado.');
+
+    alert('Usuario rejeitado.');
   } catch (err) {
-    alert('Erro ao rejeitar: ' + (err.message || err));
+    alert(`Erro ao rejeitar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
   } finally {
     processingId.value = null;
   }

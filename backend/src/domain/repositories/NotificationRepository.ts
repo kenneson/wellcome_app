@@ -20,5 +20,5 @@ export interface CreateNotificationDTO {
 export interface NotificationRepository {
     create(data: CreateNotificationDTO): Promise<Notification>;
     findByUserId(userId: string): Promise<Notification[]>;
-    markAsRead(id: string): Promise<void>;
+    markAsRead(id: string, userId: string): Promise<boolean>;
 }

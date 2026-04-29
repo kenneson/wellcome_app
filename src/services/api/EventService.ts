@@ -6,6 +6,16 @@ import * as Location from 'expo-location';
 import { API_URL } from '@/shared/config/api';
 
 export class EventService {
+    private async getAuthHeaders(includeJsonContentType: boolean = true): Promise<Record<string, string>> {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('UsuÃ¡rio nÃ£o autenticado');
+
+        return {
+            ...(includeJsonContentType ? { 'Content-Type': 'application/json' } : {}),
+            Authorization: `Bearer ${session.access_token}`,
+        };
+    }
+
     async uploadImage(uri: string, userId: string): Promise<string | null> {
         const filename = `${userId}/${Date.now()}.jpg`;
         const formData = new FormData();
@@ -112,9 +122,7 @@ export class EventService {
             const apiUrl = `${API_URL}/events`;
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: await this.getAuthHeaders(),
                 body: JSON.stringify(payload)
             });
 
@@ -207,9 +215,7 @@ export class EventService {
 
         const response = await fetch(`${API_URL}/events/${id}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: await this.getAuthHeaders(),
             body: JSON.stringify(cleanPayload)
         });
 
@@ -227,9 +233,7 @@ export class EventService {
 
         const response = await fetch(`${API_URL}/events/${id}`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: await this.getAuthHeaders(),
             body: JSON.stringify({
                 hostId: session.user.id
             })

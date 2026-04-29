@@ -28,6 +28,10 @@
 </template>
 
 <script setup>
+definePageMeta({
+  middleware: ['admin-auth'],
+})
+
 useHead({
   title: 'Dashboard | Wellcome Admin',
 })

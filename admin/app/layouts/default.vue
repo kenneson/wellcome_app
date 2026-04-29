@@ -27,7 +27,10 @@
       </nav>
       
       <div class="p-4 border-t border-slate-800">
-        <button class="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded border border-slate-700 hover:bg-slate-800 transition-colors text-slate-400">
+        <button
+          class="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded border border-slate-700 hover:bg-slate-800 transition-colors text-slate-400"
+          @click="handleLogout"
+        >
           Sair
         </button>
       </div>
@@ -51,3 +54,15 @@
     </main>
   </div>
 </template>
+
+<script setup>
+import { useAdminSupabase } from '../lib/supabase';
+
+const router = useRouter();
+const supabase = useAdminSupabase();
+
+async function handleLogout() {
+  await supabase.auth.signOut();
+  await router.push('/login');
+}
+</script>

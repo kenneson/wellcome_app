@@ -14,17 +14,27 @@ export interface Notification {
 export const notificationService = {
     async list(): Promise<Notification[]> {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) throw new Error('User not authenticated');
+        if (!session?.access_token) throw new Error('User not authenticated');
 
-        const response = await fetch(`${API_URL}/notifications?userId=${session.user.id}`);
+        const response = await fetch(`${API_URL}/notifications`, {
+            headers: {
+                Authorization: `Bearer ${session.access_token}`,
+            },
+        });
         if (!response.ok) throw new Error('Failed to fetch notifications');
         
         return response.json();
     },
 
     async markAsRead(id: string): Promise<void> {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('User not authenticated');
+
         const response = await fetch(`${API_URL}/notifications/${id}/read`, {
-            method: 'PUT'
+            method: 'PUT',
+            headers: {
+                Authorization: `Bearer ${session.access_token}`,
+            },
         });
         if (!response.ok) throw new Error('Failed to mark notification as read');
     }

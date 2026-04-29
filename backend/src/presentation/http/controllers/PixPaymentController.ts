@@ -2,11 +2,11 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { CheckPixPaymentUseCase } from '../../../application/use-cases/CheckPixPaymentUseCase';
 import { CreatePixChargeUseCase } from '../../../application/use-cases/CreatePixChargeUseCase';
+import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
 const createPixChargeSchema = z.object({
     bookingId: z.string().uuid(),
     eventId: z.string().uuid(),
-    userId: z.string().uuid(),
 });
 
 const checkPaymentSchema = z.object({
@@ -22,14 +22,17 @@ export class PixPaymentController {
     async createCharge(request: FastifyRequest, reply: FastifyReply) {
         try {
             const body = createPixChargeSchema.parse(request.body);
-            console.log('[PixPaymentController] Criando cobrança PIX para:', JSON.stringify(body));
-            const result = await this.createPixChargeUseCase.execute(body);
-            console.log('[PixPaymentController] Cobrança criada com sucesso, txid:', result.txid);
+            const userId = await getAuthenticatedUserId(request);
+            console.log('[PixPaymentController] Creating PIX charge');
+            const result = await this.createPixChargeUseCase.execute({ ...body, userId });
             return reply.code(201).send(result);
         } catch (error: any) {
-            console.error('[PixPaymentController] ERRO:', error?.message || error);
+            console.error('[PixPaymentController] Error:', error?.message || error);
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             if (error instanceof z.ZodError) {
-                return reply.code(400).send({ message: 'Dados inválidos', errors: error.issues });
+                return reply.code(400).send({ message: 'Dados invalidos', errors: error.issues });
             }
             if (error.message === 'Event not found' || error.message === 'Booking not found') {
                 return reply.code(404).send({ message: error.message });
@@ -43,8 +46,7 @@ export class PixPaymentController {
             if (error.message === 'Booking does not belong to this user') {
                 return reply.code(403).send({ message: error.message });
             }
-            console.error('[PixPaymentController] Stack:', error?.stack);
-            return reply.code(500).send({ message: error?.message || 'Erro ao gerar cobrança PIX' });
+            return reply.code(500).send({ message: error?.message || 'Erro ao gerar cobranca PIX' });
         }
     }
 
@@ -55,7 +57,7 @@ export class PixPaymentController {
             return reply.send(result);
         } catch (error: any) {
             if (error instanceof z.ZodError) {
-                return reply.code(400).send({ message: 'Dados inválidos' });
+                return reply.code(400).send({ message: 'Dados invalidos' });
             }
             if (error.message === 'Payment not found for this booking') {
                 return reply.code(404).send({ message: error.message });

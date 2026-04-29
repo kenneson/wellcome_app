@@ -32,6 +32,7 @@ import { PrismaNotificationRepository } from './infrastructure/repositories/Pris
 import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
 import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories/PrismaWithdrawalRequestRepository';
+import { AdminController } from './presentation/http/controllers/AdminController';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
@@ -40,6 +41,7 @@ import { PixPaymentController } from './presentation/http/controllers/PixPayment
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
 import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
+import { getAuthenticatedUserId } from './presentation/http/helpers/auth';
 
 
 const fastify = Fastify({
@@ -55,62 +57,66 @@ const start = async () => {
             credentials: true
         });
 
-        await fastify.register(fastifySwagger, {
-            openapi: {
-                info: {
-                    title: 'Wellcome API',
-                    description: 'API documentation for Wellcome application',
-                    version: '1.0.0'
-                },
-                tags: [
-                    { name: 'Auth', description: 'Authentication endpoints' },
-                    { name: 'Bookings', description: 'Event registration and approval endpoints' },
-                    { name: 'Events', description: 'Event management endpoints' },
-                    { name: 'Notifications', description: 'Push and in-app notification endpoints' },
-                    { name: 'Revews', description: 'Event review endpoints' },
-                    { name: 'Users', description: 'User profile endpoints' },
-                    { name: 'Payments', description: 'PIX payment endpoints' },
-                    { name: 'Withdrawals', description: 'Host Withdrawal endpoints' },
-                    { name: 'General', description: 'General and health endpoints' }
-                ],
-                components: {
-                    schemas: {
-                        ErrorResponse: {
-                            type: 'object',
-                            properties: {
-                                message: { type: 'string' }
+        const enableApiDocs = process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true';
+
+        if (enableApiDocs) {
+            await fastify.register(fastifySwagger, {
+                openapi: {
+                    info: {
+                        title: 'Wellcome API',
+                        description: 'API documentation for Wellcome application',
+                        version: '1.0.0'
+                    },
+                    tags: [
+                        { name: 'Auth', description: 'Authentication endpoints' },
+                        { name: 'Bookings', description: 'Event registration and approval endpoints' },
+                        { name: 'Events', description: 'Event management endpoints' },
+                        { name: 'Notifications', description: 'Push and in-app notification endpoints' },
+                        { name: 'Revews', description: 'Event review endpoints' },
+                        { name: 'Users', description: 'User profile endpoints' },
+                        { name: 'Payments', description: 'PIX payment endpoints' },
+                        { name: 'Withdrawals', description: 'Host Withdrawal endpoints' },
+                        { name: 'General', description: 'General and health endpoints' }
+                    ],
+                    components: {
+                        schemas: {
+                            ErrorResponse: {
+                                type: 'object',
+                                properties: {
+                                    message: { type: 'string' }
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
 
-        await fastify.register(fastifySwaggerUi, {
-            routePrefix: '/docs',
-            uiConfig: {
-                docExpansion: 'list',
-                deepLinking: false
-            },
-            staticCSP: true,
-        });
+            await fastify.register(fastifySwaggerUi, {
+                routePrefix: '/docs',
+                uiConfig: {
+                    docExpansion: 'list',
+                    deepLinking: false
+                },
+                staticCSP: true,
+            });
 
-        fastify.get('/docs-spec/json', {
-            schema: {
-                hide: true
-            }
-        }, async (_req, reply) => {
-            return reply.send(fastify.swagger());
-        });
+            fastify.get('/docs-spec/json', {
+                schema: {
+                    hide: true
+                }
+            }, async (_req, reply) => {
+                return reply.send(fastify.swagger());
+            });
 
-        fastify.get('/docs-spec/yaml', {
-            schema: {
-                hide: true
-            }
-        }, async (_req, reply) => {
-            reply.type('application/yaml');
-            return reply.send(fastify.swagger({ yaml: true }));
-        });
+            fastify.get('/docs-spec/yaml', {
+                schema: {
+                    hide: true
+                }
+            }, async (_req, reply) => {
+                reply.type('application/yaml');
+                return reply.send(fastify.swagger({ yaml: true }));
+            });
+        }
 
 
 
@@ -168,6 +174,7 @@ const start = async () => {
         const notificationController = new NotificationController(notificationRepository);
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
         const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
+        const adminController = new AdminController();
 
         // Test route to verify deploy
         fastify.get('/test-deploy', async () => {
@@ -236,7 +243,7 @@ const start = async () => {
                 tags: ['Events'],
                 body: {
                     type: 'object',
-                    required: ['title', 'description', 'price', 'maxGuests', 'eventDate', 'location', 'hostId'],
+                    required: ['title', 'description', 'price', 'maxGuests', 'eventDate', 'location'],
                     properties: {
                         title: { type: 'string' },
                         description: { type: 'string' },
@@ -334,7 +341,7 @@ const start = async () => {
                 tags: ['Reviews'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'userId', 'rating'],
+                    required: ['eventId', 'rating'],
                     properties: {
                         eventId: { type: 'string' },
                         userId: { type: 'string' },
@@ -385,7 +392,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'userId'],
+                    required: ['eventId'],
                     properties: {
                         eventId: { type: 'string' },
                         userId: { type: 'string' },
@@ -509,7 +516,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['registrationId', 'hostId'],
+                    required: ['registrationId'],
                     properties: {
                         registrationId: { type: 'string' },
                         hostId: { type: 'string' }
@@ -528,7 +535,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['registrationId', 'hostId', 'reason'],
+                    required: ['registrationId', 'reason'],
                     properties: {
                         registrationId: { type: 'string' },
                         hostId: { type: 'string' },
@@ -548,7 +555,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['bookingId', 'hostId'],
+                    required: ['bookingId'],
                     properties: {
                         bookingId: { type: 'string' },
                         hostId: { type: 'string' }
@@ -592,7 +599,6 @@ const start = async () => {
         }, (req, reply) => eventRegistrationController.validateTicket(req, reply));
 
         interface NotificationTestBody {
-            token: string;
             title: string;
             body: string;
             data?: Record<string, any>;
@@ -605,7 +611,7 @@ const start = async () => {
                 tags: ['Notifications'],
                 body: {
                     type: 'object',
-                    required: ['token', 'title', 'body'],
+                    required: ['title', 'body'],
                     properties: {
                         token: { type: 'string' },
                         title: { type: 'string' },
@@ -622,10 +628,21 @@ const start = async () => {
                 }
             }
         }, async (req, reply) => {
-            const { token, title, body, data } = req.body;
-            const { notificationService } = require('./application/services/NotificationService');
-            await notificationService.sendPushBlocking(token, title, body, data);
-            return { success: true };
+            try {
+                const { title, body, data } = req.body;
+                const userId = await getAuthenticatedUserId(req);
+                const user = await userRepository.findById(userId);
+
+                if (!user?.expoPushToken) {
+                    return reply.code(404).send({ message: 'Push token not found for authenticated user' });
+                }
+
+                await notificationService.sendPushBlocking(user.expoPushToken, title, body, data);
+                return { success: true };
+            } catch (error: any) {
+                const statusCode = error?.name === 'UnauthorizedRequestError' ? 401 : 500;
+                return reply.code(statusCode).send({ message: error?.message || 'Failed to send test notification' });
+            }
         });
 
         // Notification endpoints
@@ -634,13 +651,6 @@ const start = async () => {
                 summary: 'List notifications',
                 description: 'Get user notifications',
                 tags: ['Notifications'],
-                querystring: {
-                    type: 'object',
-                    properties: {
-                        userId: { type: 'string' }
-                    },
-                    required: ['userId']
-                },
                 response: {
                     200: {
                         description: 'List of notifications',
@@ -811,7 +821,7 @@ const start = async () => {
                 tags: ['Withdrawals'],
                 body: {
                     type: 'object',
-                    required: ['userId', 'amount'],
+                    required: ['amount'],
                     properties: {
                         userId: { type: 'string' },
                         amount: { type: 'number' }
@@ -851,19 +861,6 @@ const start = async () => {
                             efiEndToEndId: { type: 'string', nullable: true }
                         }
                     }
-                }
-            }
-        }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
-
-        // Alias GET for approval to prevent 404 on weird redirects
-        fastify.get('/admin/withdrawals/:id/approve', {
-            schema: {
-                summary: 'Approve withdrawal (Admin - GET Alias)',
-                description: 'Alias for POST approval to handle cases where POST is converted to GET during redirects',
-                tags: ['Withdrawals'],
-                params: {
-                    type: 'object',
-                    properties: { id: { type: 'string' } }
                 }
             }
         }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
@@ -908,8 +905,61 @@ const start = async () => {
             }
         }, (req, reply) => withdrawalController.handleWebhook(req, reply));
 
+        fastify.get('/admin/me', {
+            schema: {
+                summary: 'Get authenticated admin context',
+                description: 'Returns the authenticated admin user',
+                tags: ['Users'],
+            }
+        }, (req, reply) => adminController.me(req, reply));
+
+        fastify.get('/admin/kyc', {
+            schema: {
+                summary: 'List KYC requests',
+                description: 'List KYC requests for admin moderation',
+                tags: ['Users'],
+                querystring: {
+                    type: 'object',
+                    properties: {
+                        status: { type: 'string', enum: ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] }
+                    }
+                }
+            }
+        }, (req, reply) => adminController.listKycRequests(req, reply));
+
+        fastify.post('/admin/kyc/:id/approve', {
+            schema: {
+                summary: 'Approve KYC request',
+                description: 'Approve a pending KYC request',
+                tags: ['Users'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                }
+            }
+        }, (req, reply) => adminController.approveKyc(req as any, reply));
+
+        fastify.post('/admin/kyc/:id/reject', {
+            schema: {
+                summary: 'Reject KYC request',
+                description: 'Reject a pending KYC request',
+                tags: ['Users'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                },
+                body: {
+                    type: 'object',
+                    required: ['reason'],
+                    properties: {
+                        reason: { type: 'string' }
+                    }
+                }
+            }
+        }, (req, reply) => adminController.rejectKyc(req as any, reply));
+
         // Setup Webhook (Comando para registrar a URL na EFI)
-        fastify.get('/admin/setup-webhook', {
+        fastify.post('/admin/setup-webhook', {
             schema: {
                 summary: 'Setup EFI Webhook',
                 description: 'Registers the Webhook URL with EFI',
@@ -928,7 +978,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'userId'],
+                    required: ['eventId'],
                     properties: {
                         eventId: { type: 'string' },
                         userId: { type: 'string' }
@@ -1034,7 +1084,7 @@ const start = async () => {
                 },
                 body: {
                     type: 'object',
-                    required: ['hostId'],
+                    required: [],
                     properties: {
                         hostId: { type: 'string' },
                         title: { type: 'string' },
@@ -1111,7 +1161,7 @@ const start = async () => {
                 },
                 body: {
                     type: 'object',
-                    required: ['hostId'],
+                    required: [],
                     properties: {
                         hostId: { type: 'string' }
                     }
@@ -1146,7 +1196,7 @@ const start = async () => {
                 },
                 body: {
                     type: 'object',
-                    required: ['userId'],
+                    required: [],
                     properties: {
                         userId: { type: 'string' }
                     }
@@ -1179,7 +1229,7 @@ const start = async () => {
                 tags: ['Payments'],
                 body: {
                     type: 'object',
-                    required: ['bookingId', 'eventId', 'userId'],
+                    required: ['bookingId', 'eventId'],
                     properties: {
                         bookingId: { type: 'string' },
                         eventId: { type: 'string' },

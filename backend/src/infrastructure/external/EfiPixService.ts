@@ -1,72 +1,51 @@
 import fs from 'fs';
-import path from 'path';
 import os from 'os';
+import path from 'path';
 import EfiPay from 'sdk-node-apis-efi';
 
 export interface PixChargeResult {
     txid: string;
     location: string;
-    qrcode: string;       // base64 image
-    pixCopiaECola: string; // copia-e-cola string
+    qrcode: string;
+    pixCopiaECola: string;
     valor: string;
     status: string;
 }
 
 export class EfiPixService {
-    private efiPay: any;
+    private efiPay: any | null = null;
 
     constructor() {
-        let certPath: string;
+        const certPath = this.resolveCertificatePath();
+        const clientId = process.env.EFI_CLIENT_ID || '';
+        const clientSecret = process.env.EFI_CLIENT_SECRET || '';
 
-        // Suporte a certificado via base64 (ideal para Docker/EasyPanel)
-        if (process.env.EFI_CERT_BASE64) {
-            const tmpDir = os.tmpdir();
-            certPath = path.join(tmpDir, 'efi-cert.p12');
-            const certBuffer = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
-            fs.writeFileSync(certPath, certBuffer);
-            console.log('[EfiPixService] Certificado carregado via EFI_CERT_BASE64');
-        } else {
-            certPath = process.env.EFI_CERT_PATH
-                || path.join(__dirname, '../../../../producao-560634-wellcome_prod.p12');
-
-            if (!path.isAbsolute(certPath)) {
-                certPath = path.resolve(process.cwd(), certPath);
-            }
-        }
-
-        console.log('[EfiPixService] Cert path:', certPath);
-        console.log('[EfiPixService] Cert exists:', fs.existsSync(certPath));
-        console.log('[EfiPixService] Sandbox:', process.env.EFI_SANDBOX);
-        console.log('[EfiPixService] Client ID present:', !!process.env.EFI_CLIENT_ID);
-        console.log('[EfiPixService] PIX Key present:', !!process.env.EFI_PIX_KEY);
-
-        if (!fs.existsSync(certPath)) {
-            console.error(`[EfiPixService] ERRO: Certificado não encontrado em: ${certPath}`);
+        if (!certPath || !clientId || !clientSecret) {
+            console.warn('[EfiPixService] EFI PIX integration is not fully configured.');
+            return;
         }
 
         this.efiPay = new EfiPay({
-            client_id: process.env.EFI_CLIENT_ID || '',
-            client_secret: process.env.EFI_CLIENT_SECRET || '',
+            client_id: clientId,
+            client_secret: clientSecret,
             certificate: certPath,
             sandbox: process.env.EFI_SANDBOX === 'true',
             pemKey: process.env.EFI_PEM_KEY || undefined,
         });
     }
 
-    /**
-     * Cria uma cobrança PIX imediata e retorna o QR code
-     */
     async createPixCharge(
         valor: number,
         descricao: string,
-        expiracao: number = 3600 // 1 hora padrão
+        expiracao: number = 3600
     ): Promise<PixChargeResult> {
         const pixKey = process.env.EFI_PIX_KEY;
+        const efiPay = this.getClient();
+
         if (!pixKey) {
-            throw new Error('EFI_PIX_KEY não configurada nas variáveis de ambiente');
+            throw new Error('EFI_PIX_KEY nao configurada nas variaveis de ambiente');
         }
 
-        // 1. Criar cobrança imediata
         const chargeBody = {
             calendario: {
                 expiracao,
@@ -81,17 +60,11 @@ export class EfiPixService {
             ],
         };
 
-        console.log('[EfiPixService] Criando cobrança PIX:', JSON.stringify(chargeBody, null, 2));
-
         try {
-            const charge = await this.efiPay.pixCreateImmediateCharge([], chargeBody);
-            console.log('[EfiPixService] Cobrança criada:', JSON.stringify(charge, null, 2));
-
-            // 2. Gerar QR code a partir do loc.id
-            const qrcodeData = await this.efiPay.pixGenerateQRCode({
+            const charge = await efiPay.pixCreateImmediateCharge([], chargeBody);
+            const qrcodeData = await efiPay.pixGenerateQRCode({
                 id: charge.loc.id,
             });
-            console.log('[EfiPixService] QR Code gerado com sucesso');
 
             return {
                 txid: charge.txid,
@@ -102,22 +75,13 @@ export class EfiPixService {
                 status: charge.status,
             };
         } catch (error: any) {
-            console.error('[EfiPixService] ERRO ao criar cobrança PIX:', error?.message || error);
-            if (error?.response) {
-                console.error('[EfiPixService] Response:', JSON.stringify(error.response, null, 2));
-            }
-            if (error?.config) {
-                console.error('[EfiPixService] Config URL:', error.config?.url);
-            }
+            console.error('[EfiPixService] Failed to create PIX charge:', error?.message || error);
             throw error;
         }
     }
 
-    /**
-     * Consulta status de uma cobrança pelo txid
-     */
     async getChargeStatus(txid: string): Promise<{ status: string; txid: string; valor?: string }> {
-        const charge = await this.efiPay.pixDetailCharge({ txid });
+        const charge = await this.getClient().pixDetailCharge({ txid });
 
         return {
             status: charge.status,
@@ -126,21 +90,16 @@ export class EfiPixService {
         };
     }
 
-    /**
-     * Envia um PIX da conta EFI para uma chave destino (Saque do host)
-     */
     async sendPix(valor: number, chaveDestino: string, withdrawalId: string): Promise<any> {
         const pixKey = process.env.EFI_PIX_KEY;
+        const efiPay = this.getClient();
+
         if (!pixKey) {
-            throw new Error('EFI_PIX_KEY não configurada nas variáveis de ambiente');
+            throw new Error('EFI_PIX_KEY nao configurada nas variaveis de ambiente');
         }
 
-        // idEnvio: 1-35 chars, alphanumeric only (no hyphens)
-        // Usamos o withdrawalId sem hífens para garantir conformidade
         const idEnvio = `WD${withdrawalId.replace(/[^a-zA-Z0-9]/g, '')}`.substring(0, 35);
-
         const params = { idEnvio };
-
         const body = {
             valor: valor.toFixed(2),
             pagador: {
@@ -151,50 +110,58 @@ export class EfiPixService {
             },
         };
 
-        console.log('[EfiPixService] Iniciando envio de PIX:', JSON.stringify({ params, body }, null, 2));
-
         try {
-            const response = await this.efiPay.pixSend(params, body);
-            console.log('[EfiPixService] Pix enviado com sucesso:', JSON.stringify(response, null, 2));
-            return response;
+            return await efiPay.pixSend(params, body);
         } catch (error: any) {
-            console.error('[EfiPixService] ERRO ao enviar PIX:', error?.message || error);
-            if (error?.response) {
-                console.error('[EfiPixService] Detalhes do erro:', JSON.stringify(error.response, null, 2));
-            }
+            console.error('[EfiPixService] Failed to send PIX:', error?.message || error);
             throw error;
         }
     }
 
-    /**
-     * Registra uma URL de Webhook para a chave PIX configurada
-     */
     async configWebhook(url: string): Promise<any> {
         const pixKey = process.env.EFI_PIX_KEY;
+        const efiPay = this.getClient();
+
         if (!pixKey) {
-            throw new Error('EFI_PIX_KEY não configurada');
+            throw new Error('EFI_PIX_KEY nao configurada');
         }
-
-        const params = {
-            chave: pixKey,
-        };
-
-        const body = {
-            webhookUrl: url,
-        };
-
-        console.log(`[EfiPixService] Registrando Webhook para a chave ${pixKey} na URL: ${url}`);
 
         try {
-            const response = await this.efiPay.pixConfigWebhook(params, body);
-            console.log('[EfiPixService] Webhook registrado com sucesso:', response);
-            return response;
+            return await efiPay.pixConfigWebhook(
+                { chave: pixKey },
+                { webhookUrl: url }
+            );
         } catch (error: any) {
-            console.error('[EfiPixService] ERRO ao registrar Webhook:', error?.message || error);
-            if (error?.response) {
-                console.error('[EfiPixService] Detalhes:', JSON.stringify(error.response, null, 2));
-            }
+            console.error('[EfiPixService] Failed to configure webhook:', error?.message || error);
             throw error;
         }
+    }
+
+    private getClient() {
+        if (!this.efiPay) {
+            throw new Error('EFI PIX integration is not configured');
+        }
+
+        return this.efiPay;
+    }
+
+    private resolveCertificatePath(): string | null {
+        if (process.env.EFI_CERT_BASE64) {
+            const tmpDir = os.tmpdir();
+            const certPath = path.join(tmpDir, 'efi-cert.p12');
+            const certBuffer = Buffer.from(process.env.EFI_CERT_BASE64, 'base64');
+            fs.writeFileSync(certPath, certBuffer);
+            return certPath;
+        }
+
+        if (!process.env.EFI_CERT_PATH) {
+            return null;
+        }
+
+        const certPath = path.isAbsolute(process.env.EFI_CERT_PATH)
+            ? process.env.EFI_CERT_PATH
+            : path.resolve(process.cwd(), process.env.EFI_CERT_PATH);
+
+        return fs.existsSync(certPath) ? certPath : null;
     }
 }

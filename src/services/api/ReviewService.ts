@@ -1,4 +1,5 @@
 import { API_URL } from '@/shared/config/api';
+import { supabase } from '@/shared/lib/supabase';
 
 export interface CreateReviewDTO {
     eventId: string;
@@ -8,12 +9,20 @@ export interface CreateReviewDTO {
 }
 
 export const reviewService = {
+    async getAuthHeaders() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('User not authenticated');
+
+        return {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+        };
+    },
+
     async create(data: CreateReviewDTO) {
         const response = await fetch(`${API_URL}/reviews`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: await this.getAuthHeaders(),
             body: JSON.stringify(data),
         });
 
@@ -28,9 +37,7 @@ export const reviewService = {
     async delete(id: string, userId: string) {
         const response = await fetch(`${API_URL}/reviews/${id}`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: await this.getAuthHeaders(),
             body: JSON.stringify({ userId }),
         });
 
@@ -39,6 +46,6 @@ export const reviewService = {
             throw new Error(error.message || 'Failed to delete review');
         }
 
-        return true; // 204 No Content
+        return true;
     }
 };

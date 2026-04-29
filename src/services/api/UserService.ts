@@ -37,8 +37,22 @@ export class UserService {
         };
     }
 
+    private async getOptionalAuthHeaders(): Promise<Record<string, string>> {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+            return {};
+        }
+
+        return {
+            Authorization: `Bearer ${session.access_token}`,
+        };
+    }
+
     async getProfile(userId: string): Promise<UserProfile> {
-        const response = await fetch(`${this.apiUrl}/${userId}`);
+        const response = await fetch(`${this.apiUrl}/${userId}`, {
+            headers: await this.getOptionalAuthHeaders(),
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch profile');
         }

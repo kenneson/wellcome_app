@@ -6,6 +6,7 @@ import { DeleteEventUseCase } from '../../../application/use-cases/DeleteEventUs
 import { z } from 'zod';
 
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
+import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
 const createEventSchema = z.object({
     title: z.string(),
@@ -48,7 +49,6 @@ const createEventSchema = z.object({
 });
 
 const updateEventSchema = z.object({
-    hostId: z.string(),
     title: z.string().optional(),
     description: z.string().nullable().optional(),
     price: z.number().optional(),
@@ -97,6 +97,7 @@ export class EventController {
     async create(request: FastifyRequest, reply: FastifyReply) {
         try {
             const body = createEventSchema.parse(request.body);
+            const hostId = await getAuthenticatedUserId(request);
             
             // Debug logging
             console.log('[DEBUG] EventController.create - Parsed body:');
@@ -113,6 +114,7 @@ export class EventController {
                 facilities: body.facilities ?? [],
                 rules: body.rules ?? [],
                 imageGallery: body.imageGallery ?? [],
+                hostId,
                 dietaryOptions: body.dietaryOptions ?? [],
                 endTime: body.endTime ?? null,
                 reservationDeadline: body.reservationDeadline ?? null,
@@ -136,6 +138,9 @@ export class EventController {
             return reply.code(201).send(event);
         } catch (error) {
             console.error('Create Event Error:', error);
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }
@@ -182,11 +187,15 @@ export class EventController {
         const { id } = request.params as { id: string };
         try {
             const body = updateEventSchema.parse(request.body);
-            const { hostId, ...updateData } = body;
+            const hostId = await getAuthenticatedUserId(request);
+            const updateData = body;
             const event = await this.updateEventUseCase.execute(id, hostId, updateData);
             return reply.send(event);
         } catch (error) {
             console.error('Update Event Error:', error);
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }
@@ -204,15 +213,15 @@ export class EventController {
 
     async delete(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as { id: string };
-        const { hostId } = request.body as { hostId: string };
         try {
-            if (!hostId) {
-                return reply.code(400).send({ message: 'hostId is required' });
-            }
+            const hostId = await getAuthenticatedUserId(request);
             await this.deleteEventUseCase.execute(id, hostId);
             return reply.code(204).send();
         } catch (error) {
             console.error('Delete Event Error:', error);
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             if (error instanceof Error) {
                 if (error.message === 'Event not found') {
                     return reply.code(404).send({ message: error.message });

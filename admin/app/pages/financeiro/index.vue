@@ -2,35 +2,33 @@
   <div>
     <div class="mb-8 flex justify-between items-end">
       <div>
-        <h2 class="text-3xl font-bold text-white tracking-tight">Gestão de Saques</h2>
-        <p class="text-slate-400 mt-1">Aprove solicitações de PIX pendentes dos anfitriões.</p>
+        <h2 class="text-3xl font-bold text-white tracking-tight">Gestao de Saques</h2>
+        <p class="text-slate-400 mt-1">Aprove solicitacoes de PIX pendentes dos anfitrioes.</p>
       </div>
     </div>
 
-    <!-- Error/Loading states -->
     <div v-if="loading" class="text-slate-400">Carregando dados financeiros...</div>
     <div v-else-if="error" class="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl">
       {{ error }}
     </div>
 
-    <!-- Table -->
     <div v-else class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm text-slate-300">
           <thead class="text-xs uppercase bg-slate-800/50 text-slate-400">
             <tr>
-              <th scope="col" class="px-6 py-4 font-semibold">Anfitrião / ID</th>
+              <th scope="col" class="px-6 py-4 font-semibold">Anfitriao / ID</th>
               <th scope="col" class="px-6 py-4 font-semibold">Valor</th>
               <th scope="col" class="px-6 py-4 font-semibold">Chave PIX</th>
-              <th scope="col" class="px-6 py-4 font-semibold">Data da Solicitação</th>
+              <th scope="col" class="px-6 py-4 font-semibold">Data da Solicitacao</th>
               <th scope="col" class="px-6 py-4 font-semibold">Status</th>
-              <th scope="col" class="px-6 py-4 font-semibold text-right">Ação</th>
+              <th scope="col" class="px-6 py-4 font-semibold text-right">Acao</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800">
             <tr v-for="wd in withdrawals" :key="wd.id" class="hover:bg-slate-800/30 transition-colors">
               <td class="px-6 py-4 font-medium text-white">
-                <div class="font-semibold">{{ wd.userName || 'Anfitrião desconhecido' }}</div>
+                <div class="font-semibold">{{ wd.userName || 'Anfitriao desconhecido' }}</div>
                 <div class="text-xs text-slate-500 mt-0.5 font-mono">{{ wd.userId }}</div>
               </td>
               <td class="px-6 py-4 font-medium text-emerald-400">
@@ -38,7 +36,7 @@
               </td>
               <td class="px-6 py-4 text-slate-400">
                 <span class="block">{{ wd.pixKey }}</span>
-                <span class="text-xs text-slate-500">{{ wd.pixKeyType || 'Não definido' }}</span>
+                <span class="text-xs text-slate-500">{{ wd.pixKeyType || 'Nao definido' }}</span>
               </td>
               <td class="px-6 py-4 text-slate-400">
                 {{ new Date(wd.createdAt).toLocaleString('pt-BR') }}
@@ -48,7 +46,7 @@
                   Pendente
                 </span>
                 <span v-else-if="wd.status === 'COMPLETED'" class="bg-emerald-500/10 text-emerald-500 text-xs font-medium px-2.5 py-1 rounded-full border border-emerald-500/20">
-                  Concluído
+                  Concluido
                 </span>
                 <span v-else-if="wd.status === 'FAILED'" class="bg-red-500/10 text-red-500 text-xs font-medium px-2.5 py-1 rounded-full border border-red-500/20">
                   Falhou
@@ -75,7 +73,7 @@
             
             <tr v-if="withdrawals.length === 0 && !loading">
               <td colspan="6" class="px-6 py-12 text-center text-slate-500">
-                Nenhuma solicitação de saque encontrada.
+                Nenhuma solicitacao de saque encontrada.
               </td>
             </tr>
           </tbody>
@@ -87,51 +85,62 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import { adminFetch } from '../../lib/admin-api';
 
-useHead({
-  title: 'Saques Pendiantes | Wellcome Admin',
+definePageMeta({
+  middleware: ['admin-auth'],
 })
 
-// Integração Real Frontend com Backend
+useHead({
+  title: 'Saques Pendentes | Wellcome Admin',
+})
+
 const withdrawals = ref([]);
 const loading = ref(true);
 const error = ref('');
 const processingId = ref(null);
 
-const config = useRuntimeConfig();
-const baseURL = config.public.apiUrl;
-
 const fetchWithdrawals = async () => {
-    try {
-        const url = `${baseURL}/admin/withdrawals`.replace(/([^:]\/)\/+/g, "$1");
-        const res = await axios.get(url);
-        withdrawals.value = res.data;
-    } catch (err) {
-        error.value = 'Failed to load data';
-    } finally {
-        loading.value = false;
+  try {
+    const response = await adminFetch('/admin/withdrawals');
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.message || 'Falha ao carregar saques');
     }
+
+    withdrawals.value = await response.json();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to load data';
+  } finally {
+    loading.value = false;
+  }
 }
 
 const approveWithdrawal = async (id) => {
-  if (!confirm('Tem certeza? O valor será transferido IMEDIATAMENTE da conta Efi para a chave do cliente através do PIX.')) return;
-  
+  if (!confirm('Tem certeza? O valor sera transferido imediatamente da conta EFI para a chave PIX do cliente.')) return;
+
   processingId.value = id;
-  
+
   try {
-    const url = `${baseURL}/admin/withdrawals/${id}/approve`.replace(/([^:]\/)\/+/g, "$1");
-    const res = await axios.post(url);
-    
-    // Atualização Otimista UI
-    const index = withdrawals.value.findIndex(w => w.id === id);
-    if(index !== -1) {
-      withdrawals.value[index].status = 'COMPLETED';
-      withdrawals.value[index].efiEndToEndId = res.data.efiEndToEndId || 'Processado pela rede PIX';
-      alert('PIX enviado com sucesso!');
+    const response = await adminFetch(`/admin/withdrawals/${id}/approve`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.message || 'Falha ao aprovar saque');
     }
+
+    const result = await response.json();
+    const index = withdrawals.value.findIndex((w) => w.id === id);
+    if (index !== -1) {
+      withdrawals.value[index].status = 'COMPLETED';
+      withdrawals.value[index].efiEndToEndId = result.efiEndToEndId || 'Processado pela rede PIX';
+    }
+
+    alert('PIX enviado com sucesso!');
   } catch (err) {
-    alert('Erro ao enviar PIX: ' + (err.response?.data?.message || err.message));
+    alert(`Erro ao enviar PIX: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
   } finally {
     processingId.value = null;
   }
