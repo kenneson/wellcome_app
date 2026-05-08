@@ -184,7 +184,7 @@ export default function RootLayout() {
     );
   }
 
-  const isEventDetails = currentSegment === 'events' && segments[1] === '[id]';
+  const isEventDetails = currentSegment === 'events' && (segments as string[])[1] === '[id]';
 
   return (
     <QueryClientProvider client={queryClient}>
