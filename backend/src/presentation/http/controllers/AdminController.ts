@@ -5,6 +5,8 @@ import { prisma } from '../../../infrastructure/database/prismaClient';
 import { supabaseAdmin } from '../../../infrastructure/external/supabaseClient';
 import { ForbiddenRequestError, UnauthorizedRequestError, requireAdminUser } from '../helpers/auth';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const listKycQuerySchema = z.object({
     status: z.enum(['ALL', 'PENDING', 'APPROVED', 'REJECTED']).optional().default('PENDING'),
 });
@@ -63,7 +65,7 @@ export class AdminController {
                 },
             });
 
-            const response = await Promise.all(users.map(async (user) => ({
+            const response = await Promise.all(users.map(async (user: { id: any; fullName: any; email: any; city: any; avatarUrl: any; kycStatus: any; kycDocumentUrl: string | null; kycSelfieUrl: string | null; kycSimilarityScore: any; kycSubmittedAt: any; kycReviewedAt: any; kycRejectionReason: any; }) => ({
                 id: user.id,
                 fullName: user.fullName,
                 email: user.email,
@@ -165,7 +167,7 @@ export class AdminController {
             .createSignedUrl(path, 60 * 15);
 
         if (error) {
-            console.warn(`[AdminController] Failed to sign KYC file ${path}: ${error.message}`);
+            if (!isProd) console.warn(`[AdminController] Failed to sign KYC file ${path}: ${error.message}`);
             return null;
         }
 
@@ -181,7 +183,7 @@ export class AdminController {
             return reply.code(403).send({ message: error.message });
         }
 
-        console.error('[AdminController] Error:', error);
+        if (!isProd) console.error('[AdminController] Error:', error);
         return reply.code(500).send({ message: 'Internal server error' });
     }
 }

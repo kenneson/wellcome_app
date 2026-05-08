@@ -4,6 +4,8 @@ import { ApproveWithdrawalUseCase } from '../../../application/use-cases/Approve
 import { z } from 'zod';
 import { ForbiddenRequestError, UnauthorizedRequestError, getAuthenticatedUserId, requireAdminUser } from '../helpers/auth';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const requestWithdrawalSchema = z.object({
     amount: z.number().positive(),
 });
@@ -17,7 +19,7 @@ export class WithdrawalController {
     ) {}
 
     async handleWebhook(_request: FastifyRequest, reply: FastifyReply) {
-        console.log('[Webhook EFI] Notification received');
+        if (!isProd) console.log('[Webhook EFI] Notification received');
         return reply.code(200).send();
     }
 
@@ -65,7 +67,7 @@ export class WithdrawalController {
             if (error.message === 'Usuario nao encontrado') {
                 return reply.code(404).send({ message: error.message });
             }
-            console.error('Error requesting withdrawal:', error);
+            if (!isProd) console.error('Error requesting withdrawal:', error);
             return reply.code(500).send({ message: 'Erro ao solicitar saque' });
         }
     }
@@ -89,7 +91,7 @@ export class WithdrawalController {
             if (error.message === 'Pedido de saque nao encontrado') {
                 return reply.code(404).send({ message: error.message });
             }
-            console.error('Error approving withdrawal:', error);
+            if (!isProd) console.error('Error approving withdrawal:', error);
             return reply.code(500).send({ message: error?.message || 'Erro ao aprovar saque' });
         }
     }
@@ -106,7 +108,7 @@ export class WithdrawalController {
             if (error instanceof ForbiddenRequestError) {
                 return reply.code(403).send({ message: error.message });
             }
-            console.error('Error listing withdrawals:', error);
+            if (!isProd) console.error('Error listing withdrawals:', error);
             return reply.code(500).send({ message: 'Erro ao listar saques' });
         }
     }

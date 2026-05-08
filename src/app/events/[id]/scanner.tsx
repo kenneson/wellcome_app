@@ -104,8 +104,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
             }
 
             const response = await registrationService.validateTicket(
-                parsed.bookingId,
-                session.user.id
+                parsed.bookingId
             );
 
             setResult(response);

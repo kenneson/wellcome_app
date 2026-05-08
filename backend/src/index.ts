@@ -1,4 +1,6 @@
 import fastifyCors from '@fastify/cors';
+import fastifyHelmet from '@fastify/helmet';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import './env';
@@ -41,8 +43,10 @@ import { PixPaymentController } from './presentation/http/controllers/PixPayment
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
 import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
-import { getAuthenticatedUserId } from './presentation/http/helpers/auth';
+import { ForbiddenRequestError, getAuthenticatedUserId, requireAdminUser } from './presentation/http/helpers/auth';
 
+
+const isProd = process.env.NODE_ENV === 'production';
 
 const fastify = Fastify({
     logger: true,
@@ -51,8 +55,25 @@ const fastify = Fastify({
 
 const start = async () => {
     try {
+        // ── Security: Helmet (security headers) ──
+        await fastify.register(fastifyHelmet, {
+            contentSecurityPolicy: false, // Disabled to allow Swagger UI
+        });
+
+        // ── Security: Rate Limiting ──
+        await fastify.register(fastifyRateLimit, {
+            max: isProd ? 100 : 1000,       // requests per window
+            timeWindow: '1 minute',
+            allowList: ['127.0.0.1'],        // localhost always allowed
+        });
+
+        // ── Security: CORS ──
+        const corsOrigins = process.env.CORS_ALLOWED_ORIGINS
+            ? process.env.CORS_ALLOWED_ORIGINS.split(',')
+            : true; // In dev, allow all origins
+
         await fastify.register(fastifyCors, {
-            origin: true, // Allow all origins
+            origin: isProd ? corsOrigins : true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             credentials: true
         });
@@ -175,6 +196,31 @@ const start = async () => {
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
         const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
         const adminController = new AdminController();
+
+        // ── Security: Admin route guard (defense in depth) ──
+        fastify.addHook('onRequest', async (request, reply) => {
+            const url = request.url;
+            if (url.startsWith('/admin')) {
+                try {
+                    await requireAdminUser(request);
+                } catch (error) {
+                    if (error instanceof ForbiddenRequestError) {
+                        return reply.code(403).send({ message: error.message });
+                    }
+                    return reply.code(401).send({ message: 'Authentication required' });
+                }
+            }
+        });
+
+        // ── Security: Stricter rate limit for auth routes ──
+        const authRateLimit = {
+            config: {
+                rateLimit: {
+                    max: isProd ? 20 : 200,
+                    timeWindow: '1 minute'
+                }
+            }
+        };
 
         // Test route to verify deploy
         fastify.get('/test-deploy', async () => {
@@ -488,6 +534,20 @@ const start = async () => {
                             }
                         }
                     },
+                    403: {
+                        description: 'Forbidden - only the host can view registrations',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    },
+                    404: {
+                        description: 'Event not found',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    },
                     500: {
                         description: 'Internal server error',
                         type: 'object',
@@ -500,10 +560,20 @@ const start = async () => {
         }, async (req, reply) => {
             const { eventId } = req.params as { eventId: string };
             try {
+                // Security: Verify the requester is the host of this event
+                const userId = await getAuthenticatedUserId(req);
+                const event = await eventRepository.findById(eventId);
+                if (!event) {
+                    return reply.code(404).send({ message: 'Event not found' });
+                }
+                if (event.hostId !== userId) {
+                    return reply.code(403).send({ message: 'Only the host can view registrations' });
+                }
+
                 const registrations = await eventRegistrationRepository.findByEventIdWithUser(eventId);
                 return reply.send(registrations);
             } catch (error) {
-                console.error('Error fetching registrations:', error);
+                if (!isProd) console.error('Error fetching registrations:', error);
                 return reply.code(500).send({ message: 'Internal server error' });
             }
         });
@@ -1283,29 +1353,31 @@ const start = async () => {
         const address = await fastify.listen({ port, host: '0.0.0.0' });
 
         console.log(`\n🚀 Backend running at: ${address}`);
+        console.log(`🛡️  Security: Helmet=${true}, RateLimit=${isProd ? '100' : '1000'}/min, CORS=${isProd ? 'restricted' : 'open'}`);
 
         // Log LAN IPs for easier access
-        const { networkInterfaces } = require('os');
-        const nets = networkInterfaces();
-        const results = Object.create(null);
+        if (!isProd) {
+            const { networkInterfaces } = require('os');
+            const nets = networkInterfaces();
+            const results = Object.create(null);
 
-        for (const name of Object.keys(nets)) {
-            for (const net of nets[name]) {
-                // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-                if (net.family === 'IPv4' && !net.internal) {
-                    if (!results[name]) {
-                        results[name] = [];
+            for (const name of Object.keys(nets)) {
+                for (const net of nets[name]) {
+                    if (net.family === 'IPv4' && !net.internal) {
+                        if (!results[name]) {
+                            results[name] = [];
+                        }
+                        results[name].push(net.address);
                     }
-                    results[name].push(net.address);
                 }
             }
-        }
 
-        console.log('📍 Available on your network:');
-        Object.keys(results).forEach(name => {
-            results[name].forEach((ip: string) => console.log(`   - http://${ip}:3000`));
-        });
-        console.log('\n');
+            console.log('📍 Available on your network:');
+            Object.keys(results).forEach(name => {
+                results[name].forEach((ip: string) => console.log(`   - http://${ip}:3000`));
+            });
+            console.log('\n');
+        }
 
     } catch (err) {
         fastify.log.error(err);

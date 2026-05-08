@@ -117,14 +117,16 @@ export function useEventCreationViewModel() {
     const setMenuAlterations = (value: boolean) => setData(prev => ({ ...prev, menuAlterations: value }));
 
     const submitEvent = async () => {
-        console.log('[DEBUG] useCreateEvent.submitEvent - Full data:');
-        console.log('  - details.endTime:', data.details.endTime);
-        console.log('  - details.registrationDeadline:', data.details.registrationDeadline);
-        console.log('  - dishes count:', data.dishes.length);
-        console.log('  - dishes:', JSON.stringify(data.dishes));
-        console.log('  - veganOptions:', data.veganOptions);
-        console.log('  - substitutions:', data.substitutions);
-        console.log('  - menuAlterations:', data.menuAlterations);
+        if (__DEV__) {
+            console.log('[DEBUG] useCreateEvent.submitEvent - Full data:');
+            console.log('  - details.endTime:', data.details.endTime);
+            console.log('  - details.registrationDeadline:', data.details.registrationDeadline);
+            console.log('  - dishes count:', data.dishes.length);
+            console.log('  - dishes:', JSON.stringify(data.dishes));
+            console.log('  - veganOptions:', data.veganOptions);
+            console.log('  - substitutions:', data.substitutions);
+            console.log('  - menuAlterations:', data.menuAlterations);
+        }
         await eventService.submitEvent(data);
     };
 

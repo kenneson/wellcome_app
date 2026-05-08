@@ -24,7 +24,7 @@ const getBaseUrl = () => {
         return 'http://localhost:3000';
     }
 
-    console.warn('EXPO_PUBLIC_API_URL is missing for this production build.');
+    if (__DEV__) console.warn('EXPO_PUBLIC_API_URL is missing for this production build.');
     return 'https://wellcome.invalid';
 };
 

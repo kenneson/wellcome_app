@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
 import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const createEventSchema = z.object({
     title: z.string(),
     description: z.string(),
@@ -99,13 +101,13 @@ export class EventController {
             const body = createEventSchema.parse(request.body);
             const hostId = await getAuthenticatedUserId(request);
             
-            // Debug logging
-            console.log('[DEBUG] EventController.create - Parsed body:');
-            console.log('  - endTime:', body.endTime);
-            console.log('  - reservationDeadline:', body.reservationDeadline);
-            console.log('  - dishes count:', body.dishes?.length || 0);
-            console.log('  - dishes:', JSON.stringify(body.dishes));
-            
+            if (!isProd) {
+                console.log('[DEBUG] EventController.create - Parsed body:');
+                console.log('  - endTime:', body.endTime);
+                console.log('  - reservationDeadline:', body.reservationDeadline);
+                console.log('  - dishes count:', body.dishes?.length || 0);
+                console.log('  - dishes:', JSON.stringify(body.dishes));
+            }
             const event = await this.createEventUseCase.execute({
                 ...body,
                 eventType: body.eventType ?? '',
@@ -128,23 +130,25 @@ export class EventController {
                 })) ?? []
             });
             
-            console.log('[DEBUG] EventController.create - Returned event:');
-            console.log('  - endTime:', event.endTime);
-            console.log('  - reservationDeadline:', event.reservationDeadline);
-            console.log('  - dishes count:', event.dishes?.length || 0);
-            console.log('  - host fullName:', event.host?.fullName);
-            console.log('  - host avatarUrl:', event.host?.avatarUrl);
+            if (!isProd) {
+                console.log('[DEBUG] EventController.create - Returned event:');
+                console.log('  - endTime:', event.endTime);
+                console.log('  - reservationDeadline:', event.reservationDeadline);
+                console.log('  - dishes count:', event.dishes?.length || 0);
+                console.log('  - host fullName:', event.host?.fullName);
+                console.log('  - host avatarUrl:', event.host?.avatarUrl);
+            }
             
             return reply.code(201).send(event);
         } catch (error) {
-            console.error('Create Event Error:', error);
+            if (!isProd) console.error('Create Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -164,22 +168,22 @@ export class EventController {
             });
             return reply.send(events);
         } catch (error) {
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
     async getById(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as { id: string };
         try {
-            console.log('[DEBUG] EventController.getById - Fetching event:', id);
+            if (!isProd) console.log('[DEBUG] EventController.getById - Fetching event:', id);
             const event = await this.listEventsUseCase.getById(id);
             if (!event) {
-                console.log('[DEBUG] EventController.getById - Event not found');
+                if (!isProd) console.log('[DEBUG] EventController.getById - Event not found');
                 return reply.code(404).send({ message: 'Event not found' });
             }
             return reply.send(event);
         } catch (error) {
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -192,7 +196,7 @@ export class EventController {
             const event = await this.updateEventUseCase.execute(id, hostId, updateData);
             return reply.send(event);
         } catch (error) {
-            console.error('Update Event Error:', error);
+            if (!isProd) console.error('Update Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
@@ -207,7 +211,7 @@ export class EventController {
                     return reply.code(403).send({ message: error.message });
                 }
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -218,7 +222,7 @@ export class EventController {
             await this.deleteEventUseCase.execute(id, hostId);
             return reply.code(204).send();
         } catch (error) {
-            console.error('Delete Event Error:', error);
+            if (!isProd) console.error('Delete Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
@@ -230,7 +234,7 @@ export class EventController {
                     return reply.code(403).send({ message: error.message });
                 }
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 }

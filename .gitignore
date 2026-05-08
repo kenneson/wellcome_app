@@ -48,3 +48,7 @@ app-example
 .agent/skills
 
 /src/generated/prisma
+
+# Firebase config files (contain API keys)
+google-services.json
+GoogleService-Info.plist

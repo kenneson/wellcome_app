@@ -53,7 +53,7 @@ class LocationService {
             cacheLoaded = true;
             return municipalitiesCache;
         } catch (error) {
-            console.error('Error loading municipalities:', error);
+            if (__DEV__) console.error('Error loading municipalities:', error);
             return [];
         }
     }
@@ -106,7 +106,7 @@ class LocationService {
                 lon: parseFloat(item.lon)
             }));
         } catch (error) {
-            console.error('Geocoding error:', error);
+            if (__DEV__) console.error('Geocoding error:', error);
             return [];
         }
     }

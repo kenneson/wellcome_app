@@ -80,24 +80,24 @@ export default function RootLayout() {
         .maybeSingle(); // Use maybeSingle to avoid error when no row exists
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        if (__DEV__) console.error('Error fetching profile:', error);
         setIsProfileComplete(false);
         setKycStatus(null);
       } else if (!profile) {
         // No profile row exists - treat as incomplete
-        console.log('No profile found for user');
+        if (__DEV__) console.log('No profile found for user');
         setIsProfileComplete(false);
         setKycStatus(null);
       } else {
-        console.log('Profile data:', profile);
+        if (__DEV__) console.log('Profile data:', profile);
         // full_name, occupation, city, neighborhood are REQUIRED
         const complete = !!(profile.full_name && profile.occupation && profile.city && profile.neighborhood);
-        console.log('Is profile complete?', complete);
+        if (__DEV__) console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
         setKycStatus(profile.kyc_status as KycStatus || 'NOT_SUBMITTED');
       }
     } catch (e) {
-      console.error('Exception checking profile:', e);
+      if (__DEV__) console.error('Exception checking profile:', e);
       setIsProfileComplete(false);
       setKycStatus(null);
     } finally {

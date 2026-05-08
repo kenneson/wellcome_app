@@ -28,7 +28,7 @@ export class UserController {
                 return reply.code(401).send({ message: error.message });
             }
 
-            return reply.code(500).send({ message: 'Internal server error', error: error?.message });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -65,7 +65,7 @@ export class UserController {
                 return reply.code(401).send({ message: error.message });
             }
 
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -89,7 +89,7 @@ export class UserController {
                 return reply.code(404).send({ message: error.message });
             }
 
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 

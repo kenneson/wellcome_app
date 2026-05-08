@@ -4,6 +4,8 @@ import { CheckPixPaymentUseCase } from '../../../application/use-cases/CheckPixP
 import { CreatePixChargeUseCase } from '../../../application/use-cases/CreatePixChargeUseCase';
 import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const createPixChargeSchema = z.object({
     bookingId: z.string().uuid(),
     eventId: z.string().uuid(),
@@ -23,11 +25,11 @@ export class PixPaymentController {
         try {
             const body = createPixChargeSchema.parse(request.body);
             const userId = await getAuthenticatedUserId(request);
-            console.log('[PixPaymentController] Creating PIX charge');
+            if (!isProd) console.log('[PixPaymentController] Creating PIX charge');
             const result = await this.createPixChargeUseCase.execute({ ...body, userId });
             return reply.code(201).send(result);
         } catch (error: any) {
-            console.error('[PixPaymentController] Error:', error?.message || error);
+            if (!isProd) console.error('[PixPaymentController] Error:', error?.message || error);
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
@@ -62,7 +64,7 @@ export class PixPaymentController {
             if (error.message === 'Payment not found for this booking') {
                 return reply.code(404).send({ message: error.message });
             }
-            console.error('Error checking PIX payment:', error);
+            if (!isProd) console.error('Error checking PIX payment:', error);
             return reply.code(500).send({ message: 'Erro ao consultar pagamento' });
         }
     }

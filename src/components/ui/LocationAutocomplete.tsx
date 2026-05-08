@@ -77,7 +77,7 @@ export function LocationAutocomplete({
                     setResults(addresses);
                 }
             } catch (error) {
-                console.error('Search error:', error);
+                if (__DEV__) console.error('Search error:', error);
                 setResults([]);
             } finally {
                 setLoading(false);

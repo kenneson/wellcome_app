@@ -47,7 +47,9 @@ export class RegistrationService {
     }
 
     async getRegistrations(eventId: string) {
-        const response = await fetch(`${API_URL}/bookings/event/${eventId}`);
+        const response = await fetch(`${API_URL}/bookings/event/${eventId}`, {
+            headers: await this.getAuthHeaders(),
+        });
 
         if (!response.ok) {
             const error = await response.json();
@@ -58,13 +60,10 @@ export class RegistrationService {
     }
 
     async approveRegistration(registrationId: string) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const hostId = session?.user?.id;
-
         const response = await fetch(`${API_URL}/bookings/approve`, {
             method: 'POST',
             headers: await this.getAuthHeaders(),
-            body: JSON.stringify({ registrationId, hostId })
+            body: JSON.stringify({ registrationId })
         });
 
         if (!response.ok) {
@@ -75,14 +74,11 @@ export class RegistrationService {
         return response.json();
     }
 
-    async rejectRegistration(registrationId: string, reason: string = 'Rejeitado pelo anfitriÃ£o') {
-        const { data: { session } } = await supabase.auth.getSession();
-        const hostId = session?.user?.id;
-
+    async rejectRegistration(registrationId: string, reason: string = 'Rejeitado pelo anfitrião') {
         const response = await fetch(`${API_URL}/bookings/reject`, {
             method: 'POST',
             headers: await this.getAuthHeaders(),
-            body: JSON.stringify({ registrationId, hostId, reason })
+            body: JSON.stringify({ registrationId, reason })
         });
 
         if (!response.ok) {
@@ -101,17 +97,17 @@ export class RegistrationService {
         return this.rejectRegistration(registrationId, reason);
     }
 
-    async validateTicket(bookingId: string, hostId: string) {
+    async validateTicket(bookingId: string) {
         const response = await fetch(`${API_URL}/bookings/validate-ticket`, {
             method: 'POST',
             headers: await this.getAuthHeaders(),
-            body: JSON.stringify({ bookingId, hostId })
+            body: JSON.stringify({ bookingId })
         });
 
         return response.json();
     }
 
-    async createPixCharge(data: { bookingId: string; eventId: string; userId: string }) {
+    async createPixCharge(data: { bookingId: string; eventId: string }) {
         const response = await fetch(`${API_URL}/payments/pix`, {
             method: 'POST',
             headers: await this.getAuthHeaders(),

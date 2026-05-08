@@ -113,11 +113,13 @@ export class EventService {
             };
 
             // Debug logging
-            console.log('[DEBUG] EventService.submitEvent - Payload:');
-            console.log('  - endTime:', payload.endTime);
-            console.log('  - reservationDeadline:', payload.reservationDeadline);
-            console.log('  - dishes count:', payload.dishes.length);
-            console.log('  - dishes:', JSON.stringify(payload.dishes));
+            if (__DEV__) {
+                console.log('[DEBUG] EventService.submitEvent - Payload:');
+                console.log('  - endTime:', payload.endTime);
+                console.log('  - reservationDeadline:', payload.reservationDeadline);
+                console.log('  - dishes count:', payload.dishes.length);
+                console.log('  - dishes:', JSON.stringify(payload.dishes));
+            }
 
             const apiUrl = `${API_URL}/events`;
             const response = await fetch(apiUrl, {
@@ -139,7 +141,7 @@ export class EventService {
     }
 
     async getEventById(id: string): Promise<Event> {
-        console.log('[DEBUG] EventService.getEventById - Fetching from:', `${API_URL}/events/${id}`);
+        if (__DEV__) console.log('[DEBUG] EventService.getEventById - Fetching from:', `${API_URL}/events/${id}`);
         const response = await fetch(`${API_URL}/events/${id}`);
         if (!response.ok) {
             throw new Error('Failed to fetch event');
@@ -147,14 +149,16 @@ export class EventService {
         const event = await response.json();
         
         // Debug logging - log the full object
-        console.log('[DEBUG] EventService.getEventById - Full response:', JSON.stringify(event, null, 2));
-        console.log('[DEBUG] EventService.getEventById - Key fields:');
-        console.log('  - endTime:', event.endTime);
-        console.log('  - reservationDeadline:', event.reservationDeadline);
-        console.log('  - dishes count:', event.dishes?.length || 0);
-        console.log('  - host:', event.host);
-        console.log('  - host fullName:', event.host?.fullName);
-        console.log('  - host avatarUrl:', event.host?.avatarUrl);
+        if (__DEV__) {
+            console.log('[DEBUG] EventService.getEventById - Full response:', JSON.stringify(event, null, 2));
+            console.log('[DEBUG] EventService.getEventById - Key fields:');
+            console.log('  - endTime:', event.endTime);
+            console.log('  - reservationDeadline:', event.reservationDeadline);
+            console.log('  - dishes count:', event.dishes?.length || 0);
+            console.log('  - host:', event.host);
+            console.log('  - host fullName:', event.host?.fullName);
+            console.log('  - host avatarUrl:', event.host?.avatarUrl);
+        }
         
         return event;
     }

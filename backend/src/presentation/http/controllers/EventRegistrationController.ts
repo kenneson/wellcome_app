@@ -55,7 +55,7 @@ export class EventRegistrationController {
             if (error.message === 'Registration deadline has passed' || error.message === 'Host cannot join their own event') {
                 return reply.code(400).send({ message: error.message });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -72,7 +72,7 @@ export class EventRegistrationController {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -86,7 +86,7 @@ export class EventRegistrationController {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -103,7 +103,7 @@ export class EventRegistrationController {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 

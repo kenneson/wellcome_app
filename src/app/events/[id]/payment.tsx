@@ -57,7 +57,6 @@ export default function PaymentScreen() {
             const result = await registrationService.createPixCharge({
                 bookingId: bookingId as string,
                 eventId: id as string,
-                userId: session.user.id,
             });
 
             setPixData(result);

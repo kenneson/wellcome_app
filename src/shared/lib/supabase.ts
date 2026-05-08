@@ -10,7 +10,7 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️ As credenciais do Supabase estão ausentes. Por favor, verifique seu arquivo .env ou as variáveis de ambiente.');
+    if (__DEV__) console.warn('⚠️ As credenciais do Supabase estão ausentes. Por favor, verifique seu arquivo .env ou as variáveis de ambiente.');
 }
 
 const ExpoStorage = {

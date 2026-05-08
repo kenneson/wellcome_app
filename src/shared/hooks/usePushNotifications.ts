@@ -30,7 +30,7 @@ async function registerForPushNotificationsAsync() {
     if (!Device.isDevice) {
         // Only real devices can handle push notifications
         // But we fail silently or log to avoid breaking app in simulator
-        console.log('Must use physical device for Push Notifications');
+        if (__DEV__) console.log('Must use physical device for Push Notifications');
         return;
     }
 
@@ -52,7 +52,7 @@ async function registerForPushNotificationsAsync() {
     const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
 
     if (!projectId) {
-        console.warn('Project ID not found in app.json (extra.eas.projectId). Push notifications may fail in Expo Go.');
+        if (__DEV__) console.warn('Project ID not found in app.json (extra.eas.projectId). Push notifications may fail in Expo Go.');
     }
 
     try {
@@ -60,16 +60,16 @@ async function registerForPushNotificationsAsync() {
             projectId,
         })).data;
 
-        console.log('Expo Push Token (Hooks):', pushTokenString);
+        if (__DEV__) console.log('Expo Push Token (Hooks):', pushTokenString);
         return pushTokenString;
     } catch (error: any) {
         // Handle Expo Go limitation gracefully
         if (error.message.includes('removed from Expo Go') || error.message.includes('development build')) {
-            console.warn('Push Notifications are not supported in Expo Go (SDK 53+). Use a development build to test notifications.');
+            if (__DEV__) console.warn('Push Notifications are not supported in Expo Go (SDK 53+). Use a development build to test notifications.');
             return null;
         }
 
-        console.error('Error getting push token:', error);
+        if (__DEV__) console.error('Error getting push token:', error);
 
         if (error.message.includes('No "projectId" found')) {
             Alert.alert(
@@ -102,7 +102,7 @@ export function usePushNotifications(id: string | undefined) {
         });
 
         responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-            console.log('User tapped notification:', response);
+            if (__DEV__) console.log('User tapped notification:', response);
             const data = response.notification.request.content.data;
             if (data && data.eventId) {
                 router.push(`/events/${data.eventId}`);
@@ -122,7 +122,7 @@ export function usePushNotifications(id: string | undefined) {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
-            console.log('Saving push token to profile...', token);
+            if (__DEV__) console.log('Saving push token to profile...', token);
 
             // Using 'profiles' table as defined in Supabase schema
             const { error } = await supabase
@@ -130,11 +130,11 @@ export function usePushNotifications(id: string | undefined) {
                 .update({ expo_push_token: token })
                 .eq('id', session.user.id);
 
-            if (error) console.error('Error saving push token to DB:', error);
-            else console.log('Push token saved successfully.');
+            if (error) { if (__DEV__) console.error('Error saving push token to DB:', error); }
+            else { if (__DEV__) console.log('Push token saved successfully.'); }
 
         } catch (e) {
-            console.error('Failed to save push token:', e);
+            if (__DEV__) console.error('Failed to save push token:', e);
         }
     }
 
