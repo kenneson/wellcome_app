@@ -218,11 +218,18 @@ export default function HomeScreen() {
            const now = new Date();
            data = data.filter((e: any) => new Date(e.event_date) >= now);
            
+           const cleanPrice = (val: string) => {
+               const cleaned = val.replace(/[R$\s\.]/g, '').replace(',', '.');
+               return parseFloat(cleaned);
+           };
+
            if (filters.priceMin && filters.priceMin.trim() !== '') {
-             data = data.filter((e: any) => e.price >= parseFloat(filters.priceMin!));
+             const min = cleanPrice(filters.priceMin);
+             if (!isNaN(min)) data = data.filter((e: any) => e.price >= min);
            }
            if (filters.priceMax && filters.priceMax.trim() !== '') {
-             data = data.filter((e: any) => e.price <= parseFloat(filters.priceMax!));
+             const max = cleanPrice(filters.priceMax);
+             if (!isNaN(max)) data = data.filter((e: any) => e.price <= max);
            }
            if (filters.cuisine && filters.cuisine.length > 0) {
              data = data.filter((e: any) => e.cuisine_types && e.cuisine_types.some((c: string) => filters.cuisine!.includes(c)));
@@ -252,8 +259,19 @@ export default function HomeScreen() {
         }
 
         // Apply Filters (DB side)
-        if (filters.priceMin && filters.priceMin.trim() !== '') query = query.gte('price', parseFloat(filters.priceMin));
-        if (filters.priceMax && filters.priceMax.trim() !== '') query = query.lte('price', parseFloat(filters.priceMax));
+        const cleanPrice = (val: string) => {
+            const cleaned = val.replace(/[R$\s\.]/g, '').replace(',', '.');
+            return parseFloat(cleaned);
+        };
+
+        if (filters.priceMin && filters.priceMin.trim() !== '') {
+            const min = cleanPrice(filters.priceMin);
+            if (!isNaN(min)) query = query.gte('price', min);
+        }
+        if (filters.priceMax && filters.priceMax.trim() !== '') {
+            const max = cleanPrice(filters.priceMax);
+            if (!isNaN(max)) query = query.lte('price', max);
+        }
         if (filters.cuisine && filters.cuisine.length > 0) query = query.overlaps('cuisine_types', filters.cuisine);
         if (filters.vibe && filters.vibe.length > 0) query = query.overlaps('vibe', filters.vibe);
 

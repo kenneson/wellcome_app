@@ -1,7 +1,7 @@
 import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -92,6 +92,7 @@ export default function PixKeyScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <Stack.Screen options={{ headerShown: false }} />
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color="#333" />

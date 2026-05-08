@@ -6,9 +6,10 @@ interface SelectionPillProps {
     label: string;
     selected: boolean;
     onPress: () => void;
+    theme?: 'default' | 'host';
 }
 
-export function SelectionPill({ label, selected, onPress }: SelectionPillProps) {
+export function SelectionPill({ label, selected, onPress, theme = 'default' }: SelectionPillProps) {
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -32,12 +33,14 @@ export function SelectionPill({ label, selected, onPress }: SelectionPillProps) 
             <Animated.View style={animatedStyle}>
                 <View
                     className={`px-4 py-2 rounded-full border ${selected
-                        ? 'bg-orange-50 border-[#FF8C42]'
+                        ? theme === 'host'
+                            ? 'bg-emerald-50 border-[#10B981]'
+                            : 'bg-orange-50 border-[#FF8C42]'
                         : 'bg-white border-gray-200'
                         }`}
                 >
                     <Text
-                        className={`text-[13px] font-medium ${selected ? 'text-orange-700' : 'text-gray-600'}`}
+                        className={`text-[13px] font-medium ${selected ? (theme === 'host' ? 'text-emerald-700' : 'text-orange-700') : 'text-gray-600'}`}
                     >
                         {label}
                     </Text>

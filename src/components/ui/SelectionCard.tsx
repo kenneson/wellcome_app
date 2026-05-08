@@ -8,9 +8,10 @@ interface SelectionCardProps {
     selected: boolean;
     onPress: () => void;
     style?: ViewStyle;
+    theme?: 'default' | 'host';
 }
 
-export function SelectionCard({ label, description, selected, onPress, style }: SelectionCardProps) {
+export function SelectionCard({ label, description, selected, onPress, style, theme = 'default' }: SelectionCardProps) {
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -35,7 +36,9 @@ export function SelectionCard({ label, description, selected, onPress, style }: 
             <Animated.View style={animatedStyle}>
                 <View
                     className={`py-4 px-6 rounded-2xl border min-w-[100px] shadow-sm ${selected
-                        ? 'bg-[#FFF5F0] border-[#FF8C42] shadow-orange-200/50'
+                        ? theme === 'host'
+                            ? 'bg-[#F0FDF4] border-[#10B981] shadow-emerald-200/50'
+                            : 'bg-[#FFF5F0] border-[#FF8C42] shadow-orange-200/50'
                         : 'bg-white border-gray-100 shadow-gray-200/50'
                         }`}
                 >
@@ -47,7 +50,7 @@ export function SelectionCard({ label, description, selected, onPress, style }: 
                         </Text>
                         {description && (
                             <Text
-                                className={`text-[13px] leading-5 ${selected ? 'text-orange-700' : 'text-gray-400'}`}
+                                className={`text-[13px] leading-5 ${selected ? (theme === 'host' ? 'text-emerald-700' : 'text-orange-700') : 'text-gray-400'}`}
                             >
                                 {description}
                             </Text>

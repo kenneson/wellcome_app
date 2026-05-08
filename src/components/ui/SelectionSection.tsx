@@ -12,6 +12,7 @@ interface SelectionSectionProps {
     onSelect: (item: string) => void;
     isMultiSelect?: boolean;
     variant?: 'card' | 'pill' | 'grid';
+    theme?: 'default' | 'host';
 }
 
 export const SelectionSection = React.memo<SelectionSectionProps>(({
@@ -22,6 +23,7 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
     onSelect,
     isMultiSelect = false,
     variant = 'card',
+    theme = 'default',
 }) => {
     const isSelected = useCallback((item: string) => {
         if (isMultiSelect && Array.isArray(selectedItems)) {
@@ -47,6 +49,7 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
                                 label={item}
                                 selected={selected}
                                 onPress={handlePress}
+                                theme={theme}
                             />
                         );
                     }
@@ -58,6 +61,7 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
                                 label={item}
                                 selected={selected}
                                 onPress={handlePress}
+                                theme={theme}
                             />
                         );
                     }
@@ -68,6 +72,7 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
                             label={item}
                             selected={selected}
                             onPress={handlePress}
+                            theme={theme}
                         />
                     );
                 })}

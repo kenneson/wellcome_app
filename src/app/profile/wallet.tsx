@@ -2,7 +2,7 @@ import { userService } from '@/services/api/UserService';
 import { walletService } from '@/services/api/WalletService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -115,6 +115,7 @@ export default function WalletScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <Stack.Screen options={{ headerShown: false }} />
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

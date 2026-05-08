@@ -160,7 +160,10 @@ export default function HostingScreen() {
                 <View style={styles.headerRow}>
                     <View>
                         <Text style={styles.headerLabel}>Painel do Anfitrião</Text>
-                        <Text style={styles.headerTitle}>🏡 Meus Eventos</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="home" size={24} color="#FFF" style={{ marginRight: 8 }} />
+                            <Text style={styles.headerTitle}>Meus Eventos</Text>
+                        </View>
                     </View>
                     <TouchableOpacity
                         style={styles.notifBtn}
