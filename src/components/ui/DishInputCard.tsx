@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Dish } from '@/entities/event/model/types';
@@ -30,7 +30,7 @@ export function DishInputCard({ index, dish, onUpdate, onRemove }: DishInputCard
                     <View className="w-6 h-6 rounded-full bg-orange-100 items-center justify-center">
                         <Text className="text-orange-600 text-xs font-bold">{index + 1}</Text>
                     </View>
-                    <Text className="text-base font-bold text-[#1A1A1A]">Prato {index + 1}</Text>
+                    <Text className="text-base font-bold text-[#333333]">Prato {index + 1}</Text>
                 </View>
                 {onRemove && (
                     <Text onPress={onRemove} className="text-red-500 text-xs font-bold">Remover</Text>

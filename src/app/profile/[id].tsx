@@ -1,4 +1,4 @@
-import { UserProfile, userService } from '@/services/api/UserService';
+﻿import { UserProfile, userService } from '@/services/api/UserService';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +43,7 @@ export default function PublicProfileScreen() {
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                        <Ionicons name="arrow-back" size={24} color="#333333" />
                     </TouchableOpacity>
                 </View>
                 <View style={styles.center}>
@@ -54,7 +54,7 @@ export default function PublicProfileScreen() {
     }
 
     const optimizedAvatar = getOptimizedImageUrl(profile.avatarUrl, { width: 200 });
-    const location = [profile.city, profile.neighborhood].filter(Boolean).join(' • ');
+    const location = [profile.city, profile.neighborhood].filter(Boolean).join(' â€¢ ');
     const pastEvents = profile.bookings?.filter((b: any) => b.status === 'APPROVED').length || 0;
     const hostedEvents = profile.events?.length || 0;
 
@@ -62,7 +62,7 @@ export default function PublicProfileScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                    <Ionicons name="arrow-back" size={24} color="#333333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Perfil</Text>
                 <View style={{ width: 32 }} />
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#1A1A1A',
+        color: '#333333',
     },
     content: {
         paddingHorizontal: 20,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
         marginBottom: 4,
     },
     occupation: {
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     statNumber: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
         marginBottom: 4,
     },
     statLabel: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#1A1A1A',
+        color: '#333333',
         marginBottom: 8,
     },
     bioText: {

@@ -1,4 +1,4 @@
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+﻿import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { SelectionSection } from '@/components/ui/SelectionSection';
@@ -129,7 +129,7 @@ export default function EventCreateStep3() {
                 style={{ flex: 1 }}
             >
                 <View className="mb-6">
-                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
+                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#333333] mb-2 leading-tight">
                         Onde será{'\n'}o evento?
                     </Text>
                     <Text className="text-sm text-gray-400">
@@ -160,7 +160,7 @@ export default function EventCreateStep3() {
                 <View className="mb-6">
                     <Text className="text-xs text-gray-500 mb-1.5 font-semibold ml-1 uppercase tracking-wider">Endereço completo</Text>
                     <TextInput
-                        className="border border-gray-200 rounded-2xl text-base bg-gray-50 text-[#1A1A1A]"
+                        className="border border-gray-200 rounded-2xl text-base bg-gray-50 text-[#333333]"
                         style={{ padding: isSmallScreen ? 12 : 16, minHeight: isSmallScreen ? 80 : 100 }}
                         placeholder="Rua, Número, Bairro, Cidade..."
                         placeholderTextColor="#D1D5DB"

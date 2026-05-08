@@ -1,4 +1,4 @@
-import { eventService } from '@/services/api/EventService';
+﻿import { eventService } from '@/services/api/EventService';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
 import { formatPrice } from '@/utils/formatters';
@@ -309,7 +309,7 @@ export default function MyEventsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: '#FAFAFA',
     },
     header: {
         backgroundColor: '#FF8C42',
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
         marginBottom: 8,
         textAlign: 'center',
     },

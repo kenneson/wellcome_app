@@ -1,4 +1,4 @@
-import { userService } from '@/services/api/UserService';
+﻿import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
@@ -155,7 +155,7 @@ export default function PixKeyScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9F9F9' },
+    container: { flex: 1, backgroundColor: '#FAFAFA' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {
         flexDirection: 'row',

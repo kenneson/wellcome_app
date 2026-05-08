@@ -1,4 +1,4 @@
-import { registrationService } from '@/services/api/RegistrationService';
+﻿import { registrationService } from '@/services/api/RegistrationService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -252,13 +252,13 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: '#333333',
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: '#333333',
         paddingHorizontal: 40,
     },
     header: {

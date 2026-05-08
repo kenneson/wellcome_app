@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 4,
     },
     input: {
-        backgroundColor: '#F9F9F9',
+        backgroundColor: '#FAFAFA',
         borderRadius: 12,
         padding: 12,
         fontSize: 16,

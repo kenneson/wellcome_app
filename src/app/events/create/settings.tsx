@@ -1,4 +1,4 @@
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+﻿import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { SelectionCard } from '@/components/ui/SelectionCard';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -70,7 +70,7 @@ export default function EventCreateSettings() {
                 style={{ flex: 1 }}
             >
                 <View className="mb-6">
-                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
+                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#333333] mb-2 leading-tight">
                         Ajustes finais
                     </Text>
                     <Text className="text-sm text-gray-400">
@@ -83,7 +83,7 @@ export default function EventCreateSettings() {
                 </View>
 
                 <View className="bg-gray-50 rounded-2xl mb-6" style={{ padding: isSmallScreen ? 14 : 20 }}>
-                    <Text style={{ fontSize: isSmallScreen ? 16 : 18 }} className="font-bold mb-4 text-[#1A1A1A]">Tipo de Acesso</Text>
+                    <Text style={{ fontSize: isSmallScreen ? 16 : 18 }} className="font-bold mb-4 text-[#333333]">Tipo de Acesso</Text>
                     <View className="gap-3">
                         <SelectionCard
                             label="Aberto a todos"
@@ -100,16 +100,16 @@ export default function EventCreateSettings() {
                     </View>
                 </View>
 
-                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#1A1A1A] mb-4">Perguntas aos Convidados</Text>
+                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#333333] mb-4">Perguntas aos Convidados</Text>
 
                 {data.details.questions && data.details.questions.length > 0 && (
                     <View className="mb-4 gap-3">
                         {data.details.questions.map((q, index) => (
                             <View key={index} className="flex-row items-center bg-white rounded-2xl border border-gray-100" style={{ padding: isSmallScreen ? 12 : 16 }}>
                                 <View className="flex-1">
-                                    <Text className="text-base font-bold text-[#1A1A1A]">{q.question}</Text>
+                                    <Text className="text-base font-bold text-[#333333]">{q.question}</Text>
                                     <Text className="text-xs text-gray-500 mt-1">
-                                        {q.required ? 'Obrigatória • Texto' : 'Opcional • Texto'}
+                                        {q.required ? 'Obrigatória â€¢ Texto' : 'Opcional â€¢ Texto'}
                                     </Text>
                                 </View>
                                 <TouchableOpacity onPress={() => removeQuestion(index)} className="p-2">
@@ -124,7 +124,7 @@ export default function EventCreateSettings() {
                     <Text className="text-sm font-bold text-gray-900 mb-3">Adicionar nova pergunta</Text>
                     <TextInput
                         ref={questionInputRef}
-                        className="bg-white border border-gray-200 rounded-xl text-base mb-4 text-[#1A1A1A]"
+                        className="bg-white border border-gray-200 rounded-xl text-base mb-4 text-[#333333]"
                         style={{ padding: isSmallScreen ? 12 : 16 }}
                         placeholder="Ex: Qual seu perfil no Instagram?"
                         placeholderTextColor="#D1D5DB"
@@ -144,7 +144,7 @@ export default function EventCreateSettings() {
                             <Text className="text-sm text-gray-600 font-medium">Pergunta obrigatória</Text>
                         </View>
                         <TouchableOpacity
-                            className={`bg-[#1A1A1A] rounded-xl ${!newQuestion.trim() ? 'opacity-40' : ''}`}
+                            className={`bg-[#333333] rounded-xl ${!newQuestion.trim() ? 'opacity-40' : ''}`}
                             style={{ paddingHorizontal: isSmallScreen ? 16 : 24, paddingVertical: 12 }}
                             onPress={handleAddQuestion}
                             disabled={!newQuestion.trim()}

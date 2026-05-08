@@ -1,4 +1,4 @@
-import { Event, RegistrationStatus } from '@/entities/event/types';
+﻿import { Event, RegistrationStatus } from '@/entities/event/types';
 import { eventService } from '@/services/api/EventService';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
@@ -151,7 +151,7 @@ export default function TicketScreen() {
                                 <QRCode
                                     value={qrData}
                                     size={200}
-                                    color="#1A1A1A"
+                                    color="#333333"
                                     backgroundColor="#FFFFFF"
                                 />
                             ) : (
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#1A1A1A',
+        color: '#333333',
     },
     scrollContent: {
         paddingHorizontal: 20,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     eventTitle: {
         fontSize: 22,
         fontWeight: '700',
-        color: '#1A1A1A',
+        color: '#333333',
         marginBottom: 16,
     },
     infoRow: {

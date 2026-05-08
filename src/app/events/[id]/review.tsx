@@ -1,4 +1,4 @@
-import { reviewService } from '@/services/api/ReviewService';
+﻿import { reviewService } from '@/services/api/ReviewService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -59,9 +59,9 @@ export default function ReviewEventScreen() {
             >
             <View className="flex-row items-center mb-6">
                 <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                    <Ionicons name="arrow-back" size={24} color="#333333" />
                 </TouchableOpacity>
-                <Text className="text-xl font-bold text-[#1A1A1A]">Avaliar Evento</Text>
+                <Text className="text-xl font-bold text-[#333333]">Avaliar Evento</Text>
             </View>
 
             <View className="mb-8 items-center">
@@ -80,9 +80,9 @@ export default function ReviewEventScreen() {
             </View>
 
             <View className="mb-6">
-                <Text className="text-base font-bold text-[#1A1A1A] mb-2">Comentário (opcional)</Text>
+                <Text className="text-base font-bold text-[#333333] mb-2">Comentário (opcional)</Text>
                 <TextInput
-                    className="bg-gray-50 p-4 rounded-xl text-base text-[#1A1A1A] h-32"
+                    className="bg-gray-50 p-4 rounded-xl text-base text-[#333333] h-32"
                     placeholder="Conte mais sobre o evento..."
                     multiline
                     textAlignVertical="top"

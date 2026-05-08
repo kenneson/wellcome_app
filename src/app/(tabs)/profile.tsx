@@ -1,4 +1,4 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
+﻿import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Dimensions } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { userService } from '@/services/api/UserService';
@@ -166,7 +166,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Settings Section */}
-                <Text style={styles.sectionTitle}>CONFIGURAÇÕES</Text>
+                <Text style={styles.sectionTitle}>CONFIGURAÃ‡Ã•ES</Text>
 
                 <View style={styles.menuGroup}>
                     <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/pix-key')}>
@@ -235,7 +235,7 @@ export default function ProfileScreen() {
                             Alert.alert(response.ok ? 'Sucesso' : 'Erro', response.ok ? 'Enviada!' : 'Falhou');
                         }}
                     >
-                        <Text style={styles.devButtonText}>🔔 Testar Push</Text>
+                        <Text style={styles.devButtonText}>ðŸ”” Testar Push</Text>
                     </TouchableOpacity>
                 )}
 
@@ -248,7 +248,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: '#FAFAFA',
     },
     center: {
         justifyContent: 'center',
@@ -264,12 +264,12 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
     },
     content: {
         paddingHorizontal: 24,
     },
-    // ── Profile Card ──
+    // â”€â”€ Profile Card â”€â”€
     profileCard: {
         alignItems: 'center',
         backgroundColor: '#FFF',
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
     },
     locationRow: {
         flexDirection: 'row',
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
         color: '#333',
         fontSize: 14,
     },
-    // ── Stats ──
+    // â”€â”€ Stats â”€â”€
     statsRow: {
         flexDirection: 'row',
         backgroundColor: '#FFF',
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         lineHeight: 16,
     },
-    // ── Settings ──
+    // â”€â”€ Settings â”€â”€
     sectionTitle: {
         fontSize: 12,
         fontWeight: 'bold',
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
         color: '#333',
         fontWeight: '500',
     },
-    // ── Logout ──
+    // â”€â”€ Logout â”€â”€
     logoutButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 15,
     },
-    // ── Dev ──
+    // â”€â”€ Dev â”€â”€
     devButton: {
         marginTop: 16,
         backgroundColor: '#F3F4F6',

@@ -1,4 +1,4 @@
-import { StatusBadge } from '@/components/ui/StatusBadge';
+﻿import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Colors, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
@@ -107,7 +107,7 @@ export default function TicketsScreen() {
                 <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{event.title}</Text>
                     <Text style={styles.cardSubtitle} numberOfLines={1}>
-                        {formatFirstName(event.host?.full_name)} • {formatShortDate(event.event_date)}
+                        {formatFirstName(event.host?.full_name)} â€¢ {formatShortDate(event.event_date)}
                     </Text>
                     <View style={styles.cardFooter}>
                         <StatusBadge status={item.status} />
@@ -246,7 +246,7 @@ export default function TicketsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: '#FAFAFA',
     },
     header: {
         flexDirection: 'row',
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
     },
     tabSwitcher: {
         flexDirection: 'row',
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 15,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
         marginBottom: 2,
     },
     cardSubtitle: {
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#333333',
         textAlign: 'center',
         marginBottom: 8,
     },

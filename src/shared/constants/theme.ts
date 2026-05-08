@@ -1,6 +1,8 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Wellcome App — Design Tokens
+ * 
+ * Referência completa: /DESIGN.md
+ * Inspiração visual: iFood (laranja predominante, fundo claro, cards elevados).
  */
 
 const tintColorLight = '#FF8C42';
@@ -8,22 +10,23 @@ const tintColorDark = '#fff';
 
 export const Colors = {
     light: {
-        text: '#11181C',
-        background: '#fff',
+        text: '#333333',
+        background: '#FAFAFA',
         tint: tintColorLight,
         icon: '#687076',
-        tabIconDefault: '#687076',
+        tabIconDefault: '#CDCDE0',
         tabIconSelected: tintColorLight,
         primary: '#FF8C42',
+        primaryDark: '#E07830',
         secondary: '#FFF3E0',
-        border: '#eee',
+        border: '#F0F0F0',
         borderStrong: '#E0E0E0',
-        textSecondary: '#666',
-        textTertiary: '#999',
-        card: '#fff',
+        textSecondary: '#666666',
+        textTertiary: '#999999',
+        card: '#FFFFFF',
         error: '#FF3B30',
         success: '#4CAF50',
-        warning: '#FFA500',
+        warning: '#F59E0B',
         overlay: 'rgba(0,0,0,0.5)',
     },
     /** Host-mode palette — visually distinct from participant (orange) */
@@ -48,6 +51,7 @@ export const Colors = {
         tabIconDefault: '#9BA1A6',
         tabIconSelected: tintColorDark,
         primary: '#FF8C42',
+        primaryDark: '#E07830',
         secondary: '#2C2C2E',
         border: '#38383A',
         borderStrong: '#48484A',
@@ -117,4 +121,42 @@ export const BorderRadius = {
     xl: 20,
     xxl: 24,
     full: 9999,
+};
+
+/**
+ * Shadow presets — use these instead of inline shadow definitions
+ */
+export const Shadows = {
+    /** Cards, grupos de menu */
+    light: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    /** Cards de evento, modais */
+    medium: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 3,
+    },
+    /** Botão CTA primário (laranja) */
+    cta: {
+        shadowColor: '#FF8C42',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    /** Botão CTA host (emerald) */
+    ctaHost: {
+        shadowColor: '#10B981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 4,
+    },
 };

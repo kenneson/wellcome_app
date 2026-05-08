@@ -114,7 +114,7 @@ export default function JoinEventScreen() {
             // Handle 409 specifically if message matches
             if (error.message && (error.message.includes('already registered') || error.message.includes('409'))) {
                 Alert.alert(
-                    'JÃ¡ Solicitado',
+                    'Já Solicitado',
                     'Você já enviou uma solicitação para este evento.',
                     [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
                 );

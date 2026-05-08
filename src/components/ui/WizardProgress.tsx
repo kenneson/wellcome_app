@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -46,7 +46,7 @@ export function WizardProgress({ currentStep }: WizardProgressProps) {
                                     <View className="w-2.5 h-2.5 rounded-full bg-[#FF8C42]" />
                                 ) : null}
                             </View>
-                            <Text className={`text-[10px] font-medium ${isCurrent || isCompleted ? 'text-[#1A1A1A]' : 'text-gray-400'}`}>
+                            <Text className={`text-[10px] font-medium ${isCurrent || isCompleted ? 'text-[#333333]' : 'text-gray-400'}`}>
                                 {step.label}
                             </Text>
                         </View>

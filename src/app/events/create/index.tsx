@@ -1,4 +1,4 @@
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+﻿import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { SelectionSection } from '@/components/ui/SelectionSection';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
@@ -116,12 +116,12 @@ export default function EventCreateStep1() {
                     </View>
 
                     <View className="mb-4">
-                        <Text className="text-lg font-bold mb-4 text-[#1A1A1A]">Fale sobre o seu evento</Text>
+                        <Text className="text-lg font-bold mb-4 text-[#333333]">Fale sobre o seu evento</Text>
 
                         <View className="border border-gray-200 rounded-2xl bg-white mb-4" style={{ padding: isSmallScreen ? 12 : 16 }}>
                             <Text className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Título do evento</Text>
                             <TextInput
-                                className="text-base text-[#1A1A1A] font-medium"
+                                className="text-base text-[#333333] font-medium"
                                 placeholder="Ex: Jantar das arábias na casa da Ju"
                                 placeholderTextColor="#D1D5DB"
                                 value={data.details.title}
@@ -132,7 +132,7 @@ export default function EventCreateStep1() {
                         <View className="border border-gray-200 rounded-2xl bg-white" style={{ padding: isSmallScreen ? 12 : 16, minHeight: isSmallScreen ? 100 : 120 }}>
                             <Text className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Descrição do evento</Text>
                             <TextInput
-                                className="text-sm text-[#1A1A1A] leading-5"
+                                className="text-sm text-[#333333] leading-5"
                                 placeholder="Dica: Seja amigável e convidativo: conte as razões que levaram você a querer receber pessoas..."
                                 placeholderTextColor="#D1D5DB"
                                 value={data.details.description}

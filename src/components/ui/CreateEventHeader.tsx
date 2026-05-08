@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -28,10 +28,10 @@ export function CreateEventHeader({ title = "Crie seu evento", onBack }: CreateE
                 className="w-10 h-10 -ml-2 items-center justify-center"
                 activeOpacity={0.7}
             >
-                <IconSymbol name="chevron.left" size={24} color="#1A1A1A" />
+                <IconSymbol name="chevron.left" size={24} color="#333333" />
             </TouchableOpacity>
 
-            <Text className="text-[17px] font-bold text-[#1A1A1A] text-center flex-1">
+            <Text className="text-[17px] font-bold text-[#333333] text-center flex-1">
                 {title}
             </Text>
 

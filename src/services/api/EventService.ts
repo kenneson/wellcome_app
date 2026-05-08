@@ -8,7 +8,7 @@ import { API_URL } from '@/shared/config/api';
 export class EventService {
     private async getAuthHeaders(includeJsonContentType: boolean = true): Promise<Record<string, string>> {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('UsuÃ¡rio nÃ£o autenticado');
+        if (!session?.access_token) throw new Error('Usuário não autenticado');
 
         return {
             ...(includeJsonContentType ? { 'Content-Type': 'application/json' } : {}),

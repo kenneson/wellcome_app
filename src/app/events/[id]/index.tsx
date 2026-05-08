@@ -1,4 +1,4 @@
-import { Event } from '@/entities/event/types';
+﻿import { Event } from '@/entities/event/types';
 import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { ReviewList } from '@/features/reviews/ReviewList';
 import { eventService } from '@/services/api/EventService';
@@ -290,7 +290,7 @@ export default function EventDetailsScreen() {
 
                 <View className="px-5 pt-6 pb-8 -mt-6 bg-white rounded-t-[32px]">
                     {/* Title */}
-                    <Text className="text-[24px] font-bold text-[#1A1A1A] leading-tight mb-4">
+                    <Text className="text-[24px] font-bold text-[#333333] leading-tight mb-4">
                         {event.title}
                     </Text>
 
@@ -305,7 +305,7 @@ export default function EventDetailsScreen() {
                         />
                         <View className="ml-3 flex-1">
                             <View className="flex-row items-center">
-                                <Text className="text-base font-bold text-[#1A1A1A] mr-1">
+                                <Text className="text-base font-bold text-[#333333] mr-1">
                                     {hostName}
                                 </Text>
                                 <Ionicons name="checkmark-circle" size={16} color="#FF8C42" />
@@ -328,7 +328,7 @@ export default function EventDetailsScreen() {
                                     </View>
                                 </View>
                             </View>
-                            <Text className="text-base font-bold text-[#1A1A1A]">{event.maxGuests} lugares</Text>
+                            <Text className="text-base font-bold text-[#333333]">{event.maxGuests} lugares</Text>
                             <View className="flex-row items-center mt-1">
                                 <Text className="text-xs text-orange-500 font-medium mr-1">{spotsAvailable} disponíveis</Text>
                                 <Ionicons name="information-circle-outline" size={12} color="#FF8C42" />
@@ -337,27 +337,27 @@ export default function EventDetailsScreen() {
 
                         {/* Price */}
                         <View className="w-[48%] bg-gray-50 p-4 rounded-2xl justify-center">
-                            <Text className="text-[20px] font-bold text-[#1A1A1A]">{formatPrice(event.price)}</Text>
+                            <Text className="text-[20px] font-bold text-[#333333]">{formatPrice(event.price)}</Text>
                             <Text className="text-xs text-gray-500 mt-1">por convidado</Text>
                         </View>
 
                         {/* Type/Time */}
                         <View className="w-[48%] bg-gray-50 p-4 rounded-2xl">
-                            <Ionicons name="restaurant-outline" size={24} color="#1A1A1A" className="mb-3" />
-                            <Text className="text-sm font-bold text-[#1A1A1A] mb-1">
+                            <Ionicons name="restaurant-outline" size={24} color="#333333" className="mb-3" />
+                            <Text className="text-sm font-bold text-[#333333] mb-1">
                                 {event.eventType || 'Evento'}
                             </Text>
                             <Text className="text-xs text-gray-500">
                                 {event.endTime 
-                                    ? `das ${new Date(event.eventDate).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})} às ${new Date(event.endTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`
+                                    ? `das ${new Date(event.eventDate).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})} Ã s ${new Date(event.endTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`
                                     : 'Horário a definir'}
                             </Text>
                         </View>
 
                         {/* Date */}
                         <View className="w-[48%] bg-gray-50 p-4 rounded-2xl">
-                            <Ionicons name="calendar-outline" size={24} color="#1A1A1A" className="mb-3" />
-                            <Text className="text-sm font-bold text-[#1A1A1A] mb-1">
+                            <Ionicons name="calendar-outline" size={24} color="#333333" className="mb-3" />
+                            <Text className="text-sm font-bold text-[#333333] mb-1">
                                 {date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
                             </Text>
                             <Text className="text-xs text-gray-500">
@@ -370,7 +370,7 @@ export default function EventDetailsScreen() {
 
                     {/* Description */}
                     <View className="mb-8">
-                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-3">O evento</Text>
+                        <Text className="text-[18px] font-bold text-[#333333] mb-3">O evento</Text>
                         <Text className="text-base text-gray-600 leading-6">
                             {event.description}
                         </Text>
@@ -378,7 +378,7 @@ export default function EventDetailsScreen() {
 
                     {/* Menu */}
                     <View className="mb-8">
-                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-6">Cardápio</Text>
+                        <Text className="text-[18px] font-bold text-[#333333] mb-6">Cardápio</Text>
                         
                         {sortedCategories.length > 0 ? (
                             <View className="pl-2">
@@ -390,7 +390,7 @@ export default function EventDetailsScreen() {
                                         </Text>
                                         {groupedDishes[category].map((dish: any, dishIdx: number) => (
                                             <View key={dishIdx} className="mb-4 last:mb-0">
-                                                <Text className="text-base font-bold text-[#1A1A1A] mb-1">
+                                                <Text className="text-base font-bold text-[#333333] mb-1">
                                                     {dish.name}
                                                 </Text>
                                                 {dish.description && (
@@ -411,7 +411,7 @@ export default function EventDetailsScreen() {
                         <View className="bg-gray-50 rounded-xl p-4 mt-2 space-y-2">
                             {event.dietaryOptions?.map((option, idx) => (
                                 <View key={idx} className="flex-row items-center">
-                                    <Ionicons name="checkmark" size={16} color="#1A1A1A" />
+                                    <Ionicons name="checkmark" size={16} color="#333333" />
                                     <Text className="text-xs text-gray-600 ml-2 font-medium">{option}</Text>
                                 </View>
                             ))}
@@ -423,7 +423,7 @@ export default function EventDetailsScreen() {
 
                     {/* Host Full Profile */}
                     <View className="mb-8">
-                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">Seu Anfitrião(a)</Text>
+                        <Text className="text-[18px] font-bold text-[#333333] mb-4">Seu Anfitrião(a)</Text>
                         <View className="bg-[#FFF5F0] rounded-2xl p-5">
                             <View className="flex-row items-start justify-between mb-6">
                                 <View className="flex-row items-center">
@@ -434,7 +434,7 @@ export default function EventDetailsScreen() {
                                     />
                                     <View className="ml-3">
                                         <Text className="text-sm text-gray-500 mb-0.5">Olá, eu sou</Text>
-                                        <Text className="text-base font-bold text-[#1A1A1A] mb-1">
+                                        <Text className="text-base font-bold text-[#333333] mb-1">
                                             {hostName.split(' ')[0]} {hostName.split(' ')[1] || ''}
                                         </Text>
                                         {event.host?.isSuperhost && (
@@ -446,7 +446,7 @@ export default function EventDetailsScreen() {
                                 </View>
                                 <View className="bg-white px-2 py-1 rounded-lg flex-row items-center shadow-sm">
                                     <Ionicons name="star" size={14} color="#FF8C42" />
-                                    <Text className="text-xs font-bold text-[#1A1A1A] ml-1">4.9</Text>
+                                    <Text className="text-xs font-bold text-[#333333] ml-1">4.9</Text>
                                 </View>
                             </View>
 
@@ -496,7 +496,7 @@ export default function EventDetailsScreen() {
 
                     {/* Reviews Section */}
                     <View className="mb-8">
-                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">
+                        <Text className="text-[18px] font-bold text-[#333333] mb-4">
                             Avaliações ({event.reviews?.length || 0})
                         </Text>
                         
@@ -516,7 +516,7 @@ export default function EventDetailsScreen() {
 
                     {/* Location */}
                     <View className="mb-8">
-                        <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">Sobre o local</Text>
+                        <Text className="text-[18px] font-bold text-[#333333] mb-4">Sobre o local</Text>
                         
                         <TouchableOpacity 
                             className="h-[180px] bg-gray-100 rounded-2xl mb-4 overflow-hidden relative border border-gray-200"
@@ -609,7 +609,7 @@ export default function EventDetailsScreen() {
                         <View>
                             <Text className="text-[15px] text-gray-500 font-medium">Total</Text>
                             <View className="flex-row items-baseline">
-                                <Text className="text-[24px] font-bold text-[#1A1A1A]">R$ {event.price}</Text>
+                                <Text className="text-[24px] font-bold text-[#333333]">R$ {event.price}</Text>
                                 <Text className="text-[14px] text-gray-500 ml-1">/ pessoa</Text>
                             </View>
                         </View>

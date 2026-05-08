@@ -1,4 +1,4 @@
-import { Checkbox } from '@/components/ui/Checkbox';
+﻿import { Checkbox } from '@/components/ui/Checkbox';
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { DishInputCard } from '@/components/ui/DishInputCard';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -66,7 +66,7 @@ export default function EventCreateStep2() {
                 style={{ flex: 1 }}
             >
                 <View className="mb-6">
-                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
+                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#333333] mb-2 leading-tight">
                         O que será{'\n'}servido?
                     </Text>
                     <Text className="text-sm text-gray-400">
@@ -109,7 +109,7 @@ export default function EventCreateStep2() {
 
                 <View className="h-[1px] bg-gray-100 mb-6" />
 
-                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#1A1A1A] mb-4">Informações importantes</Text>
+                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#333333] mb-4">Informações importantes</Text>
 
                 <View className="gap-4">
                     <Checkbox

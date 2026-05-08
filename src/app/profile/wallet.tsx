@@ -1,4 +1,4 @@
-import { userService } from '@/services/api/UserService';
+﻿import { userService } from '@/services/api/UserService';
 import { walletService } from '@/services/api/WalletService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,7 +90,7 @@ export default function WalletScreen() {
                         try {
                             await walletService.requestWithdrawal(balance);
                             Alert.alert(
-                                '✅ Solicitação enviada!',
+                                'âœ… Solicitação enviada!',
                                 'Seu saque foi solicitado com sucesso. A equipe Wellcome irá processar em até 2 dias úteis.',
                                 [{ text: 'OK', onPress: () => loadData() }]
                             );
@@ -210,7 +210,7 @@ export default function WalletScreen() {
 
                 {!pixKey && (
                     <Text style={styles.noKeyWarning}>
-                        ⚠️ Cadastre uma chave PIX para poder solicitar saques.
+                        âš ï¸ Cadastre uma chave PIX para poder solicitar saques.
                     </Text>
                 )}
 
@@ -221,7 +221,7 @@ export default function WalletScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9F9F9' },
+    container: { flex: 1, backgroundColor: '#FAFAFA' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {
         flexDirection: 'row',

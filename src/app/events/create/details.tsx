@@ -1,4 +1,4 @@
-import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+﻿import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { useEventDetailsViewModel } from '@/features/events/create/useEventDetailsViewModel';
 import { Ionicons } from '@expo/vector-icons';
@@ -139,7 +139,7 @@ function TimeSlot({ label, time, icon, onPress, isActive, accentColor }: TimeSlo
                     {label}
                 </Text>
             </View>
-            <Text className={`font-bold ${isActive ? 'text-[#1A1A1A]' : 'text-gray-300'}`} style={{ fontSize: 22 }}>
+            <Text className={`font-bold ${isActive ? 'text-[#333333]' : 'text-gray-300'}`} style={{ fontSize: 22 }}>
                 {time}
             </Text>
         </TouchableOpacity>
@@ -172,7 +172,7 @@ function IOSPickerModal({ visible, title, value, mode, minimumDate, onConfirm, o
                         <TouchableOpacity onPress={onCancel}>
                             <Text className="text-base text-gray-500 font-medium">Cancelar</Text>
                         </TouchableOpacity>
-                        <Text className="text-base font-bold text-[#1A1A1A]">{title}</Text>
+                        <Text className="text-base font-bold text-[#333333]">{title}</Text>
                         <TouchableOpacity onPress={() => onConfirm(tempDate)}>
                             <Text className="text-base text-[#FF8C42] font-bold">Confirmar</Text>
                         </TouchableOpacity>
@@ -361,7 +361,7 @@ export default function EventCreateStep4() {
                     <View style={{ paddingHorizontal: horizontalPadding }}>
                         {/* Section Title */}
                         <Text
-                            className="font-bold text-[#1A1A1A] mb-1 mt-1"
+                            className="font-bold text-[#333333] mb-1 mt-1"
                             style={{ fontSize: isSmallScreen ? 18 : 22 }}
                         >
                             Detalhes do evento
@@ -407,7 +407,7 @@ export default function EventCreateStep4() {
                                         <Text className="text-sm font-bold text-green-600">R$</Text>
                                     </View>
                                     <TextInput
-                                        className="flex-1 text-base text-[#1A1A1A] font-semibold"
+                                        className="flex-1 text-base text-[#333333] font-semibold"
                                         placeholder="0,00"
                                         placeholderTextColor="#D1D5DB"
                                         value={vm.data.details.pricePerGuest}
@@ -426,7 +426,7 @@ export default function EventCreateStep4() {
                                         <Ionicons name="people-outline" size={16} color="#3B82F6" />
                                     </View>
                                     <TextInput
-                                        className="flex-1 text-base text-[#1A1A1A] font-semibold"
+                                        className="flex-1 text-base text-[#333333] font-semibold"
                                         placeholder="Ex: 10"
                                         placeholderTextColor="#D1D5DB"
                                         value={vm.data.details.maxGuests}
@@ -444,7 +444,7 @@ export default function EventCreateStep4() {
                                 <View className="bg-orange-100 rounded-lg p-1.5 mr-2">
                                     <Ionicons name="calendar" size={14} color="#FF8C42" />
                                 </View>
-                                <Text className="text-sm font-bold text-[#1A1A1A]">Data e horário</Text>
+                                <Text className="text-sm font-bold text-[#333333]">Data e horário</Text>
                             </View>
 
                             {/* Date Card */}
@@ -510,7 +510,7 @@ export default function EventCreateStep4() {
                                             color={deadlineDate ? '#FF8C42' : '#9CA3AF'}
                                         />
                                     </View>
-                                    <Text className={`text-base font-medium ${deadlineDate ? 'text-[#1A1A1A]' : 'text-gray-400'}`}>
+                                    <Text className={`text-base font-medium ${deadlineDate ? 'text-[#333333]' : 'text-gray-400'}`}>
                                         {deadlineLabel}
                                     </Text>
                                 </View>
@@ -524,7 +524,7 @@ export default function EventCreateStep4() {
                                 <View className="flex-row items-center mt-2 ml-1">
                                     <Ionicons name="warning-outline" size={14} color="#F59E0B" />
                                     <Text className="text-xs text-amber-500 ml-1 font-medium">
-                                        O prazo deve ser anterior à data do evento
+                                        O prazo deve ser anterior Ã  data do evento
                                     </Text>
                                 </View>
                             )}

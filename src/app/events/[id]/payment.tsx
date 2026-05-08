@@ -1,4 +1,4 @@
-import { registrationService } from '@/services/api/RegistrationService';
+﻿import { registrationService } from '@/services/api/RegistrationService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     },
     qrcodeContainer: {
         alignItems: 'center',
-        backgroundColor: '#f9f9f9',
+        backgroundColor: '#FAFAFA',
         borderRadius: 16,
         padding: 24,
         width: '100%',

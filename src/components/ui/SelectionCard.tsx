@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Pressable, Text, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -44,7 +44,7 @@ export function SelectionCard({ label, description, selected, onPress, style, th
                 >
                     <View className="items-start">
                         <Text
-                            className={`text-[15px] font-bold mb-1 ${selected ? 'text-[#1A1A1A]' : 'text-gray-600'}`}
+                            className={`text-[15px] font-bold mb-1 ${selected ? 'text-[#333333]' : 'text-gray-600'}`}
                         >
                             {label}
                         </Text>

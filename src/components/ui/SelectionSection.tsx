@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+﻿import React, { useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { SelectionCard } from '@/components/ui/SelectionCard';
 import { SelectionPill } from '@/components/ui/SelectionPill';
@@ -34,7 +34,7 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
 
     return (
         <View>
-            <Text className="text-lg font-bold mb-2 mt-2.5 text-[#1A1A1A]">{title}</Text>
+            <Text className="text-lg font-bold mb-2 mt-2.5 text-[#333333]">{title}</Text>
             {subtitle && <Text className="text-sm text-gray-500 mb-4">{subtitle}</Text>}
 
             <View className={`flex-row flex-wrap ${variant === 'grid' ? 'justify-between' : 'gap-2.5'}`}>
