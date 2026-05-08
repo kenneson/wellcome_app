@@ -26,6 +26,20 @@ export const Colors = {
         warning: '#FFA500',
         overlay: 'rgba(0,0,0,0.5)',
     },
+    /** Host-mode palette — visually distinct from participant (orange) */
+    host: {
+        primary: '#1E293B',       // Slate-800
+        accent: '#10B981',        // Emerald-500
+        accentLight: '#F0FDF4',   // Green-50
+        background: '#F8FAFC',    // Slate-50
+        card: '#FFFFFF',
+        headerBg: '#0F172A',      // Slate-900
+        headerText: '#FFFFFF',
+        textPrimary: '#0F172A',
+        textSecondary: '#64748B', // Slate-500
+        border: '#E2E8F0',       // Slate-200
+        pendingBadge: '#F59E0B',  // Amber-500
+    },
     dark: {
         text: '#ECEDEE',
         background: '#151718',

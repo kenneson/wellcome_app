@@ -2,7 +2,6 @@ import { EnhancedEventCard } from '@/components/ui/EnhancedEventCard';
 import { FilterCriteria, FilterModal } from '@/components/ui/events/FilterModal';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { QuickStats } from '@/components/ui/QuickStats';
-import { SideMenu } from '@/components/ui/SideMenu';
 import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,8 +32,6 @@ export default function HomeScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filters, setFilters] = useState<FilterCriteria>({});
 
-  // Side Menu State
-  const [menuVisible, setMenuVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -349,15 +346,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header Customizado */}
       <View style={styles.mainHeader}>
-        <TouchableOpacity 
-          onPress={() => setMenuVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Abrir menu de navegação"
-          accessibilityHint="Toque para ver opções de navegação e configurações"
-          style={styles.headerButton}
-        >
-          <Ionicons name="menu" size={Dimensions.icon.xlarge} color="#FFF" />
-        </TouchableOpacity>
         <Image
           source={require('../../../assets/images/logo.png')}
           style={styles.logoImage}
@@ -367,13 +355,13 @@ export default function HomeScreen() {
           accessibilityLabel="Logo Wellcome"
         />
         <TouchableOpacity 
-          onPress={() => router.push('/(tabs)/profile')}
+          onPress={() => router.push('/notifications')}
           accessibilityRole="button"
-          accessibilityLabel="Ir para perfil"
-          accessibilityHint="Toque para ver seu perfil e configurações"
+          accessibilityLabel="Notificações"
+          accessibilityHint="Toque para ver suas notificações"
           style={styles.headerButton}
         >
-          <Ionicons name="person-circle-outline" size={30} color="#FFF" />
+          <Ionicons name="notifications-outline" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
@@ -492,18 +480,6 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 30 + insets.bottom }]}
-        onPress={() => router.push('/events/create')}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Criar novo evento"
-        accessibilityHint="Toque para criar um novo evento gastronômico"
-      >
-        <Ionicons name="add" size={32} color="#FFF" />
-      </TouchableOpacity>
-
-      {/* Manual Location Modal */}
       {/* Location Autocomplete Modal */}
       <LocationAutocomplete
         visible={showLocationModal}
@@ -513,13 +489,6 @@ export default function HomeScreen() {
         asModal={true}
         value={location || ''}
         placeholder="Digite sua cidade (ex: São Paulo)"
-      />
-
-      {/* Side Menu */}
-      <SideMenu
-        visible={menuVisible}
-        onClose={() => setMenuVisible(false)}
-        user={currentUser}
       />
 
       <FilterModal
@@ -660,22 +629,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFF',
     fontWeight: '600',
-  },
-  // Floating Action Button
-  fab: {
-    position: 'absolute',
-    right: Spacing.xl,
-    width: Dimensions.fab.size,
-    height: Dimensions.fab.size,
-    borderRadius: Dimensions.fab.borderRadius,
-    backgroundColor: Colors.light.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   emptyStateContainer: {
     alignItems: 'center',
