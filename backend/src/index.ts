@@ -534,6 +534,13 @@ const start = async () => {
                             }
                         }
                     },
+                    401: {
+                        description: 'Unauthorized',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    },
                     403: {
                         description: 'Forbidden - only the host can view registrations',
                         type: 'object',
