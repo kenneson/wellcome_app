@@ -573,6 +573,12 @@ const start = async () => {
                 const registrations = await eventRegistrationRepository.findByEventIdWithUser(eventId);
                 return reply.send(registrations);
             } catch (error) {
+                if (error instanceof ForbiddenRequestError) {
+                    return reply.code(403).send({ message: error.message });
+                }
+                if (error && typeof error === 'object' && 'name' in error && (error as any).name === 'UnauthorizedRequestError') {
+                    return reply.code(401).send({ message: (error as any).message });
+                }
                 if (!isProd) console.error('Error fetching registrations:', error);
                 return reply.code(500).send({ message: 'Internal server error' });
             }

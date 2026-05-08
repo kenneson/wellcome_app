@@ -26,6 +26,7 @@ async function resolveAuthenticatedUserContext(accessToken: string): Promise<Aut
     const { data, error } = await supabase.auth.getUser(accessToken);
 
     if (error || !data.user?.id) {
+        console.error('[Auth] Supabase auth failed:', error?.message || 'No user ID returned');
         throw new UnauthorizedRequestError('Session expired or invalid');
     }
 
@@ -35,6 +36,7 @@ async function resolveAuthenticatedUserContext(accessToken: string): Promise<Aut
     });
 
     if (!profile) {
+        console.error('[Auth] User profile not found for ID:', data.user.id);
         throw new UnauthorizedRequestError('User profile not found');
     }
 
@@ -47,13 +49,20 @@ async function resolveAuthenticatedUserContext(accessToken: string): Promise<Aut
 function getBearerToken(request: FastifyRequest): string {
     const authorizationHeader = request.headers.authorization;
 
-    if (!authorizationHeader?.startsWith('Bearer ')) {
+    if (!authorizationHeader) {
+        console.error('[Auth] Missing authorization header. Headers received:', request.headers);
+        throw new UnauthorizedRequestError();
+    }
+
+    if (!authorizationHeader.toLowerCase().startsWith('bearer ')) {
+        console.error('[Auth] Invalid authorization header format. Received:', authorizationHeader);
         throw new UnauthorizedRequestError();
     }
 
     const accessToken = authorizationHeader.slice(7).trim();
 
     if (!accessToken) {
+        console.error('[Auth] Empty bearer token received.');
         throw new UnauthorizedRequestError();
     }
 
