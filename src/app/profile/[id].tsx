@@ -1,11 +1,15 @@
+import { ReportSheet } from '@/components/ui/ReportSheet';
+import { moderationService } from '@/services/api/ModerationService';
 import { UserProfile, userService } from '@/services/api/UserService';
+import { supabase } from '@/shared/lib/supabase';
+import { queryClient } from '@/shared/lib/react-query';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PublicProfileScreen() {
@@ -13,10 +17,48 @@ export default function PublicProfileScreen() {
     const router = useRouter();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
+    const [reportVisible, setReportVisible] = useState(false);
+
+    const profileId = id as string;
+    const isOwnProfile = !!currentUserId && currentUserId === profileId;
 
     useEffect(() => {
         if (id) fetchProfile();
     }, [id]);
+
+    useEffect(() => {
+        (async () => {
+            const { data } = await supabase.auth.getSession();
+            setCurrentUserId(data.session?.user?.id ?? null);
+            if (profileId) {
+                const blocked = await moderationService.listBlocked();
+                setIsBlocked(blocked.includes(profileId));
+            }
+        })();
+    }, [profileId]);
+
+    async function toggleBlock() {
+        try {
+            if (isBlocked) {
+                await moderationService.unblock(profileId);
+                setIsBlocked(false);
+            } else {
+                await moderationService.block(profileId);
+                setIsBlocked(true);
+            }
+            setMenuVisible(false);
+            queryClient.invalidateQueries({ queryKey: ['blockedIds'] });
+            Alert.alert(
+                isBlocked ? 'Usuário desbloqueado' : 'Usuário bloqueado',
+                isBlocked ? '' : 'Você não verá mais o conteúdo desse usuário.',
+            );
+        } catch (error: any) {
+            Alert.alert('Erro', error?.message || 'Não foi possível concluir a ação.');
+        }
+    }
 
     async function fetchProfile() {
         try {
@@ -65,7 +107,13 @@ export default function PublicProfileScreen() {
                     <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Perfil</Text>
-                <View style={{ width: 32 }} />
+                {!isOwnProfile ? (
+                    <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.backButton}>
+                        <Ionicons name="ellipsis-horizontal" size={24} color="#1A1A1A" />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={{ width: 32 }} />
+                )}
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -150,6 +198,32 @@ export default function PublicProfileScreen() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* Menu de moderação */}
+            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+                <Pressable style={styles.menuBackdrop} onPress={() => setMenuVisible(false)}>
+                    <View style={styles.menu}>
+                        <TouchableOpacity style={styles.menuItem} onPress={toggleBlock}>
+                            <Ionicons name={isBlocked ? 'lock-open-outline' : 'ban-outline'} size={20} color="#1A1A1A" />
+                            <Text style={styles.menuText}>{isBlocked ? 'Desbloquear usuário' : 'Bloquear usuário'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => { setMenuVisible(false); setReportVisible(true); }}
+                        >
+                            <Ionicons name="flag-outline" size={20} color="#DC2626" />
+                            <Text style={[styles.menuText, { color: '#DC2626' }]}>Denunciar usuário</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </Modal>
+
+            <ReportSheet
+                visible={reportVisible}
+                onClose={() => setReportVisible(false)}
+                targetType="USER"
+                targetId={profileId}
+            />
         </SafeAreaView>
     );
 }
@@ -284,5 +358,35 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#9CA3AF',
+    },
+    menuBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-end',
+        paddingTop: 60,
+        paddingRight: 16,
+    },
+    menu: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 4,
+        minWidth: 220,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    menuText: {
+        fontSize: 15,
+        color: '#1A1A1A',
     },
 });

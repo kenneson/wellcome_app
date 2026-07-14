@@ -1,3 +1,4 @@
+import { ReportSheet } from '@/components/ui/ReportSheet';
 import { Event } from '@/entities/event/types';
 import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { ReviewList } from '@/features/reviews/ReviewList';
@@ -48,6 +49,7 @@ export default function EventDetailsScreen() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [submittingReview, setSubmittingReview] = useState(false);
     const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
+    const [reportVisible, setReportVisible] = useState(false);
 
     const isPastEvent = React.useMemo(() => {
         if (!event) return false;
@@ -278,13 +280,24 @@ export default function EventDetailsScreen() {
                         >
                             <Ionicons name="chevron-back" size={24} color="#FF8C42" />
                         </TouchableOpacity>
-                        <TouchableOpacity 
-                            onPress={handleShare} 
-                            className="w-10 h-10 bg-white/90 rounded-full items-center justify-center shadow-sm"
-                            activeOpacity={0.8}
-                        >
-                            <Ionicons name="share-outline" size={24} color="#FF8C42" />
-                        </TouchableOpacity>
+                        <View className="flex-row gap-2">
+                            {!isHost && (
+                                <TouchableOpacity
+                                    onPress={() => setReportVisible(true)}
+                                    className="w-10 h-10 bg-white/90 rounded-full items-center justify-center shadow-sm"
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons name="flag-outline" size={22} color="#DC2626" />
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity
+                                onPress={handleShare}
+                                className="w-10 h-10 bg-white/90 rounded-full items-center justify-center shadow-sm"
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="share-outline" size={24} color="#FF8C42" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 
@@ -626,6 +639,13 @@ export default function EventDetailsScreen() {
                     </View>
                 </View>
             )}
+
+            <ReportSheet
+                visible={reportVisible}
+                onClose={() => setReportVisible(false)}
+                targetType="EVENT"
+                targetId={id as string}
+            />
         </View>
     );
 }
