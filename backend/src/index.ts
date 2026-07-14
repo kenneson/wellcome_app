@@ -28,6 +28,7 @@ import { PrismaEventQuestionRepository } from './infrastructure/repositories/Pri
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
+import { PrismaModerationRepository } from './infrastructure/repositories/PrismaModerationRepository';
 import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
 import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
@@ -36,6 +37,7 @@ import { AdminController } from './presentation/http/controllers/AdminController
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
+import { ModerationController } from './presentation/http/controllers/ModerationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
 import { PixPaymentController } from './presentation/http/controllers/PixPaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
@@ -126,6 +128,7 @@ const start = async () => {
         const userRepository = new PrismaUserRepository();
         const { notificationService } = require('./application/services/NotificationService'); // Import service
         const notificationRepository = new PrismaNotificationRepository();
+        const moderationRepository = new PrismaModerationRepository();
         const sendNotificationUseCase = new SendNotificationUseCase(notificationRepository, notificationService);
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
         const eventReviewRepository = new PrismaEventReviewRepository();
@@ -172,6 +175,7 @@ const start = async () => {
         );
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
+        const moderationController = new ModerationController(moderationRepository);
         const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
         const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
         const adminController = new AdminController();
@@ -365,6 +369,61 @@ const start = async () => {
                 }
             }
         }, (req, reply) => reviewController.create(req, reply));
+
+        // --- Moderação: denúncia e bloqueio (Apple 1.2 / Google UGC) ---
+        fastify.post('/reports', {
+            schema: {
+                summary: 'Report content',
+                description: 'Denuncia um evento, usuário ou avaliação',
+                tags: ['Moderation'],
+                body: {
+                    type: 'object',
+                    required: ['targetType', 'targetId', 'reason'],
+                    properties: {
+                        targetType: { type: 'string', enum: ['EVENT', 'USER', 'REVIEW'] },
+                        targetId: { type: 'string' },
+                        reason: { type: 'string', enum: ['SPAM', 'HARASSMENT', 'INAPPROPRIATE_CONTENT', 'SCAM', 'VIOLENCE', 'OTHER'] },
+                        details: { type: 'string' },
+                    },
+                },
+            },
+        }, (req, reply) => moderationController.createReport(req, reply));
+
+        fastify.get('/blocks', {
+            schema: { summary: 'List blocked users', tags: ['Moderation'] },
+        }, (req, reply) => moderationController.listBlocks(req, reply));
+
+        fastify.post('/blocks', {
+            schema: {
+                summary: 'Block a user',
+                tags: ['Moderation'],
+                body: {
+                    type: 'object',
+                    required: ['blockedId'],
+                    properties: { blockedId: { type: 'string' } },
+                },
+            },
+        }, (req, reply) => moderationController.block(req, reply));
+
+        fastify.delete('/blocks/:blockedId', {
+            schema: { summary: 'Unblock a user', tags: ['Moderation'] },
+        }, (req, reply) => moderationController.unblock(req, reply));
+
+        fastify.get('/admin/reports', {
+            schema: { summary: 'List reports (admin)', tags: ['Moderation', 'Admin'] },
+        }, (req, reply) => moderationController.listReports(req, reply));
+
+        fastify.post('/admin/reports/:id/resolve', {
+            schema: {
+                summary: 'Resolve a report (admin)',
+                tags: ['Moderation', 'Admin'],
+                body: {
+                    type: 'object',
+                    required: ['status'],
+                    properties: { status: { type: 'string', enum: ['RESOLVED', 'DISMISSED'] } },
+                },
+            },
+        }, (req, reply) => moderationController.resolveReport(req, reply));
 
 
         fastify.get('/', {
