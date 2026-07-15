@@ -56,13 +56,23 @@
         </div>
 
         <div class="p-6">
-          <p v-if="report.details" class="text-sm text-slate-300 mb-4">{{ report.details }}</p>
-          <p v-else class="text-sm text-slate-500 italic mb-4">Sem descrição adicional.</p>
+          <div class="mb-4">
+            <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
+              {{ targetLabel(report.targetType) }} denunciado
+            </p>
+            <p class="text-base font-semibold text-white">{{ report.targetLabel || '—' }}</p>
+            <p v-if="report.targetDetail" class="text-sm text-slate-400">{{ report.targetDetail }}</p>
+          </div>
 
-          <div class="text-xs text-slate-500 space-y-1 mb-4 font-mono">
-            <div>Alvo (ID): <span class="text-slate-400">{{ report.targetId }}</span></div>
-            <div>Denunciante: <span class="text-slate-400">{{ report.reporterId }}</span></div>
+          <div v-if="report.details" class="bg-slate-800/40 rounded-lg p-3 mb-4">
+            <p class="text-xs text-slate-500 mb-1">Descrição do denunciante</p>
+            <p class="text-sm text-slate-300">{{ report.details }}</p>
+          </div>
+
+          <div class="text-xs text-slate-500 space-y-1 mb-4">
+            <div>Denunciado por: <span class="text-slate-300">{{ report.reporterName || '(sem nome)' }}</span></div>
             <div>Recebida: {{ new Date(report.createdAt).toLocaleString('pt-BR') }}</div>
+            <div class="font-mono text-slate-600">Alvo ID: {{ report.targetId }}</div>
           </div>
 
           <div v-if="report.status === 'PENDING'" class="flex gap-3">

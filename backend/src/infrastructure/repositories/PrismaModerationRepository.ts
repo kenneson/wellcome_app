@@ -1,5 +1,5 @@
 import { Report, ReportStatus } from '@prisma/client';
-import { CreateReportDTO, ModerationRepository } from '../../domain/repositories/ModerationRepository';
+import { CreateReportDTO, ModerationRepository, ReportWithContext } from '../../domain/repositories/ModerationRepository';
 import { prisma } from '../database/prismaClient';
 
 export class PrismaModerationRepository implements ModerationRepository {
@@ -15,10 +15,51 @@ export class PrismaModerationRepository implements ModerationRepository {
         });
     }
 
-    async listReports(status?: ReportStatus): Promise<Report[]> {
-        return prisma.report.findMany({
+    async listReports(status?: ReportStatus): Promise<ReportWithContext[]> {
+        const reports = await prisma.report.findMany({
             where: status ? { status } : undefined,
             orderBy: { createdAt: 'desc' },
+            include: { reporter: { select: { fullName: true } } },
+        });
+
+        // Resolve o alvo por tipo (targetId é polimórfico, sem FK). Batch por tipo.
+        const idsOf = (t: string) => reports.filter((r) => r.targetType === t).map((r) => r.targetId);
+        const [events, users, reviews] = await Promise.all([
+            prisma.event.findMany({
+                where: { id: { in: idsOf('EVENT') } },
+                select: { id: true, title: true, host: { select: { fullName: true } } },
+            }),
+            prisma.user.findMany({
+                where: { id: { in: idsOf('USER') } },
+                select: { id: true, fullName: true },
+            }),
+            prisma.eventReview.findMany({
+                where: { id: { in: idsOf('REVIEW') } },
+                select: { id: true, comment: true, user: { select: { fullName: true } }, event: { select: { title: true } } },
+            }),
+        ]);
+
+        const eventMap = new Map(events.map((e) => [e.id, e]));
+        const userMap = new Map(users.map((u) => [u.id, u]));
+        const reviewMap = new Map(reviews.map((r) => [r.id, r]));
+
+        return reports.map((r) => {
+            let targetLabel = '';
+            let targetDetail = '';
+            if (r.targetType === 'EVENT') {
+                const e = eventMap.get(r.targetId);
+                targetLabel = e?.title ?? '(evento removido)';
+                targetDetail = e?.host?.fullName ? `Anfitrião: ${e.host.fullName}` : '';
+            } else if (r.targetType === 'USER') {
+                targetLabel = userMap.get(r.targetId)?.fullName ?? '(usuário removido)';
+            } else if (r.targetType === 'REVIEW') {
+                const rv = reviewMap.get(r.targetId);
+                targetLabel = rv?.comment || '(avaliação sem texto)';
+                const author = rv?.user?.fullName;
+                targetDetail = author ? `Autor: ${author}${rv?.event?.title ? ` · ${rv.event.title}` : ''}` : '';
+            }
+            const { reporter, ...rest } = r;
+            return { ...rest, reporterName: reporter?.fullName ?? null, targetLabel, targetDetail };
         });
     }
 
