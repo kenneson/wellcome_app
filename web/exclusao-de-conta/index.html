@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exclusão de conta — Wellcome</title>
+    <meta name="description" content="Como excluir sua conta e seus dados do aplicativo Wellcome.">
+    <style>
+        :root { --brand: #FF8C42; --ink: #1A1A1A; --muted: #6B7280; --line: #F0F0F0; --bg: #FFFFFF; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--ink); background: #FAFAFA; line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 64px; }
+        header { text-align: center; padding: 40px 0 28px; }
+        .logo {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 56px; height: 56px; border-radius: 16px;
+            background: var(--brand); color: #fff; font-size: 26px; font-weight: 800;
+            margin-bottom: 16px;
+        }
+        h1 { font-size: 26px; letter-spacing: -0.02em; }
+        header p { color: var(--muted); margin-top: 6px; }
+        .card {
+            background: var(--bg); border: 1px solid #EDEDED; border-radius: 16px;
+            padding: 24px; margin-top: 20px;
+        }
+        h2 { font-size: 18px; margin-bottom: 10px; }
+        h2 .step {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px; border-radius: 999px; background: var(--brand);
+            color: #fff; font-size: 14px; font-weight: 700; margin-right: 10px;
+        }
+        p { color: #333; margin-bottom: 10px; }
+        ul { margin: 8px 0 4px 22px; color: #333; }
+        li { margin-bottom: 6px; }
+        .muted { color: var(--muted); font-size: 14px; }
+        .callout {
+            background: #FFF7ED; border: 1px solid #FFE2C4; border-radius: 12px;
+            padding: 14px 16px; margin: 14px 0 4px; font-size: 14px; color: #7c4a1e;
+        }
+        a { color: var(--brand); font-weight: 600; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .mail {
+            display: inline-block; margin-top: 8px; background: var(--brand); color: #fff;
+            padding: 12px 20px; border-radius: 12px; font-weight: 700;
+        }
+        .mail:hover { text-decoration: none; opacity: 0.92; }
+        footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 32px; }
+        @media (prefers-color-scheme: dark) {
+            body { background: #0E0E10; color: #F3F4F6; }
+            .card { background: #17171A; border-color: #26262B; }
+            p, li, ul { color: #D1D5DB; }
+            .callout { background: #2A1D10; border-color: #4a341c; color: #f0c99a; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <div class="logo">W</div>
+            <h1>Exclusão de conta</h1>
+            <p>Aplicativo Wellcome</p>
+        </header>
+
+        <div class="card">
+            <h2><span class="step">1</span>Excluir pelo aplicativo</h2>
+            <p>A forma mais rápida de excluir sua conta é dentro do próprio app:</p>
+            <ul>
+                <li>Abra o <strong>Wellcome</strong> e faça login.</li>
+                <li>Acesse o <strong>menu / seu perfil</strong>.</li>
+                <li>Toque em <strong>Excluir conta</strong> e confirme.</li>
+            </ul>
+            <div class="callout">
+                A exclusão só é concluída se sua conta não tiver pendências. Antes de excluir, resolva:
+                saldo na carteira deve estar <strong>zerado</strong>, sem <strong>eventos futuros</strong> criados por você,
+                sem <strong>inscrições ativas</strong> em eventos futuros e sem <strong>saque pendente</strong>.
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span class="step">2</span>Não consegue acessar o app?</h2>
+            <p>Se você não tem mais acesso ao aplicativo, pode solicitar a exclusão por e-mail. Envie um pedido a partir do e-mail cadastrado na sua conta:</p>
+            <a class="mail" href="mailto:wellcomeappdesenvolvedor@gmail.com?subject=Solicita%C3%A7%C3%A3o%20de%20exclus%C3%A3o%20de%20conta%20-%20Wellcome">Solicitar exclusão por e-mail</a>
+            <p class="muted" style="margin-top:12px;">Processamos as solicitações em até <strong>30 dias</strong>. Podemos pedir uma confirmação para verificar sua identidade antes de excluir.</p>
+        </div>
+
+        <div class="card">
+            <h2>Quais dados são excluídos</h2>
+            <p>Ao excluir a conta, removemos permanentemente os seus dados pessoais, incluindo:</p>
+            <ul>
+                <li>Nome, foto, biografia, ocupação, cidade e demais dados do perfil;</li>
+                <li>E-mail, telefone e credenciais de acesso (login);</li>
+                <li>Chave PIX e dados da carteira;</li>
+                <li>Documento e selfie enviados na verificação de identidade (KYC);</li>
+                <li>Tokens de notificação e notificações.</li>
+            </ul>
+            <p class="muted" style="margin-top:12px;">
+                Registros necessários por obrigação legal ou fiscal (por exemplo, comprovantes de transações de pagamento)
+                podem ser mantidos de forma desvinculada da sua identidade pelo prazo exigido pela legislação. Avaliações e
+                históricos de eventos passados deixam de ser associados a você.
+            </p>
+        </div>
+
+        <footer>
+            <p>Wellcome · Dúvidas sobre privacidade e dados: <a href="mailto:wellcomeappdesenvolvedor@gmail.com">wellcomeappdesenvolvedor@gmail.com</a></p>
+        </footer>
+    </div>
+</body>
+</html>
