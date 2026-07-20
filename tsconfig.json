@@ -17,6 +17,10 @@
   ],
   "exclude": [
     "node_modules",
-    "backend"
+    "backend",
+    "admin",
+    "supabase",
+    "web",
+    "tools"
   ]
 }

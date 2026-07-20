@@ -15,9 +15,9 @@ The frontend is built with **Expo (React Native)** using **Expo Router** for nav
 ### Key Technologies
 - **Framework**: React Native with Expo
 - **Routing**: Expo Router (File-system based)
-- **State Management**: 
+- **State Management**:
   - **Server State**: TanStack Query (React Query)
-  - **Global Client State**: Zustand
+  - **Client State**: React Context (`src/shared/context`, `src/context`)
 - **Styling**: NativeWind (Tailwind CSS)
 
 ### Layered Structure
@@ -25,12 +25,22 @@ The frontend is built with **Expo (React Native)** using **Expo Router** for nav
 ![Frontend Architecture](assets/docs/images/frontend-arch.png)
 
 ### Directory Structure Explanation
-- **`app/`**: Contains screens and routing logic.
-- **`components/`**: Reusable UI components (dumb components).
-- **`features/`**: Feature-specific components (smart components).
-- **`hooks/`**: Custom hooks for logic reuse.
-- **`services/`**: API calls and external service integrations.
-- **`stores/`**: Global state management.
+
+Todo o código do app vive em `src/` (alias `@/*` → `./src/*`).
+
+- **`app/`**: Telas e rotas (Expo Router, file-system based).
+- **`components/ui/`**: Componentes da aplicação. Alguns são adapters que
+  embrulham a lib em `shared/ui` mapeando variants/tema do app.
+- **`shared/`**: Base transversal — `ui/` (lib de componentes em atomic
+  design), `constants/theme.ts`, `context/`, `lib/`, `config/`, `hooks/`.
+- **`entities/`**: Tipos do domínio (Event, Registration, Review).
+- **`features/`**: Hooks de caso de uso / view-models de fluxos específicos.
+- **`services/api/`**: Clientes HTTP por recurso.
+- **`hooks/`**, **`utils/`**: Hooks e helpers globais.
+
+> A divisão `entities` / `features` / `shared` é inspirada em Feature-Sliced
+> Design, mas aplicada de forma parcial e sem enforcement. Não há linter de
+> camadas — trate como organização, não como regra.
 
 ## Backend Architecture
 
