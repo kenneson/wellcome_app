@@ -3,17 +3,12 @@ WORKDIR /app
 ENV CI=1
 ENV EXPO_NO_TELEMETRY=1
 
-# Instalar 'expect' para forçar output de terminal (QR Code/URL)
-RUN apt-get update && apt-get install -y expect && rm -rf /var/lib/apt/lists/*
-
 COPY package*.json ./
 RUN npm ci
 COPY . .
-COPY entrypoint.sh .
-COPY print-url.js .
-RUN chmod +x entrypoint.sh
 
-# Expor porta 80 para padrão EasyPanel (Fake Server) e 8081 para Expo
-EXPOSE 80 8081
+EXPOSE 8081
 
-CMD ["./entrypoint.sh"]
+# REACT_NATIVE_PACKAGER_HOSTNAME (definido no EasyPanel) faz o Metro anunciar
+# o host publico no manifesto. Sem ele o Expo Go recebe o IP interno do container.
+CMD ["npx", "expo", "start", "--go", "--port", "8081"]
