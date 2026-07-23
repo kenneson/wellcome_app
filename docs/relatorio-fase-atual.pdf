@@ -1,0 +1,462 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3717 >>
+stream
+q
+1 w
+0.1 0.11 0.13 rg
+0 676.89 595.28 165 re f
+Q
+BT /F2 11 Tf 1 0.42 0.16 rg 48 783.89 Td (RELATÓRIO DE FASE) Tj ET
+BT /F2 26 Tf 1 1 1 rg 48 753.89 Td (Wellcome: situação atual do projeto) Tj ET
+BT /F1 12 Tf 0.88 0.88 0.88 rg 48 725.89 Td (O que está pronto e o que falta para a primeira versão nas lojas) Tj ET
+BT /F1 8.5 Tf 0.74 0.74 0.74 rg 48 696.89 Td (Preparado em 02/07/2026 · atualiza o relatório de 29/04/2026) Tj ET
+q
+0.5 w
+1 0.93 0.88 rg
+1 0.78 0.65 RG
+48 571.89 156 78 re B
+Q
+BT /F2 9 Tf 1 0.42 0.16 rg 62 625.89 Td (Fase atual) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 62 597.89 Td (Pré-lançamento) Tj ET
+q
+0.5 w
+0.9 0.95 1 rg
+0.74 0.84 0.95 RG
+220 571.89 156 78 re B
+Q
+BT /F2 9 Tf 0.12 0.36 0.68 rg 234 625.89 Td (Prontidão para loja) Tj ET
+BT /F2 20 Tf 0.1 0.11 0.13 rg 234 597.89 Td (~65%) Tj ET
+q
+0.5 w
+0.9 0.97 0.93 rg
+0.7 0.86 0.72 RG
+392 571.89 156 78 re B
+Q
+BT /F2 9 Tf 0.12 0.48 0.22 rg 406 625.89 Td (Esforço restante) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 406 597.89 Td (3 a 5 semanas) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 48 526.89 Td (Leitura executiva) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 504.89 Td (O produto está funcionalmente completo: cadastro e login, criação e descoberta de eventos, inscrições com) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 490.69 Td (pagamento PIX, ingressos com QR code e check-in, avaliações, notificações, carteira com saques, verificação de) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 476.49 Td (identidade \(KYC\) e painel administrativo. Desde o último relatório, a principal evolução foi o endurecimento de) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 462.29 Td (segurança do backend. O trabalho restante não é desenvolvimento de funcionalidades: é a camada de) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 448.09 Td (conformidade legal, moderação e materiais de loja exigida por Apple e Google.) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 48 409.89 Td (O que mudou desde 29/04/2026) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 389.89 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 389.89 Td (Todas as rotas do backend passaram a exigir token de sessão válido: o servidor não confia mais em identidades enviadas) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 377.48 Td (pelo aplicativo.) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 360.07 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 360.07 Td (Verificação de propriedade adicionada em eventos, inscrições, ingressos, saques, avaliações e notificações: cada) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 347.67 Td (usuário só altera o que é dele.) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 330.26 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 330.26 Td (Papel de administrador criado no banco e exigido nas rotas administrativas; painel admin ganhou tela de login própria.) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 312.85 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 312.85 Td (Chave privilegiada \(service role\) removida do painel administrativo: o navegador só usa a chave pública.) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 295.44 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 295.44 Td (Certificado PIX retirado do repositório de código.) Tj ET
+q
+0.4 w
+0.96 0.94 0.91 rg
+0.84 0.84 0.84 RG
+48 206.03 499.28 58 re B
+Q
+BT /F2 10 Tf 1 0.42 0.16 rg 64 244.03 Td (Ponto de atenção) Tj ET
+BT /F1 9 Tf 0.33 0.36 0.4 rg 64 226.03 Td (O projeto está sem alterações desde 29/04/2026 \(cerca de 2 meses\). O prazo de 3 a 5 semanas conta a partir da) Tj ET
+BT /F1 9 Tf 0.33 0.36 0.4 rg 64 214.03 Td (retomada do trabalho, não a partir de hoje.) Tj ET
+q
+0.84 0.84 0.84 RG
+0.5 w
+48 36.89 m 547.28 36.89 l S
+Q
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 21.89 Td (Documento executivo para planejamento de publicação. Valores em USD/BRL são estimativas e podem variar.) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 4180 >>
+stream
+q
+1 w
+0.1 0.11 0.13 rg
+0 787.89 595.28 54 re f
+Q
+BT /F2 15 Tf 1 1 1 rg 48 807.89 Td (Wellcome) Tj ET
+BT /F1 9.5 Tf 0.88 0.88 0.88 rg 130 807.89 Td (Estado do produto) Tj ET
+BT /F1 8.5 Tf 0.78 0.78 0.78 rg 517.28 807.89 Td (Página 2) Tj ET
+BT /F2 18 Tf 0.1 0.11 0.13 rg 48 757.89 Td (Funcionalidades entregues) Tj ET
+BT /F2 11 Tf 1 0.42 0.16 rg 48 727.89 Td (Aplicativo \(Android e iOS\)) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 709.89 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 709.89 Td (Cadastro e login com e-mail e Google.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 693.01 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 693.01 Td (Criação de eventos em etapas: detalhes, cardápio, local e) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 681.13 Td (configurações.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 664.25 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 664.25 Td (Descoberta de eventos, inscrição e pagamento via PIX.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 647.37 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 647.37 Td (Ingresso com QR code e scanner de check-in para o) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 635.49 Td (anfitrião.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 618.61 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 618.61 Td (Avaliações de eventos, notificações push e perfil público.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 601.73 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 601.73 Td (Carteira do anfitrião com chave PIX e saques.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 584.85 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 584.85 Td (Verificação de identidade \(KYC\) com documento e selfie.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 48 567.97 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 60 567.97 Td (Exclusão de conta dentro do aplicativo.) Tj ET
+BT /F2 11 Tf 1 0.42 0.16 rg 307.64 727.89 Td (Plataforma e operação) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 307.64 709.89 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 709.89 Td (Backend próprio \(Node/Fastify\) com autenticação e) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 698.01 Td (controle de acesso por papel.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 307.64 681.13 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 681.13 Td (Pagamentos e saques PIX integrados ao provedor Efí, com) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 669.25 Td (webhooks.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 307.64 652.37 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 652.37 Td (Painel administrativo web com login, aprovação de KYC e) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 640.49 Td (gestão financeira.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 307.64 623.61 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 623.61 Td (Banco e autenticação no Supabase; armazenamento de) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 611.73 Td (imagens e documentos.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 307.64 594.85 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 594.85 Td (Builds de produção configurados no Expo/EAS para as duas) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 582.97 Td (lojas.) Tj ET
+BT /F2 9 Tf 1 0.42 0.16 rg 307.64 566.09 Td (-) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 566.09 Td (Ícones, splash screen e textos de permissão \(câmera,) Tj ET
+BT /F1 9 Tf 0.1 0.11 0.13 rg 319.64 554.21 Td (fotos, localização, notificações\) prontos.) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 48 517.33 Td (Qualidade e verificação) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 497.33 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 497.33 Td (Análise estática do código do app: aprovada \(apenas avisos\).) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 479.92 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 479.92 Td (Compilação do backend: aprovada.) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 462.51 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 462.51 Td (Testes automatizados do backend: aprovados.) Tj ET
+BT /F2 9.4 Tf 1 0.42 0.16 rg 48 445.11 Td (-) Tj ET
+BT /F1 9.4 Tf 0.1 0.11 0.13 rg 60 445.11 Td (Pendente: rodada de testes em celulares reais cobrindo push, KYC, upload de imagens, PIX e exclusão de conta.) Tj ET
+q
+0.84 0.84 0.84 RG
+0.5 w
+48 36.89 m 547.28 36.89 l S
+Q
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 21.89 Td (Documento executivo para planejamento de publicação. Valores em USD/BRL são estimativas e podem variar.) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 7931 >>
+stream
+q
+1 w
+0.1 0.11 0.13 rg
+0 787.89 595.28 54 re f
+Q
+BT /F2 15 Tf 1 1 1 rg 48 807.89 Td (Wellcome) Tj ET
+BT /F1 9.5 Tf 0.88 0.88 0.88 rg 130 807.89 Td (Pendências e cronograma) Tj ET
+BT /F1 8.5 Tf 0.78 0.78 0.78 rg 517.28 807.89 Td (Página 3) Tj ET
+BT /F2 18 Tf 0.1 0.11 0.13 rg 48 757.89 Td (O que falta para submeter às lojas) Tj ET
+q
+1 w
+0.1 0.11 0.13 rg
+48 707.89 501 24 re f
+Q
+BT /F2 8.6 Tf 1 1 1 rg 55 715.89 Td (#) Tj ET
+BT /F2 8.6 Tf 1 1 1 rg 83 715.89 Td (Pendência) Tj ET
+BT /F2 8.6 Tf 1 1 1 rg 248 715.89 Td (Prior.) Tj ET
+BT /F2 8.6 Tf 1 1 1 rg 296 715.89 Td (Por que importa) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 663.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 693.89 Td (1) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 707.89 m 76 663.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 693.89 Td (Política de Privacidade pública) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 707.89 m 241 663.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 693.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 707.89 m 289 663.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 693.89 Td (Obrigatória nas duas lojas; precisa cobrir KYC, fotos, localização,) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 683.89 Td (pagamentos, push e exclusão de dados.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 619.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 649.89 Td (2) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 663.89 m 76 619.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 649.89 Td (Termos de Uso públicos) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 663.89 m 241 619.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 649.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 663.89 m 289 619.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 649.89 Td (Definem regras para anfitriões e convidados: cancelamentos, taxas,) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 639.89 Td (PIX, responsabilidades e conduta.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 575.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 605.89 Td (3) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 619.89 m 76 575.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 605.89 Td (Página web de exclusão de conta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 619.89 m 241 575.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 605.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 619.89 m 289 575.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 605.89 Td (O Google exige canal fora do app. A tela interna já existe; falta a URL) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 595.89 Td (pública.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 531.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 561.89 Td (4) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 575.89 m 76 531.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 561.89 Td (Denúncia e bloqueio de conteúdo) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 575.89 m 241 531.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 561.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 575.89 m 289 531.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 561.89 Td (Eventos, perfis e avaliações são conteúdo de usuários; as lojas) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 551.89 Td (exigem moderação e resposta a abuso.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 487.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 517.89 Td (5) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 531.89 m 76 487.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 517.89 Td (Sign in with Apple no iOS) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 531.89 m 241 487.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 517.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 531.89 m 289 487.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 517.89 Td (Como existe login Google, a Apple exige uma opção equivalente de login) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 507.89 Td (\(diretriz 4.8\).) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 443.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 473.89 Td (6) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 487.89 m 76 443.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 473.89 Td (Contas de desenvolvedor) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 487.89 m 241 443.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 473.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 487.89 m 289 443.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 473.89 Td (Google Play \(US$ 25, única\) e Apple Developer \(US$ 99/ano\) em nome) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 463.89 Td (da empresa.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 399.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 429.89 Td (7) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 443.89 m 76 399.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 429.89 Td (Materiais de loja) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 443.89 m 241 399.89 l S
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 247 429.89 Td (Media) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 443.89 m 289 399.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 429.89 Td (Descrições, screenshots reais, formulários de privacidade de dados e) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 419.89 Td (notas para o revisor com conta de teste.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 355.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 385.89 Td (8) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 399.89 m 76 355.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 385.89 Td (Ambiente de produção validado) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 399.89 m 241 355.89 l S
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 247 385.89 Td (Media) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 399.89 m 289 355.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 385.89 Td (Backend, Supabase, PIX e push estáveis e com variáveis de produção) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 375.89 Td (conferidas durante a revisão.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 311.89 501 44 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 341.89 Td (9) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 355.89 m 76 311.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 341.89 Td (Beta fechado no Google) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 355.89 m 241 311.89 l S
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 247 341.89 Td (Media) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 355.89 m 289 311.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 341.89 Td (Contas pessoais novas exigem 12 testadores por 14 dias antes da) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 331.89 Td (produção; conta empresarial dispensa.) Tj ET
+BT /F2 13 Tf 0.1 0.11 0.13 rg 48 293.89 Td (Cronograma proposto \(a partir da retomada\)) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 273.89 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 273.89 Td (Semana 1: criar contas de desenvolvedor, publicar política de privacidade, termos e página de exclusão.) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 256.75 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 256.75 Td (Semana 2: implementar denúncia/bloqueio e Sign in with Apple.) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 239.6 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 239.6 Td (Semana 3: ambiente de produção, builds finais e testes em celulares reais; screenshots e textos das lojas.) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 222.46 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 222.46 Td (Semanas 4-5: beta fechado \(se necessário\), envio para revisão e correções de eventuais reprovações.) Tj ET
+q
+0.5 w
+0.9 0.97 0.93 rg
+0.7 0.86 0.72 RG
+48 105.31 499.28 92 re B
+Q
+BT /F2 11 Tf 0.12 0.48 0.22 rg 64 175.31 Td (Conclusão) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 64 157.31 Td (O aplicativo está pronto como produto. Publicar a primeira versão é um projeto curto de conformidade e operação: 3) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 64 144.81 Td (a 5 semanas de trabalho e cerca de R$ 620 de custos obrigatórios no primeiro ano. Apoios opcionais: design das novas) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 64 132.31 Td (páginas web \(R$ 800 a 2.500, pontual\) e Claude Code Pro \(US$ 20/mês\) para acelerar o desenvolvimento.) Tj ET
+q
+0.84 0.84 0.84 RG
+0.5 w
+48 36.89 m 547.28 36.89 l S
+Q
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 21.89 Td (Documento executivo para planejamento de publicação. Valores em USD/BRL são estimativas e podem variar.) Tj ET
+endstream
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000230 00000 n 
+0000000332 00000 n 
+0000000474 00000 n 
+0000004242 00000 n 
+0000004384 00000 n 
+0000008615 00000 n 
+0000008758 00000 n 
+trailer
+<< /Size 11 /Root 1 0 R >>
+startxref
+16741
+%%EOF
