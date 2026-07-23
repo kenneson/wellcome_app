@@ -13,7 +13,10 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Precisamos da sua localizacao para mostrar eventos e sugerir enderecos proximos.",
+        "NSPhotoLibraryUsageDescription": "Precisamos da sua galeria para enviar foto de perfil, imagens do evento e documentos de verificacao.",
+        "NSUserNotificationsUsageDescription": "Usamos notificacoes para avisar sobre inscricoes, pagamentos e atualizacoes dos seus eventos."
       }
     },
     "android": {
@@ -52,7 +55,27 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Permitir acesso à câmera para escanear QR Codes de ingressos"
+          "cameraPermission": "Precisamos da camera para escanear ingressos e enviar documentos de verificacao."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Precisamos da sua galeria para enviar foto de perfil, imagens do evento e documentos de verificacao.",
+          "cameraPermission": "Precisamos da camera para tirar foto de perfil, imagens do evento e documentos de verificacao.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Precisamos da sua localizacao para mostrar eventos e sugerir enderecos proximos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default"
         }
       ]
     ],

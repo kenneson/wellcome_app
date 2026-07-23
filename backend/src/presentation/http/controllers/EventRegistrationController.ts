@@ -5,10 +5,10 @@ import { CancelEventRegistrationUseCase } from '../../../application/use-cases/C
 import { JoinEventUseCase } from '../../../application/use-cases/JoinEventUseCase';
 import { RejectRegistrationUseCase } from '../../../application/use-cases/RejectRegistrationUseCase';
 import { EventRegistrationRepository } from '../../../domain/repositories/EventRegistrationRepository';
+import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
 const createRegistrationSchema = z.object({
     eventId: z.string(),
-    userId: z.string(),
     answers: z.array(z.object({
         questionId: z.string(),
         answer: z.string()
@@ -17,13 +17,11 @@ const createRegistrationSchema = z.object({
 
 const approveRejectSchema = z.object({
     registrationId: z.string(),
-    hostId: z.string(), // In a real app this comes from auth token
     reason: z.string().optional()
 });
 
 const validateTicketSchema = z.object({
-    bookingId: z.string().uuid(),
-    hostId: z.string().uuid()
+    bookingId: z.string().uuid()
 });
 
 export class EventRegistrationController {
@@ -38,9 +36,13 @@ export class EventRegistrationController {
     async create(request: FastifyRequest, reply: FastifyReply) {
         try {
             const body = createRegistrationSchema.parse(request.body);
-            const registration = await this.joinEventUseCase.execute(body);
+            const userId = await getAuthenticatedUserId(request);
+            const registration = await this.joinEventUseCase.execute({ ...body, userId });
             return reply.code(201).send(registration);
         } catch (error: any) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }
@@ -59,61 +61,74 @@ export class EventRegistrationController {
 
     async delete(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { eventId, userId } = request.body as { eventId: string; userId: string };
-            if (!eventId || !userId) {
-                return reply.code(400).send({ message: 'eventId and userId are required' });
+            const { eventId } = request.body as { eventId: string };
+            if (!eventId) {
+                return reply.code(400).send({ message: 'eventId is required' });
             }
+            const userId = await getAuthenticatedUserId(request);
             await this.cancelEventRegistrationUseCase.execute(eventId, userId);
             return reply.code(204).send();
         } catch (error) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             return reply.code(500).send({ message: 'Internal server error', error });
         }
     }
 
     async approve(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { registrationId, hostId } = approveRejectSchema.parse(request.body);
+            const { registrationId } = approveRejectSchema.parse(request.body);
+            const hostId = await getAuthenticatedUserId(request);
             const registration = await this.approveRegistrationUseCase.execute(registrationId, hostId);
             return reply.send(registration);
         } catch (error) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             return reply.code(500).send({ message: 'Internal server error', error });
         }
     }
 
     async reject(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { registrationId, hostId, reason } = approveRejectSchema.parse(request.body);
+            const { registrationId, reason } = approveRejectSchema.parse(request.body);
+            const hostId = await getAuthenticatedUserId(request);
             if (!reason) {
                 return reply.code(400).send({ message: 'Reason is required for rejection' });
             }
             const registration = await this.rejectRegistrationUseCase.execute(registrationId, hostId, reason);
             return reply.send(registration);
         } catch (error) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
             return reply.code(500).send({ message: 'Internal server error', error });
         }
     }
 
     async validateTicket(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { bookingId, hostId } = validateTicketSchema.parse(request.body);
+            const { bookingId } = validateTicketSchema.parse(request.body);
+            const hostId = await getAuthenticatedUserId(request);
 
             const registration = await this.eventRegistrationRepository.findById(bookingId);
 
             if (!registration) {
-                return reply.code(404).send({ valid: false, message: 'Ingresso não encontrado' });
+                return reply.code(404).send({ valid: false, message: 'Ingresso nao encontrado' });
             }
 
             if (registration.event?.hostId !== hostId) {
-                return reply.code(403).send({ valid: false, message: 'Você não é o anfitrião deste evento' });
+                return reply.code(403).send({ valid: false, message: 'Voce nao e o anfitriao deste evento' });
             }
 
             if (registration.status !== 'APPROVED') {
-                return reply.code(400).send({ valid: false, message: `Inscrição com status: ${registration.status}` });
+                return reply.code(400).send({ valid: false, message: `Inscricao com status: ${registration.status}` });
             }
 
             return reply.send({
                 valid: true,
-                message: 'Ingresso válido!',
+                message: 'Ingresso valido!',
                 booking: {
                     id: registration.id,
                     status: registration.status,
@@ -129,8 +144,11 @@ export class EventRegistrationController {
                 }
             });
         } catch (error: any) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ valid: false, message: error.message });
+            }
             if (error instanceof z.ZodError) {
-                return reply.code(400).send({ valid: false, message: 'Dados inválidos' });
+                return reply.code(400).send({ valid: false, message: 'Dados invalidos' });
             }
             return reply.code(500).send({ valid: false, message: 'Erro interno' });
         }

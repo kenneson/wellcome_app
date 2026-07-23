@@ -31,10 +31,12 @@ export class PrismaNotificationRepository implements NotificationRepository {
         }));
     }
 
-    async markAsRead(id: string): Promise<void> {
-        await prisma.notification.update({
-            where: { id },
+    async markAsRead(id: string, userId: string): Promise<boolean> {
+        const result = await prisma.notification.updateMany({
+            where: { id, userId },
             data: { read: true, readAt: new Date() }
         });
+
+        return result.count > 0;
     }
 }

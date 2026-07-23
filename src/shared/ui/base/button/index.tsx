@@ -20,9 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 // @ts-check
 import type { IButton } from "./types";
 
-export const Button: React.FC<IButton> & React.FunctionComponent<IButton> =
-  memo<IButton>(
-    ({
+function ButtonComponent({
       children,
       isLoading = false,
       onPress,
@@ -42,7 +40,7 @@ export const Button: React.FC<IButton> & React.FunctionComponent<IButton> =
       showLoadingIndicator = false,
       renderLoadingIndicator,
       loadingTextBackgroundColor = "#cacaca",
-    }: IButton): React.ReactNode & React.JSX.Element & React.ReactElement => {
+    }: IButton): React.ReactElement {
       const animationProgress = useSharedValue<number>(isLoading ? 1 : 0);
       const scaleValue = useSharedValue<number>(1);
 
@@ -202,8 +200,11 @@ export const Button: React.FC<IButton> & React.FunctionComponent<IButton> =
           {buttonContent}
         </Pressable>
       );
-    },
-  );
+    }
+
+export const Button = memo(ButtonComponent);
+
+Button.displayName = "Button";
 
 const styles = StyleSheet.create({
   pressable: {
@@ -241,6 +242,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default memo<React.FC<IButton> & React.FunctionComponent<IButton>>(
-  Button,
-);
+export default Button;

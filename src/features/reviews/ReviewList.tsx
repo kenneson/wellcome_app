@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ReportSheet } from '@/components/ui/ReportSheet';
 import { EventReview } from '@/entities/event/types';
+import { useBlockedIds } from '@/hooks/useBlockedIds';
+import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import React, { useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ReviewListProps {
     reviews: EventReview[];
@@ -12,7 +14,13 @@ interface ReviewListProps {
 }
 
 export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps) {
-    if (!reviews || reviews.length === 0) {
+    const blockedIds = useBlockedIds();
+    const [reportReviewId, setReportReviewId] = useState<string | null>(null);
+
+    // Oculta avaliações de usuários bloqueados (filtro client-side).
+    const visibleReviews = (reviews || []).filter((r) => !blockedIds.has(r.userId));
+
+    if (visibleReviews.length === 0) {
         return (
             <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Nenhuma avaliação ainda.</Text>
@@ -35,11 +43,15 @@ export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps
                         </Text>
                     </View>
                 </View>
-                {currentUserId === item.userId && onDelete && (
+                {currentUserId === item.userId && onDelete ? (
                     <TouchableOpacity onPress={() => onDelete(item.id)}>
                         <Ionicons name="trash-outline" size={20} color="#FF4B4B" />
                     </TouchableOpacity>
-                )}
+                ) : currentUserId && currentUserId !== item.userId ? (
+                    <TouchableOpacity onPress={() => setReportReviewId(item.id)}>
+                        <Ionicons name="flag-outline" size={18} color="#9CA3AF" />
+                    </TouchableOpacity>
+                ) : null}
             </View>
             <View style={styles.ratingContainer}>
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -57,11 +69,18 @@ export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps
 
     return (
         <View style={styles.container}>
-            {reviews.map((item) => (
+            {visibleReviews.map((item) => (
                 <View key={item.id} style={styles.wrapper}>
                     {renderItem({ item })}
                 </View>
             ))}
+
+            <ReportSheet
+                visible={reportReviewId !== null}
+                onClose={() => setReportReviewId(null)}
+                targetType="REVIEW"
+                targetId={reportReviewId ?? ''}
+            />
         </View>
     );
 }

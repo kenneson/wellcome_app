@@ -1,0 +1,607 @@
+%PDF-1.4
+%âãÏÓ
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 5857 >>
+stream
+q
+1 w
+0.1 0.11 0.13 rg
+0 676.89 595.28 165 re f
+Q
+BT /F2 11 Tf 1 0.42 0.16 rg 48 783.89 Td (RELATÓRIO EXECUTIVO) Tj ET
+BT /F2 27 Tf 1 1 1 rg 48 753.89 Td (Publicação do Wellcome nas lojas) Tj ET
+BT /F1 12 Tf 0.88 0.88 0.88 rg 48 725.89 Td (Passos, custos e riscos restantes para Play Store e App Store) Tj ET
+BT /F1 8.5 Tf 0.74 0.74 0.74 rg 48 696.89 Td (Preparado em 29/04/2026) Tj ET
+q
+0.5 w
+1 0.93 0.88 rg
+1 0.78 0.65 RG
+48 571.89 156 78 re B
+Q
+BT /F2 9 Tf 1 0.42 0.16 rg 62 623.89 Td (Status atual) Tj ET
+BT /F2 18 Tf 0.1 0.11 0.13 rg 62 595.89 Td (Beta avançado) Tj ET
+q
+0.5 w
+0.9 0.95 1 rg
+0.74 0.84 0.95 RG
+220 571.89 156 78 re B
+Q
+BT /F2 9 Tf 0.12 0.36 0.68 rg 234 623.89 Td (Prontidão para loja) Tj ET
+BT /F2 20 Tf 0.1 0.11 0.13 rg 234 595.89 Td (50-60%) Tj ET
+q
+0.5 w
+0.9 0.97 0.93 rg
+0.7 0.86 0.72 RG
+392 571.89 156 78 re B
+Q
+BT /F2 9 Tf 0.12 0.48 0.22 rg 406 623.89 Td (Prazo realista) Tj ET
+BT /F2 17 Tf 0.1 0.11 0.13 rg 406 595.89 Td (3 a 5 semanas) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 48 526.89 Td (Leitura executiva) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 504.89 Td (O app já possui uma base forte de produto: login, criação de eventos, KYC, pagamentos PIX, carteira,) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 490.69 Td (notificações, admin e fluxo de anfitrião/convidado. O principal trabalho restante não é criar o app do zero; é) Tj ET
+BT /F1 10.2 Tf 0.1 0.11 0.13 rg 48 476.49 Td (preparar a camada de publicação, conformidade, segurança e operação para reduzir risco de rejeição nas lojas.) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 48 434.29 Td (Custos obrigatórios e operacionais) Tj ET
+q
+1 w
+1 0.42 0.16 rg
+48 392.29 535 24 re f
+Q
+BT /F2 8.7 Tf 1 1 1 rg 56 400.29 Td (Item) Tj ET
+BT /F2 8.7 Tf 1 1 1 rg 206 400.29 Td (Valor estimado) Tj ET
+BT /F2 8.7 Tf 1 1 1 rg 311 400.29 Td (Recorrência) Tj ET
+BT /F2 8.7 Tf 1 1 1 rg 386 400.29 Td (Observação) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 357.29 535 35 re B
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 55 378.29 Td (Conta Google Play) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+198 392.29 m 198 357.29 l S
+Q
+BT /F2 8.6 Tf 1 0.42 0.16 rg 205 378.29 Td (US$ 25) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+303 392.29 m 303 357.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 310 378.29 Td (Uma vez) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+378 392.29 m 378 357.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 378.29 Td (Obrigatório para publicar Android.) Tj ET
+q
+0.4 w
+0.99 0.99 0.99 rg
+0.84 0.84 0.84 RG
+48 322.29 535 35 re B
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 55 343.29 Td (Conta Apple Developer) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+198 357.29 m 198 322.29 l S
+Q
+BT /F2 8.6 Tf 1 0.42 0.16 rg 205 343.29 Td (US$ 99) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+303 357.29 m 303 322.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 310 343.29 Td (Por ano) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+378 357.29 m 378 322.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 343.29 Td (Obrigatório para publicar iOS.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 287.29 535 35 re B
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 55 308.29 Td (Expo/EAS) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+198 322.29 m 198 287.29 l S
+Q
+BT /F2 8.6 Tf 1 0.42 0.16 rg 205 308.29 Td (US$ 0 a US$ 19/mês) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+303 322.29 m 303 287.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 310 308.29 Td (Mensal) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+378 322.29 m 378 287.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 308.29 Td (Plano gratuito pode bastar no começo; Starter) Tj ET
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 297.79 Td (acelera builds.) Tj ET
+q
+0.4 w
+0.99 0.99 0.99 rg
+0.84 0.84 0.84 RG
+48 252.29 535 35 re B
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 55 273.29 Td (Supabase produção) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+198 287.29 m 198 252.29 l S
+Q
+BT /F2 8.6 Tf 1 0.42 0.16 rg 205 273.29 Td (US$ 0 a US$ 25/mês) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+303 287.29 m 303 252.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 310 273.29 Td (Mensal) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+378 287.29 m 378 252.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 273.29 Td (Free no beta; Pro recomendado para lançamento) Tj ET
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 262.79 Td (público.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 217.29 535 35 re B
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 55 238.29 Td (VPS Hostinger) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+198 252.29 m 198 217.29 l S
+Q
+BT /F2 8.6 Tf 1 0.42 0.16 rg 205 238.29 Td (R$ 43,99/mês) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+303 252.29 m 303 217.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 310 238.29 Td (Mensal) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+378 252.29 m 378 217.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 238.29 Td (Servidor inicial previsto para hospedar a) Tj ET
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 227.79 Td (API/backend.) Tj ET
+q
+0.4 w
+0.99 0.99 0.99 rg
+0.84 0.84 0.84 RG
+48 182.29 535 35 re B
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 55 203.29 Td (Domínio e páginas legais) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+198 217.29 m 198 182.29 l S
+Q
+BT /F2 8.6 Tf 1 0.42 0.16 rg 205 203.29 Td (R$ 40/ano) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+303 217.29 m 303 182.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 310 203.29 Td (Anual) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+378 217.29 m 378 182.29 l S
+Q
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 203.29 Td (Páginas públicas para privacidade, termos, suporte) Tj ET
+BT /F1 8.6 Tf 0.1 0.11 0.13 rg 385 192.79 Td (e exclusão de conta.) Tj ET
+BT /F2 9 Tf 0.1 0.11 0.13 rg 48 164.29 Td (Observação de câmbio) Tj ET
+BT /F1 8.2 Tf 0.33 0.36 0.4 rg 150 164.29 Td (Para planejamento rápido, US$ 124 no primeiro ano equivale a aproximadamente R$ 620 usando câmbio) Tj ET
+BT /F1 8.2 Tf 0.33 0.36 0.4 rg 150 153.29 Td (arredondado de R$ 5,00/US$. O valor real depende do câmbio e impostos no dia do pagamento.) Tj ET
+q
+0.84 0.84 0.84 RG
+0.5 w
+48 36.89 m 547.28 36.89 l S
+Q
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 21.89 Td (Documento executivo para planejamento de publicação. Valores em USD/BRL são estimativas e podem variar.) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 6813 >>
+stream
+q
+1 w
+0.1 0.11 0.13 rg
+0 787.89 595.28 54 re f
+Q
+BT /F2 15 Tf 1 1 1 rg 48 807.89 Td (Wellcome) Tj ET
+BT /F1 9.5 Tf 0.88 0.88 0.88 rg 130 807.89 Td (Pendências antes da submissão) Tj ET
+BT /F1 8.5 Tf 0.78 0.78 0.78 rg 517.28 807.89 Td (Página 2) Tj ET
+BT /F2 18 Tf 0.1 0.11 0.13 rg 48 757.89 Td (O que ainda precisa ser feito) Tj ET
+BT /F1 10 Tf 0.33 0.36 0.4 rg 48 731.89 Td (Abaixo estão os itens que mais influenciam aprovação, confiança do usuário e risco operacional. Eles estão escritos) Tj ET
+BT /F1 10 Tf 0.33 0.36 0.4 rg 48 718.39 Td (em linguagem de negócio e não em linguagem técnica.) Tj ET
+q
+1 w
+0.1 0.11 0.13 rg
+48 659.89 501 24 re f
+Q
+BT /F2 8.6 Tf 1 1 1 rg 55 667.89 Td (#) Tj ET
+BT /F2 8.6 Tf 1 1 1 rg 83 667.89 Td (Pendência) Tj ET
+BT /F2 8.6 Tf 1 1 1 rg 248 667.89 Td (Prior.) Tj ET
+BT /F2 8.6 Tf 1 1 1 rg 296 667.89 Td (Por que importa) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 613.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 645.89 Td (1) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 659.89 m 76 613.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 645.89 Td (Publicar Política de Privacidade) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 659.89 m 241 613.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 645.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 659.89 m 289 613.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 645.89 Td (Obrigatório nas duas lojas; precisa cobrir KYC, fotos, localização,) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 635.89 Td (pagamentos, push e exclusão de dados.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 567.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 599.89 Td (2) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 613.89 m 76 567.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 599.89 Td (Publicar Termos de Uso) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 613.89 m 241 567.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 599.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 613.89 m 289 567.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 599.89 Td (Define regras para anfitriões, convidados, conteúdo, cancelamentos,) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 589.89 Td (segurança, PIX, taxas e responsabilidades.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 521.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 553.89 Td (3) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 567.89 m 76 521.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 553.89 Td (Criar página web de exclusão de conta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 567.89 m 241 521.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 553.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 567.89 m 289 521.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 553.89 Td (Google exige canal fora do app para pedir exclusão. O app já tem tela) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 543.89 Td (interna; falta URL pública.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 475.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 507.89 Td (4) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 521.89 m 76 475.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 507.89 Td (Adicionar denúncia e bloqueio) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 521.89 m 241 475.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 507.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 521.89 m 289 475.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 507.89 Td (Eventos, perfis, fotos e avaliações são conteúdo de usuários. As lojas) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 497.89 Td (pedem moderação e resposta a abuso.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 429.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 461.89 Td (5) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 475.89 m 76 429.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 461.89 Td (Adicionar Sign in with Apple no iOS) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 475.89 m 241 429.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 461.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 475.89 m 289 429.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 461.89 Td (Como existe login Google, a Apple pode exigir opção equivalente de) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 451.89 Td (login com privacidade.) Tj ET
+q
+0.4 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 383.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 415.89 Td (6) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 429.89 m 76 383.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 415.89 Td (Fechar vazamentos e permissões do) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 405.89 Td (backend) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 429.89 m 241 383.89 l S
+Q
+BT /F2 8.2 Tf 1 0.42 0.16 rg 247 415.89 Td (Alta) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 429.89 m 289 383.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 415.89 Td (Evitar exposição de telefone, email, token push e dados de reservas) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 405.89 Td (em telas públicas.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 337.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 369.89 Td (7) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 383.89 m 76 337.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 369.89 Td (Preparar ambiente de produção) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 383.89 m 241 337.89 l S
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 247 369.89 Td (Média) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 383.89 m 289 337.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 369.89 Td (Backend, Supabase, KYC, push, storage e PIX precisam estar online e) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 359.89 Td (estáveis durante a revisão.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 291.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 323.89 Td (8) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 337.89 m 76 291.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 323.89 Td (Preparar materiais das lojas) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 337.89 m 241 291.89 l S
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 247 323.89 Td (Média) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 337.89 m 289 291.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 323.89 Td (Descrição, screenshots reais, ícone, imagem promocional Google,) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 313.89 Td (suporte, categoria, idade e notas para reviewer.) Tj ET
+q
+0.4 w
+1 1 1 rg
+0.84 0.84 0.84 RG
+48 245.89 501 46 re B
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 54 277.89 Td (9) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+76 291.89 m 76 245.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 82 277.89 Td (Executar beta fechado) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+241 291.89 m 241 245.89 l S
+Q
+BT /F2 8.2 Tf 0.1 0.11 0.13 rg 247 277.89 Td (Média) Tj ET
+q
+0.84 0.84 0.84 RG
+0.35 w
+289 291.89 m 289 245.89 l S
+Q
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 277.89 Td (No Google, contas pessoais novas podem exigir 12 testers por 14 dias) Tj ET
+BT /F1 8.2 Tf 0.1 0.11 0.13 rg 295 267.89 Td (antes da produção.) Tj ET
+q
+0.84 0.84 0.84 RG
+0.5 w
+48 36.89 m 547.28 36.89 l S
+Q
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 21.89 Td (Documento executivo para planejamento de publicação. Valores em USD/BRL são estimativas e podem variar.) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 4692 >>
+stream
+q
+1 w
+0.1 0.11 0.13 rg
+0 787.89 595.28 54 re f
+Q
+BT /F2 15 Tf 1 1 1 rg 48 807.89 Td (Wellcome) Tj ET
+BT /F1 9.5 Tf 0.88 0.88 0.88 rg 130 807.89 Td (Orçamento e plano de ação) Tj ET
+BT /F1 8.5 Tf 0.78 0.78 0.78 rg 517.28 807.89 Td (Página 3) Tj ET
+BT /F2 18 Tf 0.1 0.11 0.13 rg 48 757.89 Td (Cenários de orçamento) Tj ET
+q
+0.5 w
+0.9 0.95 1 rg
+0.84 0.84 0.84 RG
+48 599.89 499.28 130 re B
+Q
+BT /F2 12 Tf 0.1 0.11 0.13 rg 64 707.89 Td (Mínimo para tentar publicar) Tj ET
+BT /F2 11 Tf 1 0.42 0.16 rg 64 686.89 Td (US$ 124 no primeiro ano + custos internos) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 664.89 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 664.89 Td (Contas oficiais da Apple e Google.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 648.8 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 648.8 Td (Usar planos gratuitos quando possível.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 632.71 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 632.71 Td (Equipe interna produz política, termos, screenshots e testes.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 616.63 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 616.63 Td (Maior risco de retrabalho se privacidade/moderação não estiverem maduros.) Tj ET
+q
+0.5 w
+0.9 0.97 0.93 rg
+0.84 0.84 0.84 RG
+48 455.89 499.28 130 re B
+Q
+BT /F2 12 Tf 0.1 0.11 0.13 rg 64 563.89 Td (Recomendado para lançamento controlado) Tj ET
+BT /F2 11 Tf 1 0.42 0.16 rg 64 542.89 Td (US$ 124 + US$ 25-44/mês + R$ 2.300 a R$ 8.000 pontuais) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 520.89 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 520.89 Td (Supabase Pro e/ou Expo Starter para reduzir risco operacional.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 504.8 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 504.8 Td (Apoio externo para política/termos, design de screenshots e revisão final.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 488.71 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 488.71 Td (Mais adequado para uma primeira versão pública com reputação protegida.) Tj ET
+q
+0.5 w
+1 0.93 0.88 rg
+0.84 0.84 0.84 RG
+48 311.89 499.28 130 re B
+Q
+BT /F2 12 Tf 0.1 0.11 0.13 rg 64 419.89 Td (Profissional com folga operacional) Tj ET
+BT /F2 11 Tf 1 0.42 0.16 rg 64 398.89 Td (US$ 124 + US$ 224+/mês + orçamento dedicado de QA/compliance) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 376.89 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 376.89 Td (Expo Production, Supabase Pro, monitoramento e rotina de QA.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 360.8 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 360.8 Td (Indicado se houver campanha de lançamento, volume alto ou investimento maior.) Tj ET
+BT /F2 8.4 Tf 1 0.42 0.16 rg 64 344.71 Td (-) Tj ET
+BT /F1 8.4 Tf 0.1 0.11 0.13 rg 76 344.71 Td (Menor risco de indisponibilidade e melhor velocidade de correção pós-lançamento.) Tj ET
+BT /F2 15 Tf 0.1 0.11 0.13 rg 48 293.89 Td (Plano sugerido) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 271.89 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 271.89 Td (Semana 1: fechar política de privacidade, termos, URL de exclusão e conteúdo das lojas.) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 254.75 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 254.75 Td (Semana 2: implementar denúncia/bloqueio, Sign in with Apple e ajustes de segurança.) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 237.6 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 237.6 Td (Semana 3: ambiente de produção, build EAS, testes em dispositivos reais e screenshots.) Tj ET
+BT /F2 9.2 Tf 1 0.42 0.16 rg 48 220.46 Td (-) Tj ET
+BT /F1 9.2 Tf 0.1 0.11 0.13 rg 60 220.46 Td (Semanas 4-5: teste fechado Google quando aplicável, envio para review e correções de reprovação.) Tj ET
+q
+0.4 w
+0.96 0.94 0.91 rg
+0.84 0.84 0.84 RG
+48 123.31 499.28 70 re B
+Q
+BT /F2 10 Tf 0.1 0.11 0.13 rg 64 171.31 Td (Fora deste orçamento) Tj ET
+BT /F1 8.8 Tf 0.33 0.36 0.4 rg 64 151.31 Td (Marketing pago, impostos, taxas de adquirência/PIX/EFI, suporte ao cliente, parecer jurídico regulatório detalhado e) Tj ET
+BT /F1 8.8 Tf 0.33 0.36 0.4 rg 64 139.31 Td (custos de escala após tração.) Tj ET
+BT /F2 9 Tf 0.1 0.11 0.13 rg 48 101.31 Td (Fontes oficiais consultadas) Tj ET
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 86.31 Td (Apple Developer Program: US$ 99/ano. Google Play Console: US$ 25 uma vez. Google Play: teste fechado de 12 testers por 14 dias para contas pessoais novas.) Tj ET
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 76.81 Td (Apple/Google: privacidade, exclusão de conta, moderação de conteúdo e regras de pagamento. Expo e Supabase: planos gratuitos e pagos variam conforme uso.) Tj ET
+q
+0.84 0.84 0.84 RG
+0.5 w
+48 36.89 m 547.28 36.89 l S
+Q
+BT /F1 7.2 Tf 0.33 0.36 0.4 rg 48 21.89 Td (Documento executivo para planejamento de publicação. Valores em USD/BRL são estimativas e podem variar.) Tj ET
+endstream
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000230 00000 n 
+0000000332 00000 n 
+0000000474 00000 n 
+0000006382 00000 n 
+0000006524 00000 n 
+0000013388 00000 n 
+0000013531 00000 n 
+trailer
+<< /Size 11 /Root 1 0 R >>
+startxref
+18275
+%%EOF

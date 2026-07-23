@@ -1,24 +1,42 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { NotificationRepository } from '../../../domain/repositories/NotificationRepository';
+import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
 export class NotificationController {
     constructor(private notificationRepository: NotificationRepository) {}
 
-    async list(req: FastifyRequest<{ Querystring: { userId: string } }>, reply: FastifyReply) {
-        // Temporary: Get userId from query params until auth middleware is set up
-        const { userId } = req.query;
-        
-        if (!userId) {
-            return reply.code(400).send({ message: 'Missing userId in query params' });
+    async list(req: FastifyRequest, reply: FastifyReply) {
+        try {
+            const userId = await getAuthenticatedUserId(req);
+            const notifications = await this.notificationRepository.findByUserId(userId);
+
+            return reply.send(notifications);
+        } catch (error) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
+
+            return reply.code(500).send({ message: 'Failed to fetch notifications' });
         }
-        
-        const notifications = await this.notificationRepository.findByUserId(userId);
-        return reply.send(notifications);
     }
 
     async markAsRead(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-        const { id } = req.params;
-        await this.notificationRepository.markAsRead(id);
-        return reply.send({ success: true });
+        try {
+            const { id } = req.params;
+            const userId = await getAuthenticatedUserId(req);
+            const updated = await this.notificationRepository.markAsRead(id, userId);
+
+            if (!updated) {
+                return reply.code(404).send({ message: 'Notification not found' });
+            }
+
+            return reply.send({ success: true });
+        } catch (error) {
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
+
+            return reply.code(500).send({ message: 'Failed to mark notification as read' });
+        }
     }
 }

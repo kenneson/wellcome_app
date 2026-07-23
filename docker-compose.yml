@@ -11,6 +11,11 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - EFI_CLIENT_ID=${EFI_CLIENT_ID}
+      - EFI_CLIENT_SECRET=${EFI_CLIENT_SECRET}
+      - EFI_PIX_KEY=${EFI_PIX_KEY}
+      - EFI_SANDBOX=${EFI_SANDBOX:-false}
+      - EFI_CERT_PATH=/app/producao-560634-wellcome_prod.p12
       - PORT=3000
     networks:
       - wellcome-network

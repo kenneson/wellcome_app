@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Dynamic import to avoid breaking other routes if expo-camera isn't available
 let CameraView: any = null;
@@ -36,39 +36,17 @@ type ScanResult = {
     };
 };
 
-export default function ScannerScreen() {
-    const { id: eventId } = useLocalSearchParams();
-    const router = useRouter();
-    const permissionResult = useCameraPermissions ? useCameraPermissions() : [null, () => {}];
-    const [permission, requestPermission] = permissionResult;
+type ScannerContentProps = {
+    eventId: string | undefined;
+    headerPaddingTop: number;
+    onBack: () => void;
+};
+
+function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentProps) {
+    const [permission, requestPermission] = useCameraPermissions!();
     const [scanned, setScanned] = useState(false);
     const [validating, setValidating] = useState(false);
     const [result, setResult] = useState<ScanResult | null>(null);
-
-    // expo-camera not available
-    if (!CameraView || !useCameraPermissions) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Escanear Ingresso</Text>
-                    <View style={{ width: 40 }} />
-                </View>
-                <View style={styles.centerContainer}>
-                    <Ionicons name="camera-outline" size={64} color="#CCC" />
-                    <Text style={styles.permissionTitle}>Câmera Indisponível</Text>
-                    <Text style={styles.permissionText}>
-                        O módulo de câmera não está disponível nesta versão do app. É necessário um novo build para usar o scanner.
-                    </Text>
-                    <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
-                        <Text style={styles.backLinkText}>Voltar</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
 
     if (!permission) {
         return (
@@ -83,14 +61,14 @@ export default function ScannerScreen() {
             <SafeAreaView style={styles.container}>
                 <View style={styles.centerContainer}>
                     <Ionicons name="camera-outline" size={64} color="#CCC" />
-                    <Text style={styles.permissionTitle}>Acesso à Câmera</Text>
+                    <Text style={styles.permissionTitle}>Acesso a Camera</Text>
                     <Text style={styles.permissionText}>
-                        Precisamos da sua câmera para escanear os QR Codes dos participantes.
+                        Precisamos da sua camera para escanear os QR Codes dos participantes.
                     </Text>
                     <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-                        <Text style={styles.permissionButtonText}>Permitir Câmera</Text>
+                        <Text style={styles.permissionButtonText}>Permitir Camera</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backLink} onPress={onBack}>
                         <Text style={styles.backLinkText}>Voltar</Text>
                     </TouchableOpacity>
                 </View>
@@ -107,20 +85,20 @@ export default function ScannerScreen() {
             const parsed = JSON.parse(data);
 
             if (!parsed.bookingId || !parsed.eventId) {
-                setResult({ valid: false, message: 'QR Code inválido' });
+                setResult({ valid: false, message: 'QR Code invalido' });
                 setValidating(false);
                 return;
             }
 
             if (parsed.eventId !== eventId) {
-                setResult({ valid: false, message: 'Este ingresso é de outro evento' });
+                setResult({ valid: false, message: 'Este ingresso e de outro evento' });
                 setValidating(false);
                 return;
             }
 
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
-                setResult({ valid: false, message: 'Sessão expirada' });
+                setResult({ valid: false, message: 'Sessao expirada' });
                 setValidating(false);
                 return;
             }
@@ -132,7 +110,7 @@ export default function ScannerScreen() {
 
             setResult(response);
         } catch {
-            setResult({ valid: false, message: 'QR Code inválido ou ilegível' });
+            setResult({ valid: false, message: 'QR Code invalido ou ilegivel' });
         } finally {
             setValidating(false);
         }
@@ -145,9 +123,8 @@ export default function ScannerScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
+                <TouchableOpacity onPress={onBack} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Escanear Ingresso</Text>
@@ -163,7 +140,6 @@ export default function ScannerScreen() {
                         }}
                         onBarcodeScanned={handleBarCodeScanned}
                     >
-                        {/* Scan overlay */}
                         <View style={styles.overlay}>
                             <View style={styles.scanFrame}>
                                 <View style={[styles.corner, styles.cornerTopLeft]} />
@@ -202,7 +178,7 @@ export default function ScannerScreen() {
                                 styles.resultTitle,
                                 result.valid ? styles.resultTitleValid : styles.resultTitleInvalid
                             ]}>
-                                {result.valid ? 'Ingresso Válido!' : 'Ingresso Inválido'}
+                                {result.valid ? 'Ingresso Valido!' : 'Ingresso Invalido'}
                             </Text>
 
                             <Text style={styles.resultMessage}>{result.message}</Text>
@@ -235,6 +211,45 @@ export default function ScannerScreen() {
     );
 }
 
+export default function ScannerScreen() {
+    const { id: eventId } = useLocalSearchParams();
+    const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const normalizedEventId = Array.isArray(eventId) ? eventId[0] : eventId;
+
+    if (!CameraView || !useCameraPermissions) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Escanear Ingresso</Text>
+                    <View style={{ width: 40 }} />
+                </View>
+                <View style={styles.centerContainer}>
+                    <Ionicons name="camera-outline" size={64} color="#CCC" />
+                    <Text style={styles.permissionTitle}>Camera Indisponivel</Text>
+                    <Text style={styles.permissionText}>
+                        O modulo de camera nao esta disponivel nesta versao do app. E necessario um novo build para usar o scanner.
+                    </Text>
+                    <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
+                        <Text style={styles.backLinkText}>Voltar</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <ScannerContent
+            eventId={normalizedEventId}
+            headerPaddingTop={insets.top + 8}
+            onBack={() => router.back()}
+        />
+    );
+}
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -252,7 +267,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingBottom: 12,
     },
     backButton: {
         width: 40,

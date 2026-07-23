@@ -2,6 +2,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
 import { userService } from '@/services/api/UserService';
+import { API_URL } from '@/shared/config/api';
 import { Colors, Dimensions } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { formatFirstName, formatShortDate } from '@/utils/formatters';
@@ -34,7 +35,7 @@ export default function ProfileScreen() {
         });
     }, []);
 
-    const { data: profile, isLoading, refetch, error } = useQuery({
+    const { data: profile, isLoading, refetch } = useQuery({
         queryKey: ['profile', session?.user?.id],
         queryFn: async () => {
             try {
@@ -68,7 +69,10 @@ export default function ProfileScreen() {
                     languages: data.languages || [],
                     dietaryRestrictions: data.dietary_restrictions || [],
                     events: [],
-                    bookings: []
+                    bookings: [],
+                    walletBalance: data.wallet_balance ?? 0,
+                    pixKey: data.pix_key ?? null,
+                    pixKeyType: data.pix_key_type ?? null,
                 };
             }
         },
@@ -80,7 +84,7 @@ export default function ProfileScreen() {
             if (session?.user?.id) {
                 refetch();
             }
-        }, [session?.user?.id])
+        }, [refetch, session?.user?.id])
     );
 
     async function handleSignOut() {
@@ -138,9 +142,12 @@ export default function ProfileScreen() {
                 return;
             }
 
-            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/test`, {
+            const response = await fetch(`${API_URL}/notifications/test`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
                 body: JSON.stringify({
                     token: profile.expo_push_token,
                     title: 'Olá!',
@@ -293,6 +300,22 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
+                {/* Wallet Card */}
+                <TouchableOpacity style={styles.walletCard} onPress={() => router.push('/profile/wallet')}>
+                    <View style={styles.walletIconContainer}>
+                        <Ionicons name="wallet-outline" size={24} color="#fff" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.walletTitle}>Minha Carteira</Text>
+                        <Text style={styles.walletBalance}>
+                            R$ {Number(profile?.walletBalance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </Text>
+                    </View>
+                    <View style={styles.walletChevron}>
+                        <Ionicons name="chevron-forward" size={20} color="#fff" />
+                    </View>
+                </TouchableOpacity>
+
                 <Text style={styles.sectionTitle}>
                     {activeTab === 'history' ? 'ÚLTIMAS EXPERIÊNCIAS' : 'PRÓXIMOS EVENTOS'}
                 </Text>
@@ -362,11 +385,11 @@ export default function ProfileScreen() {
 
                 <Text style={styles.sectionTitle}>CONFIGURAÇÕES</Text>
 
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/pix-key')}>
                     <View style={styles.menuIconCircle}>
                         <Ionicons name="card-outline" size={20} color="#FF8C42" />
                     </View>
-                    <Text style={styles.menuText}>Métodos de Pagamento</Text>
+                    <Text style={styles.menuText}>Minha Chave PIX</Text>
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
@@ -378,12 +401,12 @@ export default function ProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuItem}>
-                    <View style={[styles.menuIconCircle, { backgroundColor: '#F3E5F5' }]}>
-                        <Ionicons name="help-circle-outline" size={20} color="#9C27B0" />
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/delete-account')}>
+                    <View style={[styles.menuIconCircle, { backgroundColor: '#FFF1F0' }]}>
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                     </View>
-                    <Text style={styles.menuText}>Ajuda e Suporte</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                    <Text style={[styles.menuText, { color: '#FF3B30' }]}>Excluir conta</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#FF3B30" />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.menuItem, { marginTop: 20 }]} onPress={handleSignOut}>
@@ -391,10 +414,12 @@ export default function ProfileScreen() {
                     <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
 
+                {__DEV__ && (
                 <TouchableOpacity style={[styles.menuItem, { marginTop: 20, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, borderBottomWidth: 0 }]} onPress={handleTestNotification}>
                     <Text style={[styles.menuText, { color: '#666', fontSize: 14 }]}>Testar Notificação Push</Text>
                     <Ionicons name="paper-plane-outline" size={18} color="#666" />
                 </TouchableOpacity>
+                )}
 
                 <View style={{ height: 40 }} />
             </ScrollView>
@@ -650,7 +675,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         padding: 16,
         borderRadius: 16,
-        marginBottom: 24,
+        marginBottom: 12,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -674,6 +699,47 @@ const styles = StyleSheet.create({
     manageSubtitle: {
         fontSize: 12,
         color: '#666',
+    },
+    walletCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF8C42',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 24,
+        shadowColor: '#FF8C42',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    walletIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    walletTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: 'rgba(255,255,255,0.85)',
+        marginBottom: 2,
+    },
+    walletBalance: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    walletChevron: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     emptyState: {
         padding: 24,

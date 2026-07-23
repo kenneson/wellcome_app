@@ -100,6 +100,71 @@ Quando você precisar atualizar o frontend com uma nova URL de backend:
 
 ---
 
+# Parte 3.5: Expo Go apontando para a VPS (Metro remoto)
+
+Isso sobe o Metro (bundler do Expo) na VPS. Você abre o Expo Go de qualquer lugar,
+digita uma URL fixa, e o app carrega — sem precisar do seu PC ligado.
+
+## 1. Serviço no EasyPanel
+
+Crie um terceiro **App** no mesmo projeto (ex: `wellcome-metro`):
+
+- **Source**: mesmo repositório, **Build Path**: `.` (raiz)
+- **Dockerfile**: `Dockerfile.expo.dev`
+- **Domains**: **nenhum**. O Expo Go fala HTTP direto na 8081, não passa pelo Traefik.
+
+## 2. Ports (CRÍTICO)
+
+Em **Advanced → Ports**, publique a porta no host:
+
+| Published | Target |
+|-----------|--------|
+| `8081`    | `8081` |
+
+E libere no firewall da VPS:
+
+```bash
+ufw allow 8081/tcp
+```
+
+## 3. Environment Variables
+
+| Nome | Valor |
+|------|-------|
+| `REACT_NATIVE_PACKAGER_HOSTNAME` | IP público da VPS (ou `dev.seudominio.com` apontando pra ele) |
+| `EXPO_PUBLIC_API_URL` | `https://api.seudominio.com` |
+| `EXPO_PUBLIC_SUPABASE_URL` | `https://cmkknuvydqetzmdpzzqv.supabase.co` |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | sua anon key |
+
+> `REACT_NATIVE_PACKAGER_HOSTNAME` é o que faz o Metro anunciar o endereço público
+> no manifesto. Sem ele o Expo Go recebe o IP interno do container (`172.x`) e trava
+> em "Downloading JavaScript bundle".
+
+## 4. Usar
+
+Deploy → abra o **Expo Go** → *Enter URL manually*:
+
+```
+exp://SEU_IP_DA_VPS:8081
+```
+
+Funciona de qualquer rede, 4G incluso. A URL não muda entre deploys.
+
+## 5. Atualizar o código
+
+Cada `git push` + **Deploy** no EasyPanel reconstrói a imagem e reinicia o Metro.
+O primeiro bundle depois do restart demora (~1-2 min); os seguintes são instantâneos.
+
+## Limitações conhecidas
+
+- **RAM**: o Metro empacotando esse app pede ~2 GB. VPS de 1 GB vai morrer por OOM no bundle.
+- **Push notifications** não funcionam no Expo Go desde o SDK 53 — o app já trata isso
+  silenciosamente (`src/shared/hooks/usePushNotifications.ts`). Para testar push, use o APK da Parte 4.
+- **Sem HTTPS**: o tráfego do bundler é HTTP puro. Serve para testes, não exponha
+  credencial nenhuma por ali.
+
+---
+
 # Parte 4: App Nativo (Opcional)
 
 Se você quiser que eles testem o app **nativo** (instalar no Android):

@@ -1,16 +1,20 @@
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
-import dotenv from 'dotenv';
+import './env';
 import Fastify from 'fastify';
-import path from 'path';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
+import { CheckPixPaymentUseCase } from './application/use-cases/CheckPixPaymentUseCase';
+import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
+import { ApproveWithdrawalUseCase } from './application/use-cases/ApproveWithdrawalUseCase';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
+import { CreatePixChargeUseCase } from './application/use-cases/CreatePixChargeUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
 import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
+import { DeleteUserAccountUseCase } from './application/use-cases/DeleteUserAccountUseCase';
 import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
@@ -19,24 +23,32 @@ import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistr
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
+import { EfiPixService } from './infrastructure/external/EfiPixService';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
+import { PrismaModerationRepository } from './infrastructure/repositories/PrismaModerationRepository';
 import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
+import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
+import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories/PrismaWithdrawalRequestRepository';
+import { AdminController } from './presentation/http/controllers/AdminController';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
+import { ModerationController } from './presentation/http/controllers/ModerationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
+import { PixPaymentController } from './presentation/http/controllers/PixPaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
+import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
+import { getAuthenticatedUserId } from './presentation/http/helpers/auth';
 
-// Explicitly load .env from backend root
-dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const fastify = Fastify({
-    logger: true
+    logger: true,
+    ignoreTrailingSlash: true
 });
 
 const start = async () => {
@@ -47,61 +59,66 @@ const start = async () => {
             credentials: true
         });
 
-        await fastify.register(fastifySwagger, {
-            openapi: {
-                info: {
-                    title: 'Wellcome API',
-                    description: 'API documentation for Wellcome application',
-                    version: '1.0.0'
-                },
-                servers: [{ url: 'http://localhost:3000' }],
-                tags: [
-                    { name: 'Auth', description: 'Authentication endpoints' },
-                    { name: 'Bookings', description: 'Event registration and approval endpoints' },
-                    { name: 'Events', description: 'Event management endpoints' },
-                    { name: 'Notifications', description: 'Push and in-app notification endpoints' },
-                    { name: 'Reviews', description: 'Event review endpoints' },
-                    { name: 'Users', description: 'User profile endpoints' },
-                    { name: 'General', description: 'General and health endpoints' }
-                ],
-                components: {
-                    schemas: {
-                        ErrorResponse: {
-                            type: 'object',
-                            properties: {
-                                message: { type: 'string' }
+        const enableApiDocs = process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true';
+
+        if (enableApiDocs) {
+            await fastify.register(fastifySwagger, {
+                openapi: {
+                    info: {
+                        title: 'Wellcome API',
+                        description: 'API documentation for Wellcome application',
+                        version: '1.0.0'
+                    },
+                    tags: [
+                        { name: 'Auth', description: 'Authentication endpoints' },
+                        { name: 'Bookings', description: 'Event registration and approval endpoints' },
+                        { name: 'Events', description: 'Event management endpoints' },
+                        { name: 'Notifications', description: 'Push and in-app notification endpoints' },
+                        { name: 'Revews', description: 'Event review endpoints' },
+                        { name: 'Users', description: 'User profile endpoints' },
+                        { name: 'Payments', description: 'PIX payment endpoints' },
+                        { name: 'Withdrawals', description: 'Host Withdrawal endpoints' },
+                        { name: 'General', description: 'General and health endpoints' }
+                    ],
+                    components: {
+                        schemas: {
+                            ErrorResponse: {
+                                type: 'object',
+                                properties: {
+                                    message: { type: 'string' }
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
 
-        await fastify.register(fastifySwaggerUi, {
-            routePrefix: '/docs',
-            uiConfig: {
-                docExpansion: 'list',
-                deepLinking: false
-            },
-            staticCSP: true,
-        });
+            await fastify.register(fastifySwaggerUi, {
+                routePrefix: '/docs',
+                uiConfig: {
+                    docExpansion: 'list',
+                    deepLinking: false
+                },
+                staticCSP: true,
+            });
 
-        fastify.get('/docs-spec/json', {
-            schema: {
-                hide: true
-            }
-        }, async (_req, reply) => {
-            return reply.send(fastify.swagger());
-        });
+            fastify.get('/docs-spec/json', {
+                schema: {
+                    hide: true
+                }
+            }, async (_req, reply) => {
+                return reply.send(fastify.swagger());
+            });
 
-        fastify.get('/docs-spec/yaml', {
-            schema: {
-                hide: true
-            }
-        }, async (_req, reply) => {
-            reply.type('application/yaml');
-            return reply.send(fastify.swagger({ yaml: true }));
-        });
+            fastify.get('/docs-spec/yaml', {
+                schema: {
+                    hide: true
+                }
+            }, async (_req, reply) => {
+                reply.type('application/yaml');
+                return reply.send(fastify.swagger({ yaml: true }));
+            });
+        }
 
 
 
@@ -111,11 +128,17 @@ const start = async () => {
         const userRepository = new PrismaUserRepository();
         const { notificationService } = require('./application/services/NotificationService'); // Import service
         const notificationRepository = new PrismaNotificationRepository();
+        const moderationRepository = new PrismaModerationRepository();
         const sendNotificationUseCase = new SendNotificationUseCase(notificationRepository, notificationService);
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
         const eventReviewRepository = new PrismaEventReviewRepository();
+        const paymentRepository = new PrismaPaymentRepository();
+        const withdrawalRepository = new PrismaWithdrawalRequestRepository();
+        const efiPixService = new EfiPixService();
 
         // Use Cases
+        const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
+        const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(withdrawalRepository, userRepository, efiPixService);
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository);
@@ -126,11 +149,15 @@ const start = async () => {
         const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
 
+        const createPixChargeUseCase = new CreatePixChargeUseCase(efiPixService, eventRepository, eventRegistrationRepository, paymentRepository);
+        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository, eventRepository, sendNotificationUseCase, userRepository);
+
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
 
         const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
         const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
+        const deleteUserAccountUseCase = new DeleteUserAccountUseCase(userRepository);
 
         const loginUseCase = new LoginUseCase();
         const registerUseCase = new RegisterUseCase();
@@ -146,8 +173,17 @@ const start = async () => {
             rejectRegistrationUseCase,
             eventRegistrationRepository
         );
-        const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase);
+        const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
+        const moderationController = new ModerationController(moderationRepository);
+        const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
+        const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
+        const adminController = new AdminController();
+
+        // Test route to verify deploy
+        fastify.get('/test-deploy', async () => {
+            return { deploy: 'OK', time: new Date().toISOString() };
+        });
 
         // Auth Routes
         fastify.post('/auth/login', {
@@ -211,7 +247,7 @@ const start = async () => {
                 tags: ['Events'],
                 body: {
                     type: 'object',
-                    required: ['title', 'description', 'price', 'maxGuests', 'eventDate', 'location', 'hostId'],
+                    required: ['title', 'description', 'price', 'maxGuests', 'eventDate', 'location'],
                     properties: {
                         title: { type: 'string' },
                         description: { type: 'string' },
@@ -309,7 +345,7 @@ const start = async () => {
                 tags: ['Reviews'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'userId', 'rating'],
+                    required: ['eventId', 'rating'],
                     properties: {
                         eventId: { type: 'string' },
                         userId: { type: 'string' },
@@ -333,6 +369,61 @@ const start = async () => {
                 }
             }
         }, (req, reply) => reviewController.create(req, reply));
+
+        // --- Moderação: denúncia e bloqueio (Apple 1.2 / Google UGC) ---
+        fastify.post('/reports', {
+            schema: {
+                summary: 'Report content',
+                description: 'Denuncia um evento, usuário ou avaliação',
+                tags: ['Moderation'],
+                body: {
+                    type: 'object',
+                    required: ['targetType', 'targetId', 'reason'],
+                    properties: {
+                        targetType: { type: 'string', enum: ['EVENT', 'USER', 'REVIEW'] },
+                        targetId: { type: 'string' },
+                        reason: { type: 'string', enum: ['SPAM', 'HARASSMENT', 'INAPPROPRIATE_CONTENT', 'SCAM', 'VIOLENCE', 'OTHER'] },
+                        details: { type: 'string' },
+                    },
+                },
+            },
+        }, (req, reply) => moderationController.createReport(req, reply));
+
+        fastify.get('/blocks', {
+            schema: { summary: 'List blocked users', tags: ['Moderation'] },
+        }, (req, reply) => moderationController.listBlocks(req, reply));
+
+        fastify.post('/blocks', {
+            schema: {
+                summary: 'Block a user',
+                tags: ['Moderation'],
+                body: {
+                    type: 'object',
+                    required: ['blockedId'],
+                    properties: { blockedId: { type: 'string' } },
+                },
+            },
+        }, (req, reply) => moderationController.block(req, reply));
+
+        fastify.delete('/blocks/:blockedId', {
+            schema: { summary: 'Unblock a user', tags: ['Moderation'] },
+        }, (req, reply) => moderationController.unblock(req, reply));
+
+        fastify.get('/admin/reports', {
+            schema: { summary: 'List reports (admin)', tags: ['Moderation', 'Admin'] },
+        }, (req, reply) => moderationController.listReports(req, reply));
+
+        fastify.post('/admin/reports/:id/resolve', {
+            schema: {
+                summary: 'Resolve a report (admin)',
+                tags: ['Moderation', 'Admin'],
+                body: {
+                    type: 'object',
+                    required: ['status'],
+                    properties: { status: { type: 'string', enum: ['RESOLVED', 'DISMISSED'] } },
+                },
+            },
+        }, (req, reply) => moderationController.resolveReport(req, reply));
 
 
         fastify.get('/', {
@@ -360,7 +451,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'userId'],
+                    required: ['eventId'],
                     properties: {
                         eventId: { type: 'string' },
                         userId: { type: 'string' },
@@ -484,7 +575,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['registrationId', 'hostId'],
+                    required: ['registrationId'],
                     properties: {
                         registrationId: { type: 'string' },
                         hostId: { type: 'string' }
@@ -503,7 +594,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['registrationId', 'hostId', 'reason'],
+                    required: ['registrationId', 'reason'],
                     properties: {
                         registrationId: { type: 'string' },
                         hostId: { type: 'string' },
@@ -523,7 +614,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['bookingId', 'hostId'],
+                    required: ['bookingId'],
                     properties: {
                         bookingId: { type: 'string' },
                         hostId: { type: 'string' }
@@ -567,7 +658,6 @@ const start = async () => {
         }, (req, reply) => eventRegistrationController.validateTicket(req, reply));
 
         interface NotificationTestBody {
-            token: string;
             title: string;
             body: string;
             data?: Record<string, any>;
@@ -580,7 +670,7 @@ const start = async () => {
                 tags: ['Notifications'],
                 body: {
                     type: 'object',
-                    required: ['token', 'title', 'body'],
+                    required: ['title', 'body'],
                     properties: {
                         token: { type: 'string' },
                         title: { type: 'string' },
@@ -597,10 +687,21 @@ const start = async () => {
                 }
             }
         }, async (req, reply) => {
-            const { token, title, body, data } = req.body;
-            const { notificationService } = require('./application/services/NotificationService');
-            await notificationService.sendPushBlocking(token, title, body, data);
-            return { success: true };
+            try {
+                const { title, body, data } = req.body;
+                const userId = await getAuthenticatedUserId(req);
+                const user = await userRepository.findById(userId);
+
+                if (!user?.expoPushToken) {
+                    return reply.code(404).send({ message: 'Push token not found for authenticated user' });
+                }
+
+                await notificationService.sendPushBlocking(user.expoPushToken, title, body, data);
+                return { success: true };
+            } catch (error: any) {
+                const statusCode = error?.name === 'UnauthorizedRequestError' ? 401 : 500;
+                return reply.code(statusCode).send({ message: error?.message || 'Failed to send test notification' });
+            }
         });
 
         // Notification endpoints
@@ -609,13 +710,6 @@ const start = async () => {
                 summary: 'List notifications',
                 description: 'Get user notifications',
                 tags: ['Notifications'],
-                querystring: {
-                    type: 'object',
-                    properties: {
-                        userId: { type: 'string' }
-                    },
-                    required: ['userId']
-                },
                 response: {
                     200: {
                         description: 'List of notifications',
@@ -688,6 +782,9 @@ const start = async () => {
                             languages: { type: 'array', items: { type: 'string' } },
                             dietaryRestrictions: { type: 'array', items: { type: 'string' } },
                             avatarUrl: { type: 'string', nullable: true },
+                            walletBalance: { type: 'number' },
+                            pixKey: { type: 'string', nullable: true },
+                            pixKeyType: { type: 'string', nullable: true },
                             events: { type: 'array', items: { type: 'object', additionalProperties: true } },
                             bookings: { type: 'array', items: { type: 'object', additionalProperties: true } }
                         }
@@ -723,7 +820,9 @@ const start = async () => {
                         neighborhood: { type: 'string' },
                         languages: { type: 'array', items: { type: 'string' } },
                         dietary_restrictions: { type: 'array', items: { type: 'string' } },
-                        avatar_url: { type: 'string' }
+                        avatar_url: { type: 'string' },
+                        pix_key: { type: 'string' },
+                        pix_key_type: { type: 'string' }
                     }
                 },
                 response: {
@@ -742,6 +841,195 @@ const start = async () => {
             }
         }, (req, reply) => userController.updateProfile(req, reply));
 
+        fastify.delete('/users/me/account', {
+            schema: {
+                summary: 'Delete current user account',
+                description: 'Deletes the authenticated account and anonymizes the public profile',
+                tags: ['Users'],
+                response: {
+                    204: {
+                        description: 'Account deleted successfully'
+                    },
+                    401: {
+                        description: 'Missing or invalid session',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' }
+                        }
+                    },
+                    409: {
+                        description: 'Account cannot be deleted yet',
+                        type: 'object',
+                        properties: {
+                            message: { type: 'string' },
+                            blockers: {
+                                type: 'array',
+                                items: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => userController.deleteAccount(req, reply));
+
+        // Withdrawals
+        fastify.post('/withdrawals', {
+            schema: {
+                summary: 'Request withdrawal',
+                description: 'Host request withdrawal of their available balance',
+                tags: ['Withdrawals'],
+                body: {
+                    type: 'object',
+                    required: ['amount'],
+                    properties: {
+                        userId: { type: 'string' },
+                        amount: { type: 'number' }
+                    }
+                },
+                response: {
+                    201: {
+                        description: 'Withdrawal requested',
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            userId: { type: 'string' },
+                            amount: { type: 'number' },
+                            status: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => withdrawalController.requestWithdrawal(req, reply));
+
+        fastify.post('/admin/withdrawals/:id/approve', {
+            schema: {
+                summary: 'Approve withdrawal (Admin)',
+                description: 'Admin approves a pending withdrawal and sends the PIX',
+                tags: ['Withdrawals'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                },
+                response: {
+                    200: {
+                        description: 'Withdrawal approved',
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            status: { type: 'string' },
+                            efiEndToEndId: { type: 'string', nullable: true }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
+
+        // Get all withdrawals for Admin UI
+        fastify.get('/admin/withdrawals', {
+            schema: {
+                summary: 'List all withdrawals (Admin)',
+                description: 'List all withdrawals requests',
+                tags: ['Withdrawals'],
+                response: {
+                    200: {
+                        description: 'List of withdrawals',
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string' },
+                                userId: { type: 'string' },
+                                userName: { type: 'string', nullable: true },
+                                userAvatarUrl: { type: 'string', nullable: true },
+                                amount: { type: 'number' },
+                                status: { type: 'string' },
+                                pixKey: { type: 'string' },
+                                pixKeyType: { type: 'string', nullable: true },
+                                efiEndToEndId: { type: 'string', nullable: true },
+                                createdAt: { type: 'string' }
+                            }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => withdrawalController.listAll(req, reply));
+
+        // PIX Webhook (Recebe avisos da EFI)
+        fastify.post('/webhook/pix', {
+            schema: {
+                summary: 'EFI PIX Webhook',
+                description: 'Receives notifications from EFI regarding PIX transfers',
+                tags: ['Withdrawals'],
+                hide: true
+            }
+        }, (req, reply) => withdrawalController.handleWebhook(req, reply));
+
+        fastify.get('/admin/me', {
+            schema: {
+                summary: 'Get authenticated admin context',
+                description: 'Returns the authenticated admin user',
+                tags: ['Users'],
+            }
+        }, (req, reply) => adminController.me(req, reply));
+
+        fastify.get('/admin/kyc', {
+            schema: {
+                summary: 'List KYC requests',
+                description: 'List KYC requests for admin moderation',
+                tags: ['Users'],
+                querystring: {
+                    type: 'object',
+                    properties: {
+                        status: { type: 'string', enum: ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] }
+                    }
+                }
+            }
+        }, (req, reply) => adminController.listKycRequests(req, reply));
+
+        fastify.post('/admin/kyc/:id/approve', {
+            schema: {
+                summary: 'Approve KYC request',
+                description: 'Approve a pending KYC request',
+                tags: ['Users'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                }
+            }
+        }, (req, reply) => adminController.approveKyc(req as any, reply));
+
+        fastify.post('/admin/kyc/:id/reject', {
+            schema: {
+                summary: 'Reject KYC request',
+                description: 'Reject a pending KYC request',
+                tags: ['Users'],
+                params: {
+                    type: 'object',
+                    properties: { id: { type: 'string' } }
+                },
+                body: {
+                    type: 'object',
+                    required: ['reason'],
+                    properties: {
+                        reason: { type: 'string' }
+                    }
+                }
+            }
+        }, (req, reply) => adminController.rejectKyc(req as any, reply));
+
+        // Setup Webhook (Comando para registrar a URL na EFI)
+        fastify.post('/admin/setup-webhook', {
+            schema: {
+                summary: 'Setup EFI Webhook',
+                description: 'Registers the Webhook URL with EFI',
+                tags: ['Withdrawals'],
+                querystring: {
+                    type: 'object',
+                    properties: { url: { type: 'string' } }
+                }
+            }
+        }, (req, reply) => withdrawalController.setupWebhook(req, reply));
+
         fastify.delete('/bookings', {
             schema: {
                 summary: 'Cancel booking',
@@ -749,7 +1037,7 @@ const start = async () => {
                 tags: ['Bookings'],
                 body: {
                     type: 'object',
-                    required: ['eventId', 'userId'],
+                    required: ['eventId'],
                     properties: {
                         eventId: { type: 'string' },
                         userId: { type: 'string' }
@@ -855,7 +1143,7 @@ const start = async () => {
                 },
                 body: {
                     type: 'object',
-                    required: ['hostId'],
+                    required: [],
                     properties: {
                         hostId: { type: 'string' },
                         title: { type: 'string' },
@@ -932,7 +1220,7 @@ const start = async () => {
                 },
                 body: {
                     type: 'object',
-                    required: ['hostId'],
+                    required: [],
                     properties: {
                         hostId: { type: 'string' }
                     }
@@ -967,7 +1255,7 @@ const start = async () => {
                 },
                 body: {
                     type: 'object',
-                    required: ['userId'],
+                    required: [],
                     properties: {
                         userId: { type: 'string' }
                     }
@@ -992,7 +1280,63 @@ const start = async () => {
             }
         }, (req, reply) => reviewController.delete(req, reply));
 
+        // PIX Payment Routes
+        fastify.post('/payments/pix', {
+            schema: {
+                summary: 'Create PIX charge',
+                description: 'Generate a PIX QR code for event registration payment',
+                tags: ['Payments'],
+                body: {
+                    type: 'object',
+                    required: ['bookingId', 'eventId'],
+                    properties: {
+                        bookingId: { type: 'string' },
+                        eventId: { type: 'string' },
+                        userId: { type: 'string' }
+                    }
+                },
+                response: {
+                    201: {
+                        description: 'PIX charge created',
+                        type: 'object',
+                        properties: {
+                            paymentId: { type: 'string' },
+                            txid: { type: 'string' },
+                            qrcode: { type: 'string' },
+                            pixCopiaECola: { type: 'string' },
+                            valor: { type: 'string' },
+                            status: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => pixPaymentController.createCharge(req, reply));
 
+        fastify.get('/payments/pix/:bookingId', {
+            schema: {
+                summary: 'Check PIX payment status',
+                description: 'Check if a PIX payment has been confirmed',
+                tags: ['Payments'],
+                params: {
+                    type: 'object',
+                    properties: {
+                        bookingId: { type: 'string' }
+                    }
+                },
+                response: {
+                    200: {
+                        description: 'Payment status',
+                        type: 'object',
+                        properties: {
+                            paymentId: { type: 'string' },
+                            txid: { type: 'string' },
+                            status: { type: 'string' },
+                            paid: { type: 'boolean' }
+                        }
+                    }
+                }
+            }
+        }, (req, reply) => pixPaymentController.checkPayment(req, reply));
 
         const port = Number(process.env.PORT) || 3000;
         const address = await fastify.listen({ port, host: '0.0.0.0' });

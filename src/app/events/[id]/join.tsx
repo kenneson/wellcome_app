@@ -25,7 +25,7 @@ export default function JoinEventScreen() {
             const { data, error } = await supabase
                 .from('events')
                 .select(`
-                    id, title, access_type,
+                    id, title, access_type, price,
                     questions:event_questions(id, question, required, order, question_type)
                 `)
                 .eq('id', id)
@@ -87,6 +87,13 @@ export default function JoinEventScreen() {
                 userId: session.user.id,
                 answers: formattedAnswers
             });
+
+            // Se o evento tem preço, redirecionar para pagamento PIX
+            const eventPrice = Number(event.price || 0);
+            if (eventPrice > 0 && registration.id) {
+                router.replace(`/events/${event.id}/payment?bookingId=${registration.id}`);
+                return;
+            }
 
             // Handle specific statuses
             if (registration.status === 'PENDING') {

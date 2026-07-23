@@ -1,4 +1,5 @@
 import { EnhancedEventCard } from '@/components/ui/EnhancedEventCard';
+import { useBlockedIds } from '@/hooks/useBlockedIds';
 import { FilterCriteria, FilterModal } from '@/components/ui/events/FilterModal';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { QuickStats } from '@/components/ui/QuickStats';
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const [location, setLocation] = useState<string | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
+  const blockedIds = useBlockedIds();
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -479,16 +481,18 @@ export default function HomeScreen() {
             <ActivityIndicator size="large" color={Colors.light.primary} />
             <Text style={styles.loadingText}>Carregando eventos...</Text>
           </View>
-        ) : events.length === 0 ? (
+        ) : events.filter((e) => !blockedIds.has(e.host_id)).length === 0 ? (
           renderEmptyState()
         ) : (
-          events.map((event) => (
-            <EnhancedEventCard
-              key={event.id}
-              event={event}
-              onPress={() => router.push(`/events/${event.id}`)}
-            />
-          ))
+          events
+            .filter((e) => !blockedIds.has(e.host_id))
+            .map((event) => (
+              <EnhancedEventCard
+                key={event.id}
+                event={event}
+                onPress={() => router.push(`/events/${event.id}`)}
+              />
+            ))
         )}
       </ScrollView>
 
