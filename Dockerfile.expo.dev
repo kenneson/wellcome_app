@@ -11,6 +11,7 @@ EXPOSE 8081
 
 # REACT_NATIVE_PACKAGER_HOSTNAME (definido no EasyPanel) faz o Metro anunciar
 # o host publico no manifesto. Sem ele o Expo Go recebe o IP interno do container.
-# --offline: o projeto tem owner/projectId do EAS; sem isso o expo start tenta
-# autenticar na conta, pede input num container sem tty, e entra em loop de restart.
-CMD ["npx", "expo", "start", "--go", "--offline", "--port", "8081"]
+# O projeto tem owner/projectId do EAS, entao expo start precisa autenticar.
+# Num container sem tty isso trava (Input is required). Defina EXPO_TOKEN no
+# EasyPanel (expo.dev -> Account settings -> Access tokens) e ele autentica em CI.
+CMD ["npx", "expo", "start", "--go", "--port", "8081"]
