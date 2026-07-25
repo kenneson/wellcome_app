@@ -28,12 +28,19 @@ O **Easypanel** é um painel de controle moderno baseado em Docker que facilita 
     - **Docker Image**: Deixe vazio para usar o Dockerfile do repositório.
 
 - **Environment Variables**:
-    - Adicione todas as variáveis do seu arquivo `.env`:
-        - `DATABASE_URL`
-        - `DIRECT_URL`
-        - `SUPABASE_URL`
-        - `SUPABASE_ANON_KEY`
+    - Cole o conteúdo do seu `backend/.env` (o campo aceita `KEY=value` linha por linha):
+        - `DATABASE_URL` — única var de conexão; **não existe `DIRECT_URL`**, o `prisma.config.ts` só lê essa
+        - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+        - `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
         - `PORT`: `3000`
+        - `APP_FEE_PERCENTAGE`
+        - `NODE_ENV`: `production`
+    - Para PIX, adicione também: `EFI_CLIENT_ID`, `EFI_CLIENT_SECRET`, `EFI_PIX_KEY`,
+      `EFI_SANDBOX` e **`EFI_CERT_BASE64`** (o `.p12` é gitignored, não vai na imagem —
+      use `base64 -w0 seu-cert.p12` e deixe `EFI_CERT_PATH` vazio).
+    - Não defina `ENABLE_API_DOCS=true` em produção: expõe o Swagger publicamente.
+
+> Sem essas vars o container reinicia em loop com `Error: supabaseUrl is required.`
 
 - **Domains**:
     - Adicione seu domínio, ex: `api.seudominio.com`.
