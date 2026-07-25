@@ -14,4 +14,6 @@ EXPOSE 8081
 # O projeto tem owner/projectId do EAS, entao expo start precisa autenticar.
 # Num container sem tty isso trava (Input is required). Defina EXPO_TOKEN no
 # EasyPanel (expo.dev -> Account settings -> Access tokens) e ele autentica em CI.
-CMD ["npx", "expo", "start", "--go", "--port", "8081"]
+# --clear: EXPO_PUBLIC_* sao inlined em tempo de transform e cacheados. Sem limpar
+# o cache, mudar EXPO_PUBLIC_API_URL nao surte efeito (Metro reusa o transform velho).
+CMD ["npx", "expo", "start", "--go", "--clear", "--port", "8081"]
