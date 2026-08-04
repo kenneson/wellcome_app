@@ -7,7 +7,6 @@ import { useBlockedIds } from '@/hooks/useBlockedIds';
 import { eventService } from '@/services/api/EventService';
 import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
@@ -25,17 +24,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const STORAGE_LOCATION_KEY = '@user_location';
 const DEFAULT_RADIUS_KM = 60;
 const DEFAULT_FILTERS: FilterCriteria = { radiusInKm: DEFAULT_RADIUS_KM };
 
 type FeedCoordinates = { lat: number; lon: number };
-
-interface StoredFeedLocation {
-  label: string;
-  latitude: number;
-  longitude: number;
-}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -44,6 +36,7 @@ export default function HomeScreen() {
   const eventsRequestId = useRef(0);
 
   const [location, setLocation] = useState<string | null>(null);
+  const [locationCity, setLocationCity] = useState<string | null>(null);
   const [locationCoords, setLocationCoords] = useState<FeedCoordinates | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
@@ -74,73 +67,7 @@ export default function HomeScreen() {
   }
 
   async function initializeFeed() {
-    try {
-      setLoadingLocation(true);
-      const storedLocation = await readStoredLocation();
-
-      if (storedLocation) {
-        const coords = {
-          lat: storedLocation.latitude,
-          lon: storedLocation.longitude,
-        };
-        setLocation(storedLocation.label);
-        setLocationCoords(coords);
-        await getEvents(coords, DEFAULT_FILTERS);
-        return;
-      }
-
-      await getLocation(DEFAULT_FILTERS);
-    } catch {
-      await getLocation(DEFAULT_FILTERS);
-    } finally {
-      setLoadingLocation(false);
-    }
-  }
-
-  async function readStoredLocation(): Promise<StoredFeedLocation | null> {
-    const stored = await AsyncStorage.getItem(STORAGE_LOCATION_KEY);
-    if (!stored) return null;
-
-    try {
-      const parsed = JSON.parse(stored) as Partial<StoredFeedLocation>;
-      if (
-        typeof parsed.label === 'string' &&
-        typeof parsed.latitude === 'number' &&
-        typeof parsed.longitude === 'number'
-      ) {
-        return parsed as StoredFeedLocation;
-      }
-    } catch {
-      // Older versions stored only the city label.
-    }
-
-    const geocoded = await eventService.geocodeLocation(stored);
-    if (geocoded.latitude === null || geocoded.longitude === null) return null;
-
-    const migratedLocation: StoredFeedLocation = {
-      label: stored,
-      latitude: geocoded.latitude,
-      longitude: geocoded.longitude,
-    };
-    try {
-      await AsyncStorage.setItem(STORAGE_LOCATION_KEY, JSON.stringify(migratedLocation));
-    } catch {
-      // The current session can still use the migrated coordinates.
-    }
-    return migratedLocation;
-  }
-
-  async function persistLocation(label: string, coords: FeedCoordinates) {
-    const storedLocation: StoredFeedLocation = {
-      label,
-      latitude: coords.lat,
-      longitude: coords.lon,
-    };
-    try {
-      await AsyncStorage.setItem(STORAGE_LOCATION_KEY, JSON.stringify(storedLocation));
-    } catch {
-      // Storage failure should not block the current nearby search.
-    }
+    await getLocation(DEFAULT_FILTERS);
   }
 
   async function getLocation(appliedFilters: FilterCriteria = filters) {
@@ -166,6 +93,7 @@ export default function HomeScreen() {
         lon: currentPosition.coords.longitude,
       };
       let locationLabel = 'Localização atual';
+      let currentCity: string | null = null;
 
       try {
         const addresses = await Location.reverseGeocodeAsync({
@@ -176,17 +104,22 @@ export default function HomeScreen() {
 
         if (address) {
           const city = address.city || address.subregion;
+          currentCity = city || null;
           if (city && address.region) locationLabel = `${city} - ${address.region}`;
           else if (city || address.region) locationLabel = city || address.region || locationLabel;
         }
       } catch {
-        // Coordinates still allow the nearby search when the label lookup fails.
+        // The municipality name is required to keep neighboring cities out of the feed.
+      }
+
+      if (!currentCity) {
+        throw new Error('Current municipality could not be identified');
       }
 
       setLocation(locationLabel);
+      setLocationCity(currentCity);
       setLocationCoords(coords);
-      await persistLocation(locationLabel, coords);
-      await getEvents(coords, appliedFilters);
+      await getEvents(coords, currentCity, appliedFilters);
     } catch {
       setEvents([]);
       setEventsError('Não foi possível obter sua localização.');
@@ -198,7 +131,7 @@ export default function HomeScreen() {
   }
 
   const handleSelectCity = async (
-    municipality: { fullName: string },
+    municipality: { name: string; fullName: string },
     coords?: FeedCoordinates
   ) => {
     try {
@@ -218,10 +151,10 @@ export default function HomeScreen() {
       }
 
       setLocation(municipality.fullName);
+      setLocationCity(municipality.name);
       setLocationCoords(selectedCoords);
-      await persistLocation(municipality.fullName, selectedCoords);
       setShowLocationModal(false);
-      await getEvents(selectedCoords, filters);
+      await getEvents(selectedCoords, municipality.name, filters);
     } finally {
       setLoadingLocation(false);
     }
@@ -229,11 +162,12 @@ export default function HomeScreen() {
 
   async function getEvents(
     coords: FeedCoordinates | null,
+    city: string | null,
     appliedFilters: FilterCriteria = filters
   ) {
     const requestId = ++eventsRequestId.current;
 
-    if (!coords) {
+    if (!coords || !city) {
       setEvents([]);
       setEventsError(null);
       setLoadingEvents(false);
@@ -249,6 +183,7 @@ export default function HomeScreen() {
         lat: coords.lat.toString(),
         lon: coords.lon.toString(),
         radius: (appliedFilters.radiusInKm || DEFAULT_RADIUS_KM).toString(),
+        city,
         cuisine: appliedFilters.cuisine,
         vibe: appliedFilters.vibe,
         priceMin: appliedFilters.priceMin?.trim() || undefined,
@@ -271,7 +206,7 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      if (locationCoords) await getEvents(locationCoords, filters);
+      if (locationCoords && locationCity) await getEvents(locationCoords, locationCity, filters);
       else await getLocation(filters);
     } finally {
       setRefreshing(false);
@@ -287,7 +222,7 @@ export default function HomeScreen() {
 
   const clearFilters = async () => {
     setFilters(DEFAULT_FILTERS);
-    await getEvents(locationCoords, DEFAULT_FILTERS);
+    await getEvents(locationCoords, locationCity, DEFAULT_FILTERS);
   };
 
   const renderEmptyState = () => {
@@ -318,7 +253,7 @@ export default function HomeScreen() {
           <Text style={styles.emptyStateBody}>{eventsError}</Text>
           <TouchableOpacity
             style={styles.emptyStateButton}
-            onPress={() => void getEvents(locationCoords, filters)}
+            onPress={() => void getEvents(locationCoords, locationCity, filters)}
           >
             <Text style={styles.emptyStateButtonText}>Tentar novamente</Text>
           </TouchableOpacity>
@@ -416,23 +351,35 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.searchBar}
-        onPress={() => setShowLocationModal(true)}
-        accessibilityRole="button"
-        accessibilityLabel={`Localização atual: ${location || 'não definida'}`}
-        accessibilityHint="Toque para alterar sua localização"
-      >
-        <Ionicons name="location-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
-        <Text style={styles.searchText} numberOfLines={1}>
-          {loadingLocation ? 'Buscando localização...' : location || 'Definir localização'}
-        </Text>
-        {loadingLocation ? (
-          <ActivityIndicator size="small" color={Colors.light.primary} />
-        ) : (
+      <View style={styles.locationControls}>
+        <TouchableOpacity
+          style={styles.searchBar}
+          onPress={() => setShowLocationModal(true)}
+          accessibilityRole="button"
+          accessibilityLabel={`Cidade do feed: ${location || 'não definida'}`}
+          accessibilityHint="Toque para escolher outra cidade"
+        >
+          <Ionicons name="location-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
+          <Text style={styles.searchText} numberOfLines={1}>
+            {loadingLocation ? 'Buscando localização...' : location || 'Definir localização'}
+          </Text>
           <Ionicons name="search-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.gpsButton}
+          onPress={() => void getLocation(filters)}
+          disabled={loadingLocation}
+          accessibilityRole="button"
+          accessibilityLabel="Usar minha localização atual pelo GPS"
+        >
+          {loadingLocation ? (
+            <ActivityIndicator size="small" color={Colors.light.primary} />
+          ) : (
+            <Ionicons name="navigate" size={22} color={Colors.light.primary} />
+          )}
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -542,7 +489,7 @@ export default function HomeScreen() {
         onClose={() => setFilterModalVisible(false)}
         onApply={(newFilters) => {
           setFilters(newFilters);
-          void getEvents(locationCoords, newFilters);
+          void getEvents(locationCoords, locationCity, newFilters);
         }}
         initialFilters={filters}
       />
@@ -573,11 +520,17 @@ const styles = StyleSheet.create({
     width: Dimensions.logo.width,
     height: Dimensions.logo.height,
   },
+  locationControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    margin: Spacing.lg,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.light.card,
-    margin: Spacing.lg,
     padding: Spacing.md,
     minHeight: Dimensions.touchTarget.min,
     borderRadius: BorderRadius.sm,
@@ -588,6 +541,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  gpsButton: {
+    width: Dimensions.touchTarget.min,
+    height: Dimensions.touchTarget.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
   },
   searchText: {
     flex: 1,

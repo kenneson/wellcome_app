@@ -396,6 +396,7 @@ const start = async () => {
                         lat: { type: 'string', description: 'Latitude' },
                         lon: { type: 'string', description: 'Longitude' },
                         radius: { type: 'string', description: 'Radius in KM' },
+                        city: { type: 'string', minLength: 1, maxLength: 120, description: 'Municipality name' },
                         cuisine: {
                             anyOf: [
                                 { type: 'string' },

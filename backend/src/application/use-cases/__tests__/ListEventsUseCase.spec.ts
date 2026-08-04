@@ -52,6 +52,7 @@ describe('ListEventsUseCase', () => {
             latitude: -23.5505,
             longitude: -46.6333,
             radiusInKm: 25,
+            city: 'São Paulo',
             cuisine: ['Brasileira'],
             vibe: ['Casual'],
             priceMin: 20,

@@ -4,6 +4,7 @@ export interface EventFilters {
     latitude?: number;
     longitude?: number;
     radiusInKm?: number;
+    city?: string;
     cuisine?: string[];
     vibe?: string[];
     priceMin?: number;

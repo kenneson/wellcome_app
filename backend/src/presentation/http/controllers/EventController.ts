@@ -144,7 +144,7 @@ export class EventController {
 
     async list(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { lat, lon, radius, cuisine, vibe, priceMin, priceMax, eventType, excludeHostId } = request.query as any;
+            const { lat, lon, radius, city, cuisine, vibe, priceMin, priceMax, eventType, excludeHostId } = request.query as any;
             const latitude = this.parseOptionalNumber(lat);
             const longitude = this.parseOptionalNumber(lon);
             const radiusInKm = this.parseOptionalNumber(radius);
@@ -168,6 +168,7 @@ export class EventController {
                 latitude,
                 longitude,
                 radiusInKm,
+                city: city ? (Array.isArray(city) ? city[0] : city) : undefined,
                 cuisine: cuisine ? (Array.isArray(cuisine) ? cuisine : [cuisine]) : undefined,
                 vibe: vibe ? (Array.isArray(vibe) ? vibe : [vibe]) : undefined,
                 priceMin: minimumPrice,

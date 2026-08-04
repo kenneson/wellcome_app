@@ -1,5 +1,6 @@
 import { CreateEventDTO, Event, UpdateEventDTO } from '../../domain/entities/Event';
-import { EventRepository } from '../../domain/repositories/EventRepository';
+import { EventFilters, EventRepository } from '../../domain/repositories/EventRepository';
+import { isEventInCity } from '../../domain/services/EventCity';
 import { filterAndSortEventsByProximity } from '../../domain/services/EventProximity';
 import { prisma } from '../database/prismaClient';
 
@@ -47,17 +48,7 @@ export class PrismaEventRepository implements EventRepository {
         return this.mapToDomain(event);
     }
 
-    async findAll(filters?: {
-        latitude?: number;
-        longitude?: number;
-        radiusInKm?: number;
-        cuisine?: string[];
-        vibe?: string[];
-        priceMin?: number;
-        priceMax?: number;
-        eventType?: string;
-        excludeHostId?: string;
-    }): Promise<Event[]> {
+    async findAll(filters?: EventFilters): Promise<Event[]> {
         const where: any = {};
 
         // Coarse database filter. The use case also applies the registration cutoff.
@@ -80,7 +71,12 @@ export class PrismaEventRepository implements EventRepository {
             }
         });
 
-        const mappedEvents = events.map(this.mapToDomain);
+        let mappedEvents = events.map(this.mapToDomain);
+
+        const city = filters?.city;
+        if (city) {
+            mappedEvents = mappedEvents.filter((event) => isEventInCity(event.location, city));
+        }
 
         if (
             filters?.latitude !== undefined &&
