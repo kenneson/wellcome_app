@@ -363,6 +363,9 @@ export default function EventRegistrationsScreen() {
                         renderItem={renderItem}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
+                        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                        keyboardShouldPersistTaps="handled"
                         ListEmptyComponent={
                             <View style={styles.emptyState}>
                                 <Text style={styles.emptyStateText}>

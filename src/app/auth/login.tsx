@@ -14,7 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 
 WebBrowser.maybeCompleteAuthSession();
 

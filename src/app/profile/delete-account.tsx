@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +7,6 @@ import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -62,7 +62,7 @@ export default function DeleteAccountScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <KeyboardAwareScrollView contentContainerStyle={styles.content}>
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="chevron-back" size={20} color="#111" />
                     <Text style={styles.backText}>Voltar</Text>
@@ -114,7 +114,7 @@ export default function DeleteAccountScreen() {
                         )}
                     </TouchableOpacity>
                 </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

@@ -6,7 +6,7 @@ import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventCreateSettings() {

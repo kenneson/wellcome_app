@@ -4,7 +4,9 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -207,8 +209,9 @@ export function LocationAutocomplete({
                 transparent={false}
                 onRequestClose={onClose}
             >
-                <View
+                <KeyboardAvoidingView
                     style={styles.modalContainer}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
                     <View style={styles.modalHeader}>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -220,7 +223,7 @@ export function LocationAutocomplete({
                         <View style={{ width: 40 }} />
                     </View>
                     {content}
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         );
     }

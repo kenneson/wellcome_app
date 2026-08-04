@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,7 +7,6 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -100,7 +100,7 @@ export default function PixKeyScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
+            <KeyboardAwareScrollView contentContainerStyle={styles.content}>
                 {/* Info Banner */}
                 <View style={styles.infoBanner}>
                     <Ionicons name="information-circle-outline" size={20} color="#2196F3" />
@@ -148,7 +148,7 @@ export default function PixKeyScreen() {
                         <Text style={styles.saveButtonText}>Salvar Chave PIX</Text>
                     )}
                 </TouchableOpacity>
-            </ScrollView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }
