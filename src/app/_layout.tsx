@@ -8,7 +8,6 @@ import './global.css';
 
 
 import { supabase } from '@/shared/lib/supabase';
-import { adminService } from '@/services/api/AdminService';
 import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,7 +30,6 @@ export default function RootLayout() {
 
   const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
   const [kycStatus, setKycStatus] = useState<KycStatus>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [profileCheckLoading, setProfileCheckLoading] = useState(true);
   const lastUserId = useRef<string | null>(null);
 
@@ -51,10 +49,8 @@ export default function RootLayout() {
       if (!session) {
         setIsProfileComplete(null);
         setKycStatus(null);
-        setIsAdmin(null);
         lastUserId.current = null;
       } else {
-        setIsAdmin(null);
         setProfileCheckLoading(true);
       }
     });
@@ -65,11 +61,10 @@ export default function RootLayout() {
   async function checkProfile(force = false) {
     if (!session?.user) {
       setProfileCheckLoading(false);
-      setIsAdmin(false);
       return;
     }
 
-    if (!force && session.user.id === lastUserId.current && isProfileComplete !== null && isAdmin !== null) {
+    if (!force && session.user.id === lastUserId.current && isProfileComplete !== null) {
       // Same user, already checked. Skip.
       setProfileCheckLoading(false);
       return;
@@ -80,28 +75,21 @@ export default function RootLayout() {
 
     try {
       console.log('Checking profile for user:', session.user.id);
-      const [profileResult, hasAdminAccess] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('full_name, occupation, looking_for, city, neighborhood, kyc_status')
-          .eq('id', session.user.id)
-          .maybeSingle(),
-        adminService.getMe().then(() => true).catch(() => false),
-      ]);
-      const { data: profile, error } = profileResult;
-      setIsAdmin(hasAdminAccess);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('full_name, occupation, looking_for, city, neighborhood, kyc_status')
+        .eq('id', session.user.id)
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
         setIsProfileComplete(false);
         setKycStatus(null);
-        setIsAdmin(false);
       } else if (!profile) {
         // No profile row exists - treat as incomplete
         console.log('No profile found for user');
         setIsProfileComplete(false);
         setKycStatus(null);
-        setIsAdmin(false);
       } else {
         console.log('Profile data:', profile);
         // full_name, occupation, city, neighborhood are REQUIRED
@@ -114,7 +102,6 @@ export default function RootLayout() {
       console.error('Exception checking profile:', e);
       setIsProfileComplete(false);
       setKycStatus(null);
-      setIsAdmin(false);
     } finally {
       setProfileCheckLoading(false);
     }
@@ -137,26 +124,13 @@ export default function RootLayout() {
   const currentSegment = segments[0] as string;
   const inAuthGroup = currentSegment === 'auth';
   const inKycGroup = currentSegment === 'kyc';
-  const inAdminArea = currentSegment === 'admin';
 
   useEffect(() => {
     if (!initialized) return;
 
-    if (!session && !inAuthGroup && !inAdminArea) {
+    if (!session && !inAuthGroup) {
       // Not logged in -> go to login
       router.replace('/auth/login');
-      return;
-    }
-
-    if (session && (profileCheckLoading || isAdmin === null)) return;
-
-    if (session && isAdmin && !inAdminArea) {
-      router.replace('/admin');
-      return;
-    }
-
-    if (session && !isAdmin && inAdminArea) {
-      router.replace('/(tabs)');
       return;
     }
 
@@ -165,12 +139,8 @@ export default function RootLayout() {
       return;
     }
 
-    if (inAdminArea) {
-      // Admin screens validate the role through /admin/me and must not be gated by KYC.
-      return;
-    }
     // Check for incomplete profile
-    else if (session && isProfileComplete === false) {
+    if (session && isProfileComplete === false) {
       // Allow access to welcome screen
       if (currentSegment === 'welcome') return;
 
@@ -204,13 +174,13 @@ export default function RootLayout() {
         }
       }
     }
-  }, [initialized, session, segments, isProfileComplete, kycStatus, isAdmin, profileCheckLoading, inAuthGroup, inKycGroup, inAdminArea]);
+  }, [initialized, session, segments, isProfileComplete, kycStatus, inAuthGroup, inKycGroup]);
 
   if (
     !initialized ||
     (session && profileCheckLoading) ||
     (session && isProfileComplete === null) ||
-    (!session && !inAuthGroup && !inAdminArea) ||
+    (!session && !inAuthGroup) ||
     (session && inAuthGroup)
   ) {
     return (
@@ -238,7 +208,6 @@ export default function RootLayout() {
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
-                <Stack.Screen name="admin" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
                 <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />

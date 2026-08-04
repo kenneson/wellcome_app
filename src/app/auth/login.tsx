@@ -165,12 +165,6 @@ export default function LoginScreen() {
                             <Text style={styles.signupText}>Faça seu cadastro</Text>
                         </TouchableOpacity>
                     </Link>
-                    <Link href={'/admin/login' as any} asChild>
-                        <TouchableOpacity style={styles.adminAccessLink} accessibilityLabel="Abrir acesso administrativo">
-                            <Ionicons name="shield-checkmark-outline" size={15} color="#A95722" />
-                            <Text style={styles.adminAccessText}>Acesso administrativo</Text>
-                        </TouchableOpacity>
-                    </Link>
                 </View>
             </View>
         </KeyboardAwareScrollView>
@@ -285,7 +279,6 @@ const styles = StyleSheet.create({
     },
     footer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
         justifyContent: 'center',
         paddingVertical: 10,
     },
@@ -297,18 +290,5 @@ const styles = StyleSheet.create({
         color: '#FF8C42',
         fontSize: 14,
         fontWeight: 'bold',
-    },
-    adminAccessLink: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        marginTop: 14,
-    },
-    adminAccessText: {
-        color: '#A95722',
-        fontSize: 13,
-        fontWeight: '600',
     },
 });
