@@ -205,7 +205,7 @@ export default function RootLayout() {
             )}
             {isEventDetails && <StatusBar style="light" />}
             <View style={{ flex: 1, backgroundColor: '#fff' }}>
-              <Stack>
+              <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: 'modal' }} />
