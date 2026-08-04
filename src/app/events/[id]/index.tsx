@@ -6,6 +6,7 @@ import { eventService } from '@/services/api/EventService';
 import { reviewService } from '@/services/api/ReviewService';
 import { DEFAULT_AVATAR_PLACEHOLDER, DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
+import { isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
 import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +59,11 @@ export default function EventDetailsScreen() {
         return eventTime < Date.now();
     }, [event]);
 
+    const registrationClosed = React.useMemo(
+        () => event ? isEventRegistrationClosed(event) : false,
+        [event]
+    );
+
     const userHasReviewed = React.useMemo(() => {
         if (!event?.reviews || !currentUserId) return false;
         return event.reviews.some(r => r.userId === currentUserId);
@@ -104,6 +110,10 @@ export default function EventDetailsScreen() {
 
     async function handleJoin() {
         if (!event) return;
+        if (registrationClosed) {
+            Alert.alert('Inscricoes encerradas', 'O prazo para participar deste evento terminou.');
+            return;
+        }
         router.push(`/events/${id}/join`);
     }
 
@@ -632,7 +642,7 @@ export default function EventDetailsScreen() {
             )}
 
             {/* Action Bar - Join Event (not participant, not host) */}
-            {!isHost && !isParticipant && !isPastEvent && (
+            {!isHost && !isParticipant && !registrationClosed && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
                     <View className="flex-row items-center justify-between">
                         <View>

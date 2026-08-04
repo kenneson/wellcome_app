@@ -1,6 +1,7 @@
 import { registrationService } from '@/services/api/RegistrationService';
 import { eventService } from '@/services/api/EventService';
 import { supabase } from '@/shared/lib/supabase';
+import { isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -24,6 +25,15 @@ export default function JoinEventScreen() {
         try {
             setLoading(true);
             const data = await eventService.getEventById(String(id));
+
+            if (isEventRegistrationClosed(data)) {
+                Alert.alert(
+                    'Inscricoes encerradas',
+                    'O prazo para participar deste evento terminou.',
+                    [{ text: 'OK', onPress: () => router.replace(`/events/${id}`) }]
+                );
+                return;
+            }
 
             // Sort questions by order
             if (data.questions) {

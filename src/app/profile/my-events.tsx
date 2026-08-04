@@ -1,6 +1,7 @@
 import { eventService } from '@/services/api/EventService';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
+import { getEventStart, isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
 import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,8 +83,7 @@ export default function MyEventsScreen() {
     const filteredEvents = useMemo(() => {
         const now = new Date();
         return events.filter(event => {
-            const eventDate = new Date(event.event_date);
-            const isPast = eventDate < now;
+            const isPast = isEventRegistrationClosed(event, now);
 
             if (activeFilter === 'ativos') return !isPast;
             if (activeFilter === 'concluidos') return isPast;
@@ -92,8 +92,10 @@ export default function MyEventsScreen() {
     }, [events, activeFilter]);
 
     const renderItem = ({ item }: { item: any }) => {
-        const eventDate = new Date(item.event_date);
-        const isPast = eventDate < new Date();
+        const eventDate = getEventStart(item) ?? new Date(0);
+        const now = new Date();
+        const isPast = isEventRegistrationClosed(item, now);
+        const eventAlreadyStarted = eventDate <= now;
         const progress = Math.min((item.participants_count || 0) / (item.max_guests || 1), 1);
 
         if (isPast) {
@@ -109,7 +111,9 @@ export default function MyEventsScreen() {
                         />
                         <View style={styles.badgeContainer}>
                             <View style={[styles.badge, styles.concludedBadge]}>
-                                <Text style={styles.concludedBadgeText}>CONCLUÍDO</Text>
+                                <Text style={styles.concludedBadgeText}>
+                                    {eventAlreadyStarted ? 'CONCLUIDO' : 'INSCRICOES ENCERRADAS'}
+                                </Text>
                             </View>
                         </View>
                         <LinearGradient
@@ -270,7 +274,7 @@ export default function MyEventsScreen() {
                                 activeFilter === filter && styles.activeFilterText
                             ]}>
                                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                                {filter === 'ativos' && ` (${events.filter(e => new Date(e.event_date) >= new Date()).length})`}
+                                {filter === 'ativos' && ` (${events.filter(e => !isEventRegistrationClosed(e)).length})`}
                             </Text>
                         </TouchableOpacity>
                     ))}

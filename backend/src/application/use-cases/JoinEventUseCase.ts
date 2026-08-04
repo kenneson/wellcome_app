@@ -5,6 +5,7 @@ import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
+import { isEventOpenForRegistration } from '../../domain/services/EventAvailability';
 
 export interface JoinEventDTO {
     eventId: string;
@@ -26,20 +27,7 @@ export class JoinEventUseCase {
             throw new Error('Event not found');
         }
 
-        // Check if registration is still open
-        const now = new Date();
-        const cutoffDate = event.reservationDeadline
-            ? new Date(event.reservationDeadline)
-            : event.endTime
-                ? new Date(event.endTime)
-                : new Date(event.eventDate);
-        
-        // When deadline is a date-only value (midnight), allow registration until end of that day
-        if (event.reservationDeadline) {
-            cutoffDate.setHours(23, 59, 59, 999);
-        }
-
-        if (cutoffDate < now) {
+        if (!isEventOpenForRegistration(event)) {
             throw new Error('Registration deadline has passed');
         }
 

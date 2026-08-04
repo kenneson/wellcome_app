@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { API_URL } from '@/shared/config/api';
 import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
+import { isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
 
 export class EventService {
     private async getAuthHeaders(includeJsonContentType: boolean = true): Promise<Record<string, string>> {
@@ -177,7 +178,8 @@ export class EventService {
         if (!response.ok) {
             throw new Error('Failed to list events');
         }
-        return response.json();
+        const events: Event[] = await response.json();
+        return events.filter((event) => !isEventRegistrationClosed(event));
     }
 
     async updateEvent(id: string, data: Partial<EventCreationState>): Promise<Event> {

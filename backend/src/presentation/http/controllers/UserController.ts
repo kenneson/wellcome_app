@@ -3,6 +3,7 @@ import { DeleteUserAccountBlockedError, DeleteUserAccountUseCase } from '../../.
 import { GetUserProfileUseCase } from '../../../application/use-cases/GetUserProfileUseCase';
 import { UpdateUserProfileUseCase } from '../../../application/use-cases/UpdateUserProfileUseCase';
 import { getAuthenticatedUserId, getOptionalAuthenticatedUserContext, UnauthorizedRequestError } from '../helpers/auth';
+import { isEventOpenForRegistration } from '../../../domain/services/EventAvailability';
 
 export class UserController {
     constructor(
@@ -107,14 +108,16 @@ export class UserController {
             languages: user.languages ?? [],
             dietaryRestrictions: user.dietaryRestrictions ?? [],
             isSuperhost: user.isSuperhost ?? false,
-            events: (user.events ?? []).map((event: any) => ({
-                id: event.id,
-                title: event.title,
-                description: event.description,
-                eventDate: event.eventDate,
-                location: event.location,
-                coverImageUrl: event.coverImageUrl ?? null,
-            })),
+            events: (user.events ?? [])
+                .filter((event: any) => isEventOpenForRegistration(event))
+                .map((event: any) => ({
+                    id: event.id,
+                    title: event.title,
+                    description: event.description,
+                    eventDate: event.eventDate,
+                    location: event.location,
+                    coverImageUrl: event.coverImageUrl ?? null,
+                })),
             bookings: (user.bookings ?? [])
                 .filter((booking: any) => booking.status === 'APPROVED')
                 .map((booking: any) => ({

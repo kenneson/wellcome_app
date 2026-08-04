@@ -59,15 +59,9 @@ export class PrismaEventRepository implements EventRepository {
     }): Promise<Event[]> {
         const where: any = {};
 
-        // Filter out past events by default (only show upcoming events)
+        // Coarse database filter. The use case also applies the registration cutoff.
         const now = new Date();
-        where.OR = [
-            { endTime: { gt: now } },
-            {
-                endTime: null,
-                eventDate: { gt: now }
-            }
-        ];
+        where.eventDate = { gt: now };
 
         if (filters?.priceMin !== undefined) where.price = { ...where.price, gte: filters.priceMin };
         if (filters?.priceMax !== undefined) where.price = { ...where.price, lte: filters.priceMax };
