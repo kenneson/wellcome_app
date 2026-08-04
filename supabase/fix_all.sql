@@ -24,8 +24,7 @@ $$;
 -- 2. Corrigir permissões gerais
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 
 -- 3. Corrigir RLS da tabela profiles (Evitar erro de Permissão e Looping)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -34,12 +33,13 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 
 -- Política de Leitura Pública
-CREATE POLICY "Public profiles are viewable by everyone" 
+CREATE POLICY "Users can view their own profile"
 ON public.profiles FOR SELECT 
-USING (true);
+USING (auth.uid() = id);
 
 -- Política de Atualização (O PRÓPRIO USUÁRIO pode editar seu perfil)
 CREATE POLICY "Users can update their own profile" 

@@ -121,8 +121,8 @@ export default function EditProfileScreen() {
             setSaving(true);
             const arrayBuffer = await fetch(asset.uri).then(res => res.arrayBuffer());
             const fileExt = asset.uri.split('.').pop();
-            const fileName = `${userId}${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const fileName = `avatar-${Date.now()}.${fileExt}`;
+            const filePath = `${userId}/${fileName}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('avatars')

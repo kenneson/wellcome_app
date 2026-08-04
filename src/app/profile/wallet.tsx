@@ -181,7 +181,7 @@ export default function WalletScreen() {
                     </View>
                     {[
                         { icon: 'checkmark-circle-outline', text: 'Quando um convidado paga o PIX do ingresso, 90% do valor é creditado na sua carteira.' },
-                        { icon: 'time-outline', text: 'O crédito é confirmado após o pagamento ser processado pela Efí (pode levar alguns minutos).' },
+                        { icon: 'time-outline', text: 'O crédito é confirmado após o pagamento ser processado pelo Asaas (pode levar alguns minutos).' },
                         { icon: 'cash-outline', text: 'Solicite o saque a qualquer momento. O pagamento é feito em até 2 dias úteis.' },
                     ].map((item, i) => (
                         <View key={i} style={styles.howItWorksItem}>

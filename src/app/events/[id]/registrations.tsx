@@ -1,7 +1,7 @@
 import { RegistrationStatus } from '@/entities/event/types';
+import { eventService } from '@/services/api/EventService';
 import { registrationService } from '@/services/api/RegistrationService';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
-import { supabase } from '@/shared/lib/supabase';
 import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,13 +43,11 @@ export default function EventRegistrationsScreen() {
             setLoading(true);
             const [registrationsData, eventData] = await Promise.all([
                 registrationService.getRegistrations(id as string),
-                supabase.from('events').select('*').eq('id', id).single()
+                eventService.getEventById(id as string)
             ]);
 
             setRegistrations(registrationsData || []);
-            if (eventData.data) {
-                setEvent(eventData.data);
-            }
+            setEvent(eventData);
         } catch (error) {
             console.error('❌ Error fetching data:', error);
             Alert.alert('Erro', 'Não foi possível carregar os dados.');

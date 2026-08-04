@@ -47,7 +47,9 @@ export class RegistrationService {
     }
 
     async getRegistrations(eventId: string) {
-        const response = await fetch(`${API_URL}/bookings/event/${eventId}`);
+        const response = await fetch(`${API_URL}/bookings/event/${eventId}`, {
+            headers: await this.getAuthHeaders(),
+        });
 
         if (!response.ok) {
             const error = await response.json();
@@ -111,8 +113,8 @@ export class RegistrationService {
         return response.json();
     }
 
-    async createPixCharge(data: { bookingId: string; eventId: string; userId: string }) {
-        const response = await fetch(`${API_URL}/payments/pix`, {
+    async createPaymentCheckout(data: { bookingId: string; eventId: string }) {
+        const response = await fetch(`${API_URL}/payments/checkout`, {
             method: 'POST',
             headers: await this.getAuthHeaders(),
             body: JSON.stringify(data)
@@ -120,14 +122,16 @@ export class RegistrationService {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Falha ao gerar cobranÃ§a PIX');
+            throw new Error(error.message || 'Falha ao iniciar o pagamento');
         }
 
         return response.json();
     }
 
-    async checkPixPayment(bookingId: string) {
-        const response = await fetch(`${API_URL}/payments/pix/${bookingId}`);
+    async checkPayment(bookingId: string) {
+        const response = await fetch(`${API_URL}/payments/${bookingId}`, {
+            headers: await this.getAuthHeaders(),
+        });
 
         if (!response.ok) {
             const error = await response.json();

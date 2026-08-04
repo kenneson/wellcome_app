@@ -35,10 +35,9 @@ export default function WelcomeScreen() {
 
     // User data from Google Auth
     const [googleData, setGoogleData] = useState<{
-        email: string;
         avatarUrl: string;
         suggestedName: string;
-    }>({ email: '', avatarUrl: '', suggestedName: '' });
+    }>({ avatarUrl: '', suggestedName: '' });
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -57,7 +56,6 @@ export default function WelcomeScreen() {
             if (session?.user) {
                 const meta = session.user.user_metadata;
                 setGoogleData({
-                    email: session.user.email || '',
                     avatarUrl: meta?.avatar_url || meta?.picture || '',
                     suggestedName: meta?.full_name || meta?.name || ''
                 });
@@ -133,15 +131,11 @@ export default function WelcomeScreen() {
                 return;
             }
 
-            console.log('Saving profile for:', session.user.id);
-            console.log('Data:', { ...formData, email: googleData.email, avatar_url: googleData.avatarUrl });
-
             // Use UPSERT to create or update the profile
             const { error } = await supabase
                 .from('profiles')
                 .upsert({
                     id: session.user.id,
-                    email: googleData.email,
                     full_name: formData.full_name.trim(),
                     username: formData.username.trim(),
                     avatar_url: googleData.avatarUrl,
@@ -160,7 +154,6 @@ export default function WelcomeScreen() {
                 throw error;
             }
 
-            console.log('Profile saved successfully!');
             await refetchProfile();
             // Layout will automatically redirect to (tabs) once isProfileComplete becomes true
         } catch (error: any) {

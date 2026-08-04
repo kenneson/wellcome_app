@@ -4,6 +4,7 @@ import { FilterCriteria, FilterModal } from '@/components/ui/events/FilterModal'
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { QuickStats } from '@/components/ui/QuickStats';
 import { SideMenu } from '@/components/ui/SideMenu';
+import { eventService } from '@/services/api/EventService';
 import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,34 +141,7 @@ export default function HomeScreen() {
 
     setShowLocationModal(false);
 
-    if (coords) {
-      // Refresh events with new coordinates
-      setLoadingEvents(true);
-      try {
-        const { data, error } = await supabase
-          .rpc('get_events_nearby', {
-            lat: coords.lat,
-            long: coords.lon,
-            radius_km: 60
-          })
-          .select(`
-                *,
-                host:profiles(full_name, avatar_url),
-                event_participants(count)
-            `);
-
-        if (!error && data) {
-          setEvents(data);
-        }
-      } catch (e) {
-        console.error('Error refreshing events:', e);
-      } finally {
-        setLoadingEvents(false);
-      }
-    } else {
-      // Fallback if no coords (weird, but safe)
-      getEvents();
-    }
+    await getEvents(coords);
   };
 
   const useGPS = async () => {
@@ -175,106 +149,40 @@ export default function HomeScreen() {
     await getLocation();
   };
 
-  async function getEvents() {
+  async function getEvents(coords?: { lat: number; lon: number }) {
     try {
       setLoadingEvents(true);
 
       const { data: { session } } = await supabase.auth.getSession();
       const currentUserId = session?.user?.id;
 
-      let lat = null;
-      let long = null;
+      let lat = coords?.lat;
+      let lon = coords?.lon;
 
-      try {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const pos = await Location.getCurrentPositionAsync({});
-          lat = pos.coords.latitude;
-          long = pos.coords.longitude;
+      if (lat === undefined || lon === undefined) {
+        try {
+          const { status } = await Location.getForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const pos = await Location.getCurrentPositionAsync({});
+            lat = pos.coords.latitude;
+            lon = pos.coords.longitude;
+          }
+        } catch (error) {
+          console.log('Error getting location', error);
         }
-      } catch (e) {
-        console.log('Error getting location', e);
       }
 
-      let data: any[] = [];
-      let error = null;
-
-      if (lat && long) {
-        // Use Spatial Search (60km radius default)
-        const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_events_nearby', { lat, long, radius_km: 60 })
-          .select(`
-                *,
-                host:profiles(full_name, avatar_url),
-                event_participants(count)
-            `);
-        
-        if (rpcError) {
-           error = rpcError;
-        } else if (rpcData) {
-           data = rpcData;
-           
-           // Apply Filters in JS for RPC results
-           if (currentUserId) {
-             data = data.filter((e: any) => e.host_id !== currentUserId);
-           }
-           
-           // Filter out past events
-           const now = new Date();
-           data = data.filter((e: any) => new Date(e.event_date) >= now);
-           
-           if (filters.priceMin && filters.priceMin.trim() !== '') {
-             data = data.filter((e: any) => e.price >= parseFloat(filters.priceMin!));
-           }
-           if (filters.priceMax && filters.priceMax.trim() !== '') {
-             data = data.filter((e: any) => e.price <= parseFloat(filters.priceMax!));
-           }
-           if (filters.cuisine && filters.cuisine.length > 0) {
-             data = data.filter((e: any) => e.cuisine_types && e.cuisine_types.some((c: string) => filters.cuisine!.includes(c)));
-           }
-           if (filters.vibe && filters.vibe.length > 0) {
-              data = data.filter((e: any) => e.vibe && e.vibe.some((v: string) => filters.vibe!.includes(v)));
-           }
-
-           // Sort by created_at desc (most recent)
-           data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        }
-
-      } else {
-        // Fallback: Fetch all future events if no location
-        let query = supabase
-          .from('events')
-          .select(`
-              *,
-              host:profiles(full_name, avatar_url),
-              event_participants(count)
-            `)
-          .gte('event_date', new Date().toISOString());
-        
-        // Exclude own events
-        if (currentUserId) {
-          query = query.neq('host_id', currentUserId);
-        }
-
-        // Apply Filters (DB side)
-        if (filters.priceMin && filters.priceMin.trim() !== '') query = query.gte('price', parseFloat(filters.priceMin));
-        if (filters.priceMax && filters.priceMax.trim() !== '') query = query.lte('price', parseFloat(filters.priceMax));
-        if (filters.cuisine && filters.cuisine.length > 0) query = query.overlaps('cuisine_types', filters.cuisine);
-        if (filters.vibe && filters.vibe.length > 0) query = query.overlaps('vibe', filters.vibe);
-
-        // Sort by created_at desc (most recent)
-        query = query.order('created_at', { ascending: false });
-
-        const result = await query;
-        data = result.data || [];
-        error = result.error;
-      }
-
-      if (error) {
-        console.error('Error fetching events:', error);
-      } else {
-        setEvents(data || []);
-      }
+      const data = await eventService.listEvents({
+        lat: lat?.toString(),
+        lon: lon?.toString(),
+        radius: lat !== undefined && lon !== undefined ? '60' : undefined,
+        cuisine: filters.cuisine,
+        vibe: filters.vibe,
+        priceMin: filters.priceMin?.trim() || undefined,
+        priceMax: filters.priceMax?.trim() || undefined,
+        excludeHostId: currentUserId,
+      });
+      setEvents(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
     } finally {
@@ -316,17 +224,17 @@ export default function HomeScreen() {
     const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const eventsToday = events.filter(e => {
-      const eventDate = new Date(e.event_date);
+      const eventDate = new Date(e.eventDate || e.event_date);
       return eventDate >= today && eventDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
     }).length;
 
     const eventsThisWeek = events.filter(e => {
-      const eventDate = new Date(e.event_date);
+      const eventDate = new Date(e.eventDate || e.event_date);
       return eventDate >= today && eventDate < weekFromNow;
     }).length;
 
     // Count unique hosts from recent events
-    const uniqueHosts = new Set(events.map(e => e.host_id)).size;
+    const uniqueHosts = new Set(events.map(e => e.hostId || e.host_id)).size;
 
     return {
       eventsToday,
@@ -481,11 +389,11 @@ export default function HomeScreen() {
             <ActivityIndicator size="large" color={Colors.light.primary} />
             <Text style={styles.loadingText}>Carregando eventos...</Text>
           </View>
-        ) : events.filter((e) => !blockedIds.has(e.host_id)).length === 0 ? (
+        ) : events.filter((e) => !blockedIds.has(e.hostId || e.host_id)).length === 0 ? (
           renderEmptyState()
         ) : (
           events
-            .filter((e) => !blockedIds.has(e.host_id))
+            .filter((e) => !blockedIds.has(e.hostId || e.host_id))
             .map((event) => (
               <EnhancedEventCard
                 key={event.id}

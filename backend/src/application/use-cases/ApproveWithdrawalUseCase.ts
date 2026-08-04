@@ -1,59 +1,62 @@
-import { UserRepository } from '../../domain/repositories/UserRepository';
 import { WithdrawalRequest, WithdrawalRequestRepository } from '../../domain/repositories/WithdrawalRequestRepository';
-import { EfiPixService } from '../../infrastructure/external/EfiPixService';
+import { PaymentGatewayError, PayoutGateway } from '../../domain/services/PaymentGateway';
 
 export class ApproveWithdrawalUseCase {
     constructor(
         private withdrawalRequestRepository: WithdrawalRequestRepository,
-        private userRepository: UserRepository,
-        private efiPixService: EfiPixService
-    ) { }
+        private payoutGateway: PayoutGateway
+    ) {}
 
     async execute(withdrawalId: string): Promise<WithdrawalRequest> {
-        const withdrawal = await this.withdrawalRequestRepository.findById(withdrawalId);
+        const withdrawal = await this.withdrawalRequestRepository.claimPending(withdrawalId);
 
         if (!withdrawal) {
-            throw new Error('Pedido de saque não encontrado');
+            throw new Error('Este saque ja foi processado ou nao existe');
         }
 
-        if (withdrawal.status !== 'PENDING' && withdrawal.status !== 'FAILED') {
-            throw new Error(`Este saque já foi processado. Status atual: ${withdrawal.status}`);
+        const pixKeyType = this.getPixKeyType(withdrawal.pixKeyType);
+        if (!pixKeyType) {
+            await this.withdrawalRequestRepository.failAndRefund(withdrawal.id);
+            throw new Error('Tipo de chave Pix invalido para transferencia Asaas');
         }
-
-        // Marcar como PROCESSING
-        await this.withdrawalRequestRepository.updateStatus(withdrawalId, 'PROCESSING');
 
         try {
-            // 1. Chamar PIX Send da EFI
-            const efiResponse = await this.efiPixService.sendPix(withdrawal.amount, withdrawal.pixKey, withdrawalId);
+            const transfer = await this.payoutGateway.createPixTransfer({
+                value: withdrawal.amount,
+                pixAddressKey: withdrawal.pixKey,
+                pixAddressKeyType: pixKeyType,
+                externalReference: withdrawal.id,
+                description: 'Saque Wellcome',
+            });
 
-            // O efiResponse deve possuir o endToEndId se concluido com sucesso
-            const efiEndToEndId = efiResponse.endToEndId || 'SUCCESS';
-
-            // 2. Marcar COMPLETED
-            const completedWithdrawal = await this.withdrawalRequestRepository.updateStatus(withdrawalId, 'COMPLETED', efiEndToEndId);
-            return completedWithdrawal;
-
-        } catch (error: any) {
-            console.error('[ApproveWithdrawalUseCase] Erro ao enviar PIX:', error?.message);
-
-            // Tentar extrair erro detalhado da EFI
-            const detail = error?.response?.data?.mensagem || error?.response?.data?.error_description || error?.message;
-
-            // Se falhou, marcar como FAILED
-            // Mas só estornar na carteira se já não estivesse como FAILED (para evitar estorno duplo em retentativas)
-            const wasAlreadyFailed = withdrawal.status === 'FAILED';
-            await this.withdrawalRequestRepository.updateStatus(withdrawalId, 'FAILED');
-            
-            if (!wasAlreadyFailed) {
-               await this.userRepository.addWalletBalance(
-                   withdrawal.userId,
-                   withdrawal.amount,
-                   withdrawal.id
-               ); 
+            if (transfer.status === 'FAILED' || transfer.status === 'CANCELLED') {
+                await this.withdrawalRequestRepository.failAndRefund(withdrawal.id);
+                throw new Error('Transferencia Pix recusada pelo Asaas');
             }
 
-            throw new Error(`Erro EFI: ${detail}`);
+            return this.withdrawalRequestRepository.markSubmitted({
+                id: withdrawal.id,
+                providerTransferId: transfer.id,
+                providerEndToEndId: transfer.endToEndIdentifier,
+                status: transfer.status === 'DONE' ? 'COMPLETED' : 'PROCESSING',
+            });
+        } catch (error: any) {
+            if (error instanceof PaymentGatewayError && error.isDefinitiveClientError) {
+                await this.withdrawalRequestRepository.failAndRefund(withdrawal.id);
+                throw new Error(`Transferencia Pix rejeitada pelo Asaas: ${error.message}`);
+            }
+            if (error?.message === 'Transferencia Pix recusada pelo Asaas') {
+                throw error;
+            }
+            console.error('[ApproveWithdrawalUseCase] Asaas response is uncertain:', error?.message);
+            throw new Error('O envio Pix ficou em processamento e precisa ser conciliado antes de nova tentativa');
         }
+    }
+
+    private getPixKeyType(value: string | null): 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE' | 'EVP' | null {
+        if (value === 'CPF' || value === 'CNPJ' || value === 'EMAIL' || value === 'PHONE' || value === 'EVP') {
+            return value;
+        }
+        return null;
     }
 }

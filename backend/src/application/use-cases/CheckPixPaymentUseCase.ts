@@ -1,11 +1,10 @@
-import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
+import { Payment } from '../../domain/entities/Payment';
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { EfiPixService } from '../../infrastructure/external/EfiPixService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
-import { UserRepository } from '../../domain/repositories/UserRepository';
 
 export interface CheckPixPaymentResult {
     paymentId: string;
@@ -18,20 +17,33 @@ export class CheckPixPaymentUseCase {
     constructor(
         private efiPixService: EfiPixService,
         private paymentRepository: PaymentRepository,
-        private eventRegistrationRepository: EventRegistrationRepository,
         private eventRepository: EventRepository,
-        private sendNotificationUseCase: SendNotificationUseCase,
-        private userRepository: UserRepository
+        private sendNotificationUseCase: SendNotificationUseCase
     ) {}
 
-    async execute(bookingId: string): Promise<CheckPixPaymentResult> {
-        // 1. Buscar pagamento pelo bookingId
+    async execute(bookingId: string, userId: string): Promise<CheckPixPaymentResult> {
         const payment = await this.paymentRepository.findByBookingId(bookingId);
         if (!payment) {
             throw new Error('Payment not found for this booking');
         }
 
-        // Se já está confirmado, retorna direto
+        if (payment.userId !== userId) {
+            throw new Error('Payment does not belong to this user');
+        }
+
+        return this.checkPayment(payment);
+    }
+
+    async executeByTxid(txid: string): Promise<CheckPixPaymentResult> {
+        const payment = await this.paymentRepository.findByTxid(txid);
+        if (!payment) {
+            throw new Error('Payment not found for this transaction');
+        }
+
+        return this.checkPayment(payment);
+    }
+
+    private async checkPayment(payment: Payment): Promise<CheckPixPaymentResult> {
         if (payment.status === PaymentStatus.CONFIRMED) {
             return {
                 paymentId: payment.id,
@@ -41,54 +53,36 @@ export class CheckPixPaymentUseCase {
             };
         }
 
-        // 2. Consultar status na EFI
         const efiStatus = await this.efiPixService.getChargeStatus(payment.txid);
-
-        // Mapear status EFI para nosso status
-        // Status EFI: ATIVA, CONCLUIDA, REMOVIDA_PELO_USUARIO_RECEBEDOR, REMOVIDA_PELO_PSP
-        let newStatus: string = payment.status;
+        let newStatus: PaymentStatus = payment.status;
         let paid = false;
 
         if (efiStatus.status === 'CONCLUIDA') {
-            newStatus = PaymentStatus.CONFIRMED;
-            paid = true;
+            const event = await this.eventRepository.findById(payment.eventId);
+            if (!event?.hostId) {
+                throw new Error('Event host not found');
+            }
 
             const feePercentage = Number(process.env.APP_FEE_PERCENTAGE || '10') / 100;
             const platformFee = Number((payment.valor * feePercentage).toFixed(2));
             const netAmount = Number((payment.valor - platformFee).toFixed(2));
-
-            // Atualizar pagamento e split
-            await this.paymentRepository.updateStatus(
-                payment.id,
-                PaymentStatus.CONFIRMED,
-                new Date(),
+            const confirmed = await this.paymentRepository.confirmAndCreditHost({
+                paymentId: payment.id,
+                bookingId: payment.bookingId,
+                hostId: event.hostId,
                 platformFee,
-                netAmount
-            );
+                netAmount,
+                paidAt: new Date(),
+            });
 
-            const event = await this.eventRepository.findById(payment.eventId);
+            newStatus = PaymentStatus.CONFIRMED;
+            paid = true;
 
-            // Adicionar saldo na carteira do organizador
-            if (event?.hostId) {
-                await this.userRepository.addWalletBalance(
-                    event.hostId,
-                    netAmount,
-                    payment.id
-                );
-            }
-
-            // Aprovar automaticamente o booking
-            await this.eventRegistrationRepository.updateStatus(
-                bookingId,
-                'APPROVED'
-            );
-
-            // Notificar o host que o pagamento foi confirmado
-            if (event?.host) {
+            if (confirmed && event.host) {
                 await this.sendNotificationUseCase.execute(
                     event.host.id,
                     event.host.expoPushToken || null,
-                    'Pagamento confirmado! 💰',
+                    'Pagamento confirmado',
                     `Um participante confirmou o pagamento para "${event.title}".`,
                     NotificationType.NEW_REGISTRATION_CONFIRMED,
                     { eventId: event.id }

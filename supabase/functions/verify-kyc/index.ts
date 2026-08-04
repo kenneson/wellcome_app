@@ -59,6 +59,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    const expectedDocumentPath = `${user.id}/document.jpg`;
+    const expectedSelfiePath = `${user.id}/selfie.jpg`;
+    if (documentPath !== expectedDocumentPath || selfiePath !== expectedSelfiePath) {
+      return new Response(
+        JSON.stringify({ error: "Invalid KYC document paths" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 3. Download images from Supabase Storage
     const [docResult, selfieResult] = await Promise.all([
       supabaseAdmin.storage.from("kyc-documents").download(documentPath),

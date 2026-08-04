@@ -7,23 +7,24 @@ import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegis
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
-import { CheckPixPaymentUseCase } from './application/use-cases/CheckPixPaymentUseCase';
+import { CheckPaymentUseCase } from './application/use-cases/CheckPaymentUseCase';
 import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
 import { ApproveWithdrawalUseCase } from './application/use-cases/ApproveWithdrawalUseCase';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
-import { CreatePixChargeUseCase } from './application/use-cases/CreatePixChargeUseCase';
+import { CreatePaymentCheckoutUseCase } from './application/use-cases/CreatePaymentCheckoutUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
 import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
 import { DeleteUserAccountUseCase } from './application/use-cases/DeleteUserAccountUseCase';
 import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
+import { HandleAsaasWebhookUseCase } from './application/use-cases/HandleAsaasWebhookUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
 import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
-import { EfiPixService } from './infrastructure/external/EfiPixService';
+import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
@@ -33,28 +34,42 @@ import { PrismaNotificationRepository } from './infrastructure/repositories/Pris
 import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
 import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories/PrismaWithdrawalRequestRepository';
+import { PrismaWebhookEventRepository } from './infrastructure/repositories/PrismaWebhookEventRepository';
 import { AdminController } from './presentation/http/controllers/AdminController';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
 import { ModerationController } from './presentation/http/controllers/ModerationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
-import { PixPaymentController } from './presentation/http/controllers/PixPaymentController';
+import { PaymentController } from './presentation/http/controllers/PaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
 import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
-import { getAuthenticatedUserId } from './presentation/http/helpers/auth';
+import { ForbiddenRequestError, getAuthenticatedUserContext, getAuthenticatedUserId } from './presentation/http/helpers/auth';
 
 
 const fastify = Fastify({
-    logger: true,
+    logger: {
+        redact: ['req.headers.authorization', 'req.headers.asaas-access-token', 'req.params.token', 'req.url'],
+    },
     ignoreTrailingSlash: true
 });
+
+const corsAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
 const start = async () => {
     try {
         await fastify.register(fastifyCors, {
-            origin: true, // Allow all origins
+            origin: (origin, callback) => {
+                if (!origin || corsAllowedOrigins.includes(origin)) {
+                    callback(null, true);
+                    return;
+                }
+                callback(new Error('Origin not allowed by CORS'), false);
+            },
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             credentials: true
         });
@@ -76,7 +91,7 @@ const start = async () => {
                         { name: 'Notifications', description: 'Push and in-app notification endpoints' },
                         { name: 'Revews', description: 'Event review endpoints' },
                         { name: 'Users', description: 'User profile endpoints' },
-                        { name: 'Payments', description: 'PIX payment endpoints' },
+                        { name: 'Payments', description: 'Event payment endpoints' },
                         { name: 'Withdrawals', description: 'Host Withdrawal endpoints' },
                         { name: 'General', description: 'General and health endpoints' }
                     ],
@@ -134,11 +149,12 @@ const start = async () => {
         const eventReviewRepository = new PrismaEventReviewRepository();
         const paymentRepository = new PrismaPaymentRepository();
         const withdrawalRepository = new PrismaWithdrawalRequestRepository();
-        const efiPixService = new EfiPixService();
+        const webhookEventRepository = new PrismaWebhookEventRepository();
+        const asaasPaymentService = new AsaasPaymentService();
 
         // Use Cases
         const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
-        const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(withdrawalRepository, userRepository, efiPixService);
+        const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(withdrawalRepository, asaasPaymentService);
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository);
@@ -149,8 +165,21 @@ const start = async () => {
         const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
 
-        const createPixChargeUseCase = new CreatePixChargeUseCase(efiPixService, eventRepository, eventRegistrationRepository, paymentRepository);
-        const checkPixPaymentUseCase = new CheckPixPaymentUseCase(efiPixService, paymentRepository, eventRegistrationRepository, eventRepository, sendNotificationUseCase, userRepository);
+        const createPaymentCheckoutUseCase = new CreatePaymentCheckoutUseCase(
+            asaasPaymentService,
+            eventRepository,
+            eventRegistrationRepository,
+            paymentRepository
+        );
+        const checkPaymentUseCase = new CheckPaymentUseCase(paymentRepository);
+        const handleAsaasWebhookUseCase = new HandleAsaasWebhookUseCase(
+            asaasPaymentService,
+            paymentRepository,
+            eventRepository,
+            withdrawalRepository,
+            webhookEventRepository,
+            sendNotificationUseCase
+        );
 
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
@@ -176,8 +205,16 @@ const start = async () => {
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
         const moderationController = new ModerationController(moderationRepository);
-        const pixPaymentController = new PixPaymentController(createPixChargeUseCase, checkPixPaymentUseCase);
-        const withdrawalController = new WithdrawalController(requestWithdrawalUseCase, approveWithdrawalUseCase, withdrawalRepository, efiPixService);
+        const paymentController = new PaymentController(
+            createPaymentCheckoutUseCase,
+            checkPaymentUseCase,
+            handleAsaasWebhookUseCase
+        );
+        const withdrawalController = new WithdrawalController(
+            requestWithdrawalUseCase,
+            approveWithdrawalUseCase,
+            withdrawalRepository
+        );
         const adminController = new AdminController();
 
         // Test route to verify deploy
@@ -527,9 +564,7 @@ const start = async () => {
                                         neighborhood: { type: 'string', nullable: true },
                                         languages: { type: 'array', items: { type: 'string' } },
                                         dietaryRestrictions: { type: 'array', items: { type: 'string' } },
-                                        phoneNumber: { type: 'string', nullable: true },
-                                        expoPushToken: { type: 'string', nullable: true },
-                                        updatedAt: { type: 'string', nullable: true }
+                                        phoneNumber: { type: 'string', nullable: true }
                                     }
                                 },
                                 createdAt: { type: 'string' },
@@ -553,15 +588,59 @@ const start = async () => {
                         properties: {
                             message: { type: 'string' }
                         }
+                    },
+                    401: {
+                        description: 'Authentication required',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
+                    },
+                    403: {
+                        description: 'Host access required',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
+                    },
+                    404: {
+                        description: 'Event not found',
+                        type: 'object',
+                        properties: { message: { type: 'string' } }
                     }
                 }
             }
         }, async (req, reply) => {
             const { eventId } = req.params as { eventId: string };
             try {
+                const user = await getAuthenticatedUserContext(req);
+                const event = await eventRepository.findById(eventId);
+                if (!event) {
+                    return reply.code(404).send({ message: 'Event not found' });
+                }
+                if (event.hostId !== user.userId && user.role !== 'ADMIN') {
+                    throw new ForbiddenRequestError('Only the event host can view registrations');
+                }
                 const registrations = await eventRegistrationRepository.findByEventIdWithUser(eventId);
-                return reply.send(registrations);
+                return reply.send(registrations.map((registration: any) => ({
+                    ...registration,
+                    user: registration.user ? {
+                        id: registration.user.id,
+                        fullName: registration.user.fullName,
+                        avatarUrl: registration.user.avatarUrl,
+                        occupation: registration.user.occupation,
+                        bio: registration.user.bio,
+                        lookingFor: registration.user.lookingFor,
+                        city: registration.user.city,
+                        neighborhood: registration.user.neighborhood,
+                        languages: registration.user.languages,
+                        dietaryRestrictions: registration.user.dietaryRestrictions,
+                        phoneNumber: registration.user.phoneNumber,
+                    } : undefined,
+                })));
             } catch (error) {
+                if (error instanceof ForbiddenRequestError) {
+                    return reply.code(403).send({ message: error.message });
+                }
+                if (error instanceof Error && error.name === 'UnauthorizedRequestError') {
+                    return reply.code(401).send({ message: 'Missing or invalid bearer token' });
+                }
                 console.error('Error fetching registrations:', error);
                 return reply.code(500).send({ message: 'Internal server error' });
             }
@@ -954,15 +1033,13 @@ const start = async () => {
             }
         }, (req, reply) => withdrawalController.listAll(req, reply));
 
-        // PIX Webhook (Recebe avisos da EFI)
-        fastify.post('/webhook/pix', {
+        fastify.get('/admin/overview', {
             schema: {
-                summary: 'EFI PIX Webhook',
-                description: 'Receives notifications from EFI regarding PIX transfers',
-                tags: ['Withdrawals'],
-                hide: true
+                summary: 'Get administrative operational summary',
+                description: 'Returns queue counters for the administrative dashboard',
+                tags: ['Users'],
             }
-        }, (req, reply) => withdrawalController.handleWebhook(req, reply));
+        }, (req, reply) => adminController.overview(req, reply));
 
         fastify.get('/admin/me', {
             schema: {
@@ -1016,19 +1093,6 @@ const start = async () => {
                 }
             }
         }, (req, reply) => adminController.rejectKyc(req as any, reply));
-
-        // Setup Webhook (Comando para registrar a URL na EFI)
-        fastify.post('/admin/setup-webhook', {
-            schema: {
-                summary: 'Setup EFI Webhook',
-                description: 'Registers the Webhook URL with EFI',
-                tags: ['Withdrawals'],
-                querystring: {
-                    type: 'object',
-                    properties: { url: { type: 'string' } }
-                }
-            }
-        }, (req, reply) => withdrawalController.setupWebhook(req, reply));
 
         fastify.delete('/bookings', {
             schema: {
@@ -1280,11 +1344,10 @@ const start = async () => {
             }
         }, (req, reply) => reviewController.delete(req, reply));
 
-        // PIX Payment Routes
-        fastify.post('/payments/pix', {
+        fastify.post('/payments/checkout', {
             schema: {
-                summary: 'Create PIX charge',
-                description: 'Generate a PIX QR code for event registration payment',
+                summary: 'Create payment checkout',
+                description: 'Create an Asaas checkout for Pix or credit card',
                 tags: ['Payments'],
                 body: {
                     type: 'object',
@@ -1297,25 +1360,25 @@ const start = async () => {
                 },
                 response: {
                     201: {
-                        description: 'PIX charge created',
+                        description: 'Checkout created',
                         type: 'object',
                         properties: {
                             paymentId: { type: 'string' },
-                            txid: { type: 'string' },
-                            qrcode: { type: 'string' },
-                            pixCopiaECola: { type: 'string' },
-                            valor: { type: 'string' },
-                            status: { type: 'string' }
+                            checkoutId: { type: 'string' },
+                            checkoutUrl: { type: 'string' },
+                            value: { type: 'string' },
+                            status: { type: 'string' },
+                            expiresInMinutes: { type: 'number' }
                         }
                     }
                 }
             }
-        }, (req, reply) => pixPaymentController.createCharge(req, reply));
+        }, (req, reply) => paymentController.createCheckout(req, reply));
 
-        fastify.get('/payments/pix/:bookingId', {
+        fastify.get('/payments/:bookingId', {
             schema: {
-                summary: 'Check PIX payment status',
-                description: 'Check if a PIX payment has been confirmed',
+                summary: 'Check payment status',
+                description: 'Check if an event payment has been confirmed',
                 tags: ['Payments'],
                 params: {
                     type: 'object',
@@ -1329,14 +1392,47 @@ const start = async () => {
                         type: 'object',
                         properties: {
                             paymentId: { type: 'string' },
-                            txid: { type: 'string' },
+                            checkoutId: { type: 'string' },
+                            checkoutUrl: { type: 'string', nullable: true },
                             status: { type: 'string' },
                             paid: { type: 'boolean' }
                         }
                     }
                 }
             }
-        }, (req, reply) => pixPaymentController.checkPayment(req, reply));
+        }, (req, reply) => paymentController.checkPayment(req, reply));
+
+        fastify.post('/webhooks/asaas', {
+            schema: {
+                summary: 'Receive Asaas events',
+                description: 'Processes checkout, payment and transfer events from Asaas',
+                tags: ['Payments'],
+                hide: true,
+            }
+        }, (req, reply) => paymentController.handleWebhook(req, reply));
+
+        fastify.get('/payments/checkout/return/:state', {
+            schema: {
+                summary: 'Return from hosted checkout',
+                tags: ['Payments'],
+                hide: true,
+                params: {
+                    type: 'object',
+                    required: ['state'],
+                    properties: {
+                        state: { type: 'string', enum: ['success', 'cancel', 'expired'] }
+                    }
+                },
+                querystring: {
+                    type: 'object',
+                    required: ['bookingId', 'eventId'],
+                    properties: {
+                        bookingId: { type: 'string' },
+                        eventId: { type: 'string' }
+                    }
+                }
+            }
+        }, (req, reply) => paymentController.checkoutReturn(req, reply));
 
         const port = Number(process.env.PORT) || 3000;
         const address = await fastify.listen({ port, host: '0.0.0.0' });

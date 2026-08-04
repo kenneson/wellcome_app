@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { KycStatus } from '@prisma/client';
+import { KycStatus, ReportStatus, WithdrawalStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../../infrastructure/database/prismaClient';
 import { supabaseAdmin } from '../../../infrastructure/external/supabaseClient';
@@ -14,6 +14,29 @@ const rejectKycBodySchema = z.object({
 });
 
 export class AdminController {
+    async overview(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            await requireAdminUser(request);
+            const [totalUsers, pendingKyc, pendingReports, pendingWithdrawals, processingWithdrawals] = await Promise.all([
+                prisma.user.count(),
+                prisma.user.count({ where: { kycStatus: KycStatus.PENDING } }),
+                prisma.report.count({ where: { status: ReportStatus.PENDING } }),
+                prisma.withdrawalRequest.count({ where: { status: WithdrawalStatus.PENDING } }),
+                prisma.withdrawalRequest.count({ where: { status: WithdrawalStatus.PROCESSING } }),
+            ]);
+
+            return reply.send({
+                totalUsers,
+                pendingKyc,
+                pendingReports,
+                pendingWithdrawals,
+                processingWithdrawals,
+            });
+        } catch (error) {
+            return this.handleAuthError(error, reply);
+        }
+    }
+
     async me(request: FastifyRequest, reply: FastifyReply) {
         try {
             const { userId } = await requireAdminUser(request);
@@ -95,27 +118,25 @@ export class AdminController {
             await requireAdminUser(request);
             const { id } = request.params;
 
-            const user = await prisma.user.update({
-                where: { id },
+            const updated = await prisma.user.updateMany({
+                where: { id, kycStatus: KycStatus.PENDING },
                 data: {
                     kycStatus: KycStatus.APPROVED,
                     kycReviewedAt: new Date(),
                     kycRejectionReason: null,
                 },
-                select: {
-                    id: true,
-                    kycStatus: true,
-                    kycReviewedAt: true,
-                    kycRejectionReason: true,
-                },
             });
 
-            return reply.send(user);
-        } catch (error: any) {
-            if (error?.code === 'P2025') {
-                return reply.code(404).send({ message: 'User not found' });
+            if (updated.count === 0) {
+                return this.handleKycTransitionFailure(id, reply);
             }
 
+            const user = await prisma.user.findUniqueOrThrow({
+                where: { id },
+                select: { id: true, kycStatus: true, kycReviewedAt: true, kycRejectionReason: true },
+            });
+            return reply.send(user);
+        } catch (error) {
             return this.handleAuthError(error, reply);
         }
     }
@@ -126,33 +147,38 @@ export class AdminController {
             const { id } = request.params;
             const { reason } = rejectKycBodySchema.parse(request.body);
 
-            const user = await prisma.user.update({
-                where: { id },
+            const updated = await prisma.user.updateMany({
+                where: { id, kycStatus: KycStatus.PENDING },
                 data: {
                     kycStatus: KycStatus.REJECTED,
                     kycReviewedAt: new Date(),
                     kycRejectionReason: reason,
                 },
-                select: {
-                    id: true,
-                    kycStatus: true,
-                    kycReviewedAt: true,
-                    kycRejectionReason: true,
-                },
             });
 
+            if (updated.count === 0) {
+                return this.handleKycTransitionFailure(id, reply);
+            }
+
+            const user = await prisma.user.findUniqueOrThrow({
+                where: { id },
+                select: { id: true, kycStatus: true, kycReviewedAt: true, kycRejectionReason: true },
+            });
             return reply.send(user);
-        } catch (error: any) {
+        } catch (error) {
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Invalid request body', errors: error.issues });
             }
-
-            if (error?.code === 'P2025') {
-                return reply.code(404).send({ message: 'User not found' });
-            }
-
             return this.handleAuthError(error, reply);
         }
+    }
+
+    private async handleKycTransitionFailure(id: string, reply: FastifyReply) {
+        const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+        if (!user) {
+            return reply.code(404).send({ message: 'User not found' });
+        }
+        return reply.code(409).send({ message: 'Only pending KYC requests can be reviewed' });
     }
 
     private async createKycSignedUrl(path: string | null): Promise<string | null> {

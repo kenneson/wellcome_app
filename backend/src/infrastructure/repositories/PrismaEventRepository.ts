@@ -6,13 +6,6 @@ export class PrismaEventRepository implements EventRepository {
     async create(data: CreateEventDTO): Promise<Event> {
         const { dishes, ...eventData } = data;
 
-        // Debug logging
-        console.log('[DEBUG] PrismaEventRepository.create - Input data:');
-        console.log('  - endTime:', eventData.endTime);
-        console.log('  - reservationDeadline:', eventData.reservationDeadline);
-        console.log('  - dishes count:', dishes?.length || 0);
-        console.log('  - dishes:', JSON.stringify(dishes));
-
         const event = await prisma.event.create({
             data: {
                 title: eventData.title,
@@ -50,13 +43,6 @@ export class PrismaEventRepository implements EventRepository {
             include: { dishes: { orderBy: { order: 'asc' } }, host: true }
         });
 
-        console.log('[DEBUG] PrismaEventRepository.create - Created event:');
-        console.log('  - endTime:', event.endTime);
-        console.log('  - reservationDeadline:', event.reservationDeadline);
-        console.log('  - dishes count:', event.dishes?.length || 0);
-        console.log('  - host fullName:', event.host?.fullName);
-        console.log('  - host avatarUrl:', event.host?.avatarUrl);
-
         return this.mapToDomain(event);
     }
 
@@ -93,14 +79,21 @@ export class PrismaEventRepository implements EventRepository {
         const events = await prisma.event.findMany({
             where,
             orderBy: { createdAt: 'desc' },
-            include: { host: true }
+            include: {
+                host: true,
+                bookings: { select: { status: true } },
+            }
         });
 
         const mappedEvents = events.map(this.mapToDomain);
 
-        if (filters?.latitude && filters?.longitude && filters?.radiusInKm) {
+        if (
+            filters?.latitude !== undefined &&
+            filters.longitude !== undefined &&
+            filters.radiusInKm !== undefined
+        ) {
             return mappedEvents.filter(event => {
-                if (!event.latitude || !event.longitude) return false;
+                if (event.latitude === null || event.longitude === null) return false;
                 const distance = this.getDistanceFromLatLonInKm(
                     filters.latitude!,
                     filters.longitude!,
@@ -147,30 +140,7 @@ export class PrismaEventRepository implements EventRepository {
         
         if (!event) return null;
         
-        // Debug logging
-        console.log('[DEBUG] findById - Raw Prisma event:');
-        console.log('  - endTime:', event.endTime);
-        console.log('  - reservationDeadline:', event.reservationDeadline);
-        console.log('  - dishes count:', event.dishes?.length || 0);
-        console.log('  - host:', event.host ? {
-            id: event.host.id,
-            fullName: event.host.fullName,
-            avatarUrl: event.host.avatarUrl
-        } : 'null');
-        
-        const mapped = this.mapToDomain(event);
-        
-        console.log('[DEBUG] findById - Mapped event:');
-        console.log('  - endTime:', mapped.endTime);
-        console.log('  - reservationDeadline:', mapped.reservationDeadline);
-        console.log('  - dishes count:', mapped.dishes?.length || 0);
-        console.log('  - host:', mapped.host ? {
-            id: mapped.host.id,
-            fullName: mapped.host.fullName,
-            avatarUrl: mapped.host.avatarUrl
-        } : 'null');
-        
-        return mapped;
+        return this.mapToDomain(event);
     }
 
     async update(id: string, data: UpdateEventDTO): Promise<Event> {
@@ -352,12 +322,6 @@ export class PrismaEventRepository implements EventRepository {
                 } : undefined
             })) : []
         };
-        
-        console.log('[DEBUG] mapToDomain - Mapped result:');
-        console.log('  - endTime:', mapped.endTime);
-        console.log('  - reservationDeadline:', mapped.reservationDeadline);
-        console.log('  - host:', mapped.host ? 'present' : 'missing');
-        console.log('  - dishes:', mapped.dishes ? `${mapped.dishes.length} items` : 'missing');
         
         return mapped;
     }

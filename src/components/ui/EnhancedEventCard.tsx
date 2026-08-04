@@ -34,6 +34,7 @@ interface EnhancedEventCardProps {
     vibe?: string[];
     event_participants?: Array<{ count: number }>;
     bookings?: Array<{ status: string }>;
+    participantCount?: number;
   };
   onPress: () => void;
 }
@@ -51,8 +52,8 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
   const hostName = event.host?.full_name || event.host?.fullName;
   
   // Count valid bookings (APPROVED or PENDING)
-  const taken = event.event_participants?.[0]?.count || 
-                event.bookings?.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').length || 0;
+  const taken = event.participantCount ?? event.event_participants?.[0]?.count ??
+                event.bookings?.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').length ?? 0;
   const spotsLabel = formatSpotsAvailable(taken, maxGuests);
 
   // Get first 3 tags (combine cuisine and vibe)

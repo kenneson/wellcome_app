@@ -58,12 +58,13 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 
 -- Permitir leitura pública de perfis
-CREATE POLICY "Public profiles are viewable by everyone" 
+CREATE POLICY "Users can view their own profile"
 ON public.profiles FOR SELECT 
-USING (true);
+USING (auth.uid() = id);
 
 -- Permitir que o usuário atualize seu próprio perfil
 CREATE POLICY "Users can update their own profile" 
@@ -81,8 +82,7 @@ WITH CHECK (auth.uid() = id);
 -- =============================================
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 
 -- =============================================
 -- 5. FUNÇÃO DE GEOLOCALIZAÇÃO (GET_EVENTS_NEARBY)

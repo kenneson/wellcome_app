@@ -16,30 +16,27 @@ export class EventService {
         };
     }
 
+    private async getOptionalAuthHeaders(): Promise<Record<string, string>> {
+        const { data: { session } } = await supabase.auth.getSession();
+        return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+    }
+
     async uploadImage(uri: string, userId: string): Promise<string | null> {
         const filename = `${userId}/${Date.now()}.jpg`;
-        const formData = new FormData();
-
-        // @ts-ignore
-        formData.append('file', {
-            uri: uri,
-            name: filename,
-            type: 'image/jpeg',
-        });
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const image = await fetch(uri).then((response) => response.arrayBuffer());
+        const { error: uploadError } = await supabase.storage
             .from('avatars')
-            .upload(filename, formData as any);
-
-        if (uploadData) {
-            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filename);
-            return publicUrl;
-        }
+            .upload(filename, image, {
+                contentType: 'image/jpeg',
+                upsert: false,
+            });
 
         if (uploadError) {
+            throw uploadError;
         }
 
-        return null;
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filename);
+        return publicUrl;
     }
 
     async geocodeLocation(address: string): Promise<{ latitude: number | null, longitude: number | null }> {
@@ -140,7 +137,9 @@ export class EventService {
 
     async getEventById(id: string): Promise<Event> {
         console.log('[DEBUG] EventService.getEventById - Fetching from:', `${API_URL}/events/${id}`);
-        const response = await fetch(`${API_URL}/events/${id}`);
+        const response = await fetch(`${API_URL}/events/${id}`, {
+            headers: await this.getOptionalAuthHeaders(),
+        });
         if (!response.ok) {
             throw new Error('Failed to fetch event');
         }
@@ -159,9 +158,18 @@ export class EventService {
         return event;
     }
 
-    async listEvents(filters?: any): Promise<Event[]> {
-        const queryParams = new URLSearchParams(filters).toString();
-        const response = await fetch(`${API_URL}/events?${queryParams}`);
+    async listEvents(filters?: Record<string, string | string[] | undefined>): Promise<Event[]> {
+        const queryParams = new URLSearchParams();
+        Object.entries(filters || {}).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                value.forEach((item) => queryParams.append(key, item));
+            } else if (value !== undefined) {
+                queryParams.set(key, value);
+            }
+        });
+        const response = await fetch(`${API_URL}/events?${queryParams.toString()}`, {
+            headers: await this.getOptionalAuthHeaders(),
+        });
         if (!response.ok) {
             throw new Error('Failed to list events');
         }

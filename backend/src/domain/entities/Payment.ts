@@ -8,11 +8,19 @@ export interface Payment {
     txid: string;
     pixCopiaECola: string;
     qrcode: string;
+    provider?: string;
+    checkoutUrl?: string;
+    providerPaymentId?: string;
+    paymentMethod?: string;
+    providerStatus?: string;
     valor: number;
     status: PaymentStatus;
     paidAt?: Date;
     platformFee?: number;
+    processorFee?: number;
     netAmount?: number;
+    refundedAmount?: number;
+    refundedNetAmount?: number;
     createdAt: Date;
     updatedAt: Date;
 }

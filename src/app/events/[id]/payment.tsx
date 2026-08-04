@@ -1,13 +1,12 @@
 import { registrationService } from '@/services/api/RegistrationService';
-import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Image,
+    AppState,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,110 +15,127 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface PixData {
+interface CheckoutData {
     paymentId: string;
-    txid: string;
-    qrcode: string;         // base64 image
-    pixCopiaECola: string;
-    valor: string;
+    checkoutId: string;
+    checkoutUrl: string;
+    value: string;
     status: string;
+    expiresInMinutes: number;
 }
 
 export default function PaymentScreen() {
     const { id, bookingId } = useLocalSearchParams<{ id: string; bookingId: string }>();
     const router = useRouter();
-    const [pixData, setPixData] = useState<PixData | null>(null);
+    const [checkout, setCheckout] = useState<CheckoutData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [opening, setOpening] = useState(false);
     const [checking, setChecking] = useState(false);
     const [paid, setPaid] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [expired, setExpired] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    useEffect(() => {
-        if (id && bookingId) {
-            generatePixCharge();
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
         }
-        return () => {
-            if (pollRef.current) clearInterval(pollRef.current);
-        };
-    }, [id, bookingId]);
+    }, []);
 
-    const generatePixCharge = async () => {
+    const checkPaymentStatus = useCallback(async (showFeedback = false) => {
+        if (!bookingId) return;
+
+        if (showFeedback) setChecking(true);
         try {
-            setLoading(true);
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                Alert.alert('Erro', 'Sessão expirada. Faça login novamente.');
-                router.back();
+            const result = await registrationService.checkPayment(String(bookingId));
+            if (result.paid) {
+                stopPolling();
+                setPaid(true);
+                setExpired(false);
                 return;
             }
 
-            const result = await registrationService.createPixCharge({
-                bookingId: bookingId as string,
-                eventId: id as string,
-                userId: session.user.id,
-            });
+            if (result.status === 'EXPIRED') {
+                stopPolling();
+                setExpired(true);
+                return;
+            }
 
-            setPixData(result);
+            if (showFeedback) {
+                Alert.alert('Aguardando pagamento', 'A confirmacao ainda nao chegou. Tente novamente em alguns instantes.');
+            }
+        } catch (error: any) {
+            if (showFeedback) {
+                Alert.alert('Erro', error.message || 'Falha ao consultar o pagamento.');
+            }
+        } finally {
+            if (showFeedback) setChecking(false);
+        }
+    }, [bookingId, stopPolling]);
+
+    const startPolling = useCallback(() => {
+        stopPolling();
+        pollRef.current = setInterval(() => {
+            void checkPaymentStatus(false);
+        }, 4000);
+    }, [checkPaymentStatus, stopPolling]);
+
+    const createCheckout = useCallback(async () => {
+        if (!id || !bookingId) return;
+
+        setLoading(true);
+        setExpired(false);
+        try {
+            const result = await registrationService.createPaymentCheckout({
+                bookingId: String(bookingId),
+                eventId: String(id),
+            });
+            setCheckout(result);
             startPolling();
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Falha ao gerar QR Code PIX.');
-            router.back();
+            Alert.alert('Erro', error.message || 'Nao foi possivel iniciar o pagamento.', [
+                { text: 'Voltar', onPress: () => router.back() },
+            ]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [bookingId, id, router, startPolling]);
 
-    const startPolling = useCallback(() => {
-        if (pollRef.current) clearInterval(pollRef.current);
+    useEffect(() => {
+        void createCheckout();
+        return stopPolling;
+    }, [createCheckout, stopPolling]);
 
-        pollRef.current = setInterval(async () => {
-            try {
-                const result = await registrationService.checkPixPayment(bookingId as string);
-                if (result.paid) {
-                    if (pollRef.current) clearInterval(pollRef.current);
-                    setPaid(true);
-                }
-            } catch {
-                // Silently ignore polling errors
-            }
-        }, 5000); // Verifica a cada 5 segundos
-    }, [bookingId]);
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') void checkPaymentStatus(false);
+        });
+        return () => subscription.remove();
+    }, [checkPaymentStatus]);
 
-    const handleCheckPayment = async () => {
-        setChecking(true);
+    const handleOpenCheckout = async () => {
+        if (!checkout?.checkoutUrl) return;
+
+        setOpening(true);
         try {
-            const result = await registrationService.checkPixPayment(bookingId as string);
-            if (result.paid) {
-                setPaid(true);
-                if (pollRef.current) clearInterval(pollRef.current);
-            } else {
-                Alert.alert('Aguardando', 'Pagamento ainda não confirmado. Tente novamente em alguns instantes.');
-            }
+            await WebBrowser.openBrowserAsync(checkout.checkoutUrl, {
+                presentationStyle: WebBrowser.WebBrowserPresentationStyle.FORM_SHEET,
+                controlsColor: '#FF8C42',
+            });
+            await checkPaymentStatus(false);
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Falha ao verificar pagamento.');
+            Alert.alert('Erro', error.message || 'Nao foi possivel abrir o pagamento.');
         } finally {
-            setChecking(false);
+            setOpening(false);
         }
-    };
-
-    const handleCopyCode = async () => {
-        if (!pixData?.pixCopiaECola) return;
-        await Clipboard.setStringAsync(pixData.pixCopiaECola);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 3000);
-    };
-
-    const handleGoToEvent = () => {
-        router.replace(`/events/${id}`);
     };
 
     if (loading) {
         return (
             <SafeAreaView style={styles.safeArea}>
-                <View style={styles.loadingContainer}>
+                <View style={styles.centered}>
                     <ActivityIndicator size="large" color="#FF8C42" />
-                    <Text style={styles.loadingText}>Gerando QR Code PIX...</Text>
+                    <Text style={styles.loadingText}>Preparando pagamento...</Text>
                 </View>
             </SafeAreaView>
         );
@@ -128,16 +144,12 @@ export default function PaymentScreen() {
     if (paid) {
         return (
             <SafeAreaView style={styles.safeArea}>
-                <View style={styles.successContainer}>
-                    <View style={styles.successIcon}>
-                        <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
-                    </View>
-                    <Text style={styles.successTitle}>Pagamento Confirmado!</Text>
-                    <Text style={styles.successSubtitle}>
-                        Sua inscrição foi confirmada com sucesso.
-                    </Text>
-                    <TouchableOpacity style={styles.successButton} onPress={handleGoToEvent}>
-                        <Text style={styles.successButtonText}>Voltar ao Evento</Text>
+                <View style={styles.centered}>
+                    <Ionicons name="checkmark-circle" size={80} color="#16855B" />
+                    <Text style={styles.successTitle}>Pagamento confirmado</Text>
+                    <Text style={styles.successSubtitle}>Sua inscricao no evento esta confirmada.</Text>
+                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
+                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -147,242 +159,158 @@ export default function PaymentScreen() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Voltar">
+                    <Ionicons name="arrow-back" size={24} color="#202124" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Pagamento PIX</Text>
-                <View style={{ width: 40 }} />
+                <Text style={styles.headerTitle}>Pagamento</Text>
+                <View style={styles.iconButton} />
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {pixData && (
+                <View style={styles.amountBlock}>
+                    <Text style={styles.amountLabel}>Valor do ingresso</Text>
+                    <Text style={styles.amountValue}>
+                        R$ {Number(checkout?.value || 0).toFixed(2).replace('.', ',')}
+                    </Text>
+                </View>
+
+                <View style={styles.methodRow}>
+                    <View style={styles.methodIcon}>
+                        <Ionicons name="qr-code-outline" size={24} color="#187A67" />
+                    </View>
+                    <View style={styles.methodText}>
+                        <Text style={styles.methodTitle}>Pix</Text>
+                        <Text style={styles.methodSubtitle}>Confirmacao rapida pelo seu banco</Text>
+                    </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.methodRow}>
+                    <View style={styles.methodIcon}>
+                        <Ionicons name="card-outline" size={24} color="#315E9E" />
+                    </View>
+                    <View style={styles.methodText}>
+                        <Text style={styles.methodTitle}>Cartao de credito</Text>
+                        <Text style={styles.methodSubtitle}>Pagamento a vista</Text>
+                    </View>
+                </View>
+
+                {expired ? (
+                    <View style={styles.statusBlock}>
+                        <Ionicons name="time-outline" size={22} color="#9A5B15" />
+                        <Text style={styles.statusText}>Este checkout expirou.</Text>
+                        <TouchableOpacity style={styles.primaryButton} onPress={() => void createCheckout()}>
+                            <Ionicons name="refresh" size={20} color="#FFFFFF" />
+                            <Text style={styles.primaryButtonText}>Gerar novo pagamento</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
                     <>
-                        <View style={styles.amountContainer}>
-                            <Text style={styles.amountLabel}>Valor a pagar</Text>
-                            <Text style={styles.amountValue}>
-                                R$ {Number(pixData.valor).toFixed(2).replace('.', ',')}
-                            </Text>
-                        </View>
-
-                        <View style={styles.qrcodeContainer}>
-                            <Text style={styles.qrcodeTitle}>
-                                Escaneie o QR Code com o app do seu banco
-                            </Text>
-                            {pixData.qrcode ? (
-                                <Image
-                                    source={{ uri: pixData.qrcode }}
-                                    style={styles.qrcodeImage}
-                                    resizeMode="contain"
-                                />
+                        <TouchableOpacity
+                            style={[styles.primaryButton, opening && styles.disabledButton]}
+                            onPress={handleOpenCheckout}
+                            disabled={opening}
+                        >
+                            {opening ? (
+                                <ActivityIndicator color="#FFFFFF" />
                             ) : (
-                                <View style={styles.qrcodePlaceholder}>
-                                    <Ionicons name="qr-code-outline" size={120} color="#ccc" />
-                                </View>
+                                <>
+                                    <Ionicons name="open-outline" size={20} color="#FFFFFF" />
+                                    <Text style={styles.primaryButtonText}>Abrir pagamento</Text>
+                                </>
                             )}
-                        </View>
-
-                        <Text style={styles.orText}>ou copie o código PIX</Text>
-
-                        <TouchableOpacity style={styles.copyButton} onPress={handleCopyCode}>
-                            <Ionicons
-                                name={copied ? 'checkmark-circle' : 'copy-outline'}
-                                size={20}
-                                color={copied ? '#4CAF50' : '#FF8C42'}
-                            />
-                            <Text style={[styles.copyButtonText, copied && { color: '#4CAF50' }]}>
-                                {copied ? 'Código copiado!' : 'Copiar código Pix Copia e Cola'}
-                            </Text>
                         </TouchableOpacity>
 
-                        <View style={styles.infoBox}>
-                            <Ionicons name="time-outline" size={18} color="#666" />
-                            <Text style={styles.infoText}>
-                                O QR Code expira em 1 hora. Após o pagamento, a confirmação é automática.
-                            </Text>
-                        </View>
-
                         <TouchableOpacity
-                            style={[styles.checkButton, checking && styles.checkButtonDisabled]}
-                            onPress={handleCheckPayment}
+                            style={[styles.secondaryButton, checking && styles.disabledButton]}
+                            onPress={() => void checkPaymentStatus(true)}
                             disabled={checking}
                         >
                             {checking ? (
-                                <ActivityIndicator color="#fff" size="small" />
+                                <ActivityIndicator color="#FF8C42" />
                             ) : (
                                 <>
-                                    <Ionicons name="refresh" size={20} color="#fff" />
-                                    <Text style={styles.checkButtonText}>Já paguei, verificar</Text>
+                                    <Ionicons name="refresh" size={20} color="#FF8C42" />
+                                    <Text style={styles.secondaryButtonText}>Verificar pagamento</Text>
                                 </>
                             )}
                         </TouchableOpacity>
                     </>
                 )}
+
+                <View style={styles.securityRow}>
+                    <Ionicons name="lock-closed-outline" size={17} color="#6D7278" />
+                    <Text style={styles.securityText}>Pagamento processado em ambiente seguro pelo Asaas.</Text>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 16,
-    },
-    loadingText: {
-        fontSize: 16,
-        color: '#666',
-    },
+    safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 14 },
+    loadingText: { fontSize: 15, color: '#666B70' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        paddingVertical: 10,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: '#E3E5E8',
     },
-    backButton: {
-        padding: 8,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    content: {
-        padding: 24,
+    iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: '#202124' },
+    content: { padding: 24, paddingBottom: 40 },
+    amountBlock: { alignItems: 'center', marginBottom: 34 },
+    amountLabel: { fontSize: 14, color: '#72777D', marginBottom: 6 },
+    amountValue: { fontSize: 34, fontWeight: '800', color: '#202124' },
+    methodRow: { flexDirection: 'row', alignItems: 'center', minHeight: 68 },
+    methodIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 8,
+        backgroundColor: '#F3F5F6',
         alignItems: 'center',
-    },
-    amountContainer: {
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    amountLabel: {
-        fontSize: 14,
-        color: '#888',
-        marginBottom: 4,
-    },
-    amountValue: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#222',
-    },
-    qrcodeContainer: {
-        alignItems: 'center',
-        backgroundColor: '#f9f9f9',
-        borderRadius: 16,
-        padding: 24,
-        width: '100%',
-        marginBottom: 16,
-    },
-    qrcodeTitle: {
-        fontSize: 14,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 16,
-    },
-    qrcodeImage: {
-        width: 250,
-        height: 250,
-    },
-    qrcodePlaceholder: {
-        width: 250,
-        height: 250,
         justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        borderRadius: 12,
+        marginRight: 14,
     },
-    orText: {
-        fontSize: 13,
-        color: '#999',
-        marginVertical: 12,
-    },
-    copyButton: {
+    methodText: { flex: 1 },
+    methodTitle: { fontSize: 16, fontWeight: '700', color: '#202124' },
+    methodSubtitle: { fontSize: 13, color: '#72777D', marginTop: 3 },
+    divider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E5E8', marginLeft: 58 },
+    primaryButton: {
+        minHeight: 52,
+        borderRadius: 8,
+        backgroundColor: '#FF8C42',
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
+        marginTop: 30,
+    },
+    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    secondaryButton: {
+        minHeight: 50,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: '#FF8C42',
-        borderRadius: 12,
-        marginBottom: 20,
-    },
-    copyButtonText: {
-        fontSize: 14,
-        color: '#FF8C42',
-        fontWeight: '600',
-    },
-    infoBox: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 8,
-        backgroundColor: '#FFF8F0',
-        padding: 14,
-        borderRadius: 10,
-        marginBottom: 24,
-        width: '100%',
-    },
-    infoText: {
-        fontSize: 13,
-        color: '#666',
-        flex: 1,
-        lineHeight: 18,
-    },
-    checkButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        paddingHorizontal: 32,
-        borderRadius: 14,
-        width: '100%',
+        paddingHorizontal: 20,
+        marginTop: 12,
     },
-    checkButtonDisabled: {
-        opacity: 0.7,
-    },
-    checkButtonText: {
-        fontSize: 16,
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    successContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
-    },
-    successIcon: {
-        marginBottom: 20,
-    },
-    successTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#222',
-        marginBottom: 8,
-    },
-    successSubtitle: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginBottom: 32,
-    },
-    successButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 16,
-        paddingHorizontal: 48,
-        borderRadius: 14,
-    },
-    successButtonText: {
-        fontSize: 16,
-        color: '#fff',
-        fontWeight: 'bold',
-    },
+    secondaryButtonText: { color: '#C86529', fontSize: 15, fontWeight: '700' },
+    disabledButton: { opacity: 0.65 },
+    securityRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, marginTop: 24 },
+    securityText: { flexShrink: 1, fontSize: 12, color: '#6D7278', textAlign: 'center' },
+    statusBlock: { alignItems: 'center', marginTop: 30 },
+    statusText: { color: '#79501F', marginTop: 8 },
+    successTitle: { fontSize: 24, fontWeight: '800', color: '#202124' },
+    successSubtitle: { fontSize: 16, color: '#666B70', textAlign: 'center', marginBottom: 8 },
 });

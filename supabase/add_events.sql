@@ -19,8 +19,9 @@ alter table events enable row level security;
 
 -- Policies (Drop first to avoid errors if re-running)
 drop policy if exists "Events are viewable by everyone." on events;
-create policy "Events are viewable by everyone." on events
-  for select using (true);
+drop policy if exists "Hosts can view their own events." on events;
+create policy "Hosts can view their own events." on events
+  for select using (auth.uid() = host_id);
   
 drop policy if exists "Users can create events." on events;
 create policy "Users can create events." on events
@@ -72,8 +73,16 @@ create table if not exists event_participants (
 alter table event_participants enable row level security;
 
 drop policy if exists "Participants are viewable by everyone" on event_participants;
-create policy "Participants are viewable by everyone" on event_participants
-  for select using (true);
+drop policy if exists "Participants can view their own registration or hosted event registrations" on event_participants;
+create policy "Participants can view their own registration or hosted event registrations" on event_participants
+  for select using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from events
+      where events.id = event_participants.event_id
+        and events.host_id = auth.uid()
+    )
+  );
 
 drop policy if exists "Users can join events." on event_participants;
 create policy "Users can join events." on event_participants

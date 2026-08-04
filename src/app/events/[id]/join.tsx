@@ -1,4 +1,5 @@
 import { registrationService } from '@/services/api/RegistrationService';
+import { eventService } from '@/services/api/EventService';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,16 +23,7 @@ export default function JoinEventScreen() {
     async function fetchEventDetails() {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('events')
-                .select(`
-                    id, title, access_type, price,
-                    questions:event_questions(id, question, required, order, question_type)
-                `)
-                .eq('id', id)
-                .single();
-
-            if (error) throw error;
+            const data = await eventService.getEventById(String(id));
 
             // Sort questions by order
             if (data.questions) {

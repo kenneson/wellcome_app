@@ -18,8 +18,8 @@ create table profiles (
 -- See https://supabase.com/docs/guides/auth/row-level-security for more details.
 alter table profiles enable row level security;
 
-create policy "Public profiles are viewable by everyone." on profiles
-  for select using (true);
+create policy "Users can view their own profile." on profiles
+  for select using (auth.uid() = id);
 
 create policy "Users can insert their own profile." on profiles
   for insert with check (auth.uid() = id);
@@ -57,8 +57,8 @@ create table events (
 -- RLS for events
 alter table events enable row level security;
 
-create policy "Events are viewable by everyone." on events
-  for select using (true);
+create policy "Hosts can view their own events." on events
+  for select using (auth.uid() = host_id);
 
 create policy "Users can create events." on events
   for insert with check (auth.uid() = host_id);
@@ -84,8 +84,15 @@ create table event_participants (
 -- RLS for participants
 alter table event_participants enable row level security;
 
-create policy "Participants are viewable by everyone" on event_participants
-  for select using (true);
+create policy "Participants can view their own registration or hosted event registrations" on event_participants
+  for select using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from events
+      where events.id = event_participants.event_id
+        and events.host_id = auth.uid()
+    )
+  );
 
 create policy "Users can join events." on event_participants
   for insert with check (auth.uid() = user_id);

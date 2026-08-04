@@ -6,7 +6,7 @@ import { DeleteEventUseCase } from '../../../application/use-cases/DeleteEventUs
 import { z } from 'zod';
 
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
-import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
+import { UnauthorizedRequestError, getAuthenticatedUserId, getOptionalAuthenticatedUserContext } from '../helpers/auth';
 
 const createEventSchema = z.object({
     title: z.string(),
@@ -99,13 +99,6 @@ export class EventController {
             const body = createEventSchema.parse(request.body);
             const hostId = await getAuthenticatedUserId(request);
             
-            // Debug logging
-            console.log('[DEBUG] EventController.create - Parsed body:');
-            console.log('  - endTime:', body.endTime);
-            console.log('  - reservationDeadline:', body.reservationDeadline);
-            console.log('  - dishes count:', body.dishes?.length || 0);
-            console.log('  - dishes:', JSON.stringify(body.dishes));
-            
             const event = await this.createEventUseCase.execute({
                 ...body,
                 eventType: body.eventType ?? '',
@@ -128,14 +121,7 @@ export class EventController {
                 })) ?? []
             });
             
-            console.log('[DEBUG] EventController.create - Returned event:');
-            console.log('  - endTime:', event.endTime);
-            console.log('  - reservationDeadline:', event.reservationDeadline);
-            console.log('  - dishes count:', event.dishes?.length || 0);
-            console.log('  - host fullName:', event.host?.fullName);
-            console.log('  - host avatarUrl:', event.host?.avatarUrl);
-            
-            return reply.code(201).send(event);
+            return reply.code(201).send(this.serializeEvent(event, hostId));
         } catch (error) {
             console.error('Create Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
@@ -144,7 +130,7 @@ export class EventController {
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -152,9 +138,9 @@ export class EventController {
         try {
             const { lat, lon, radius, cuisine, vibe, priceMin, priceMax, eventType, excludeHostId } = request.query as any;
             const events = await this.listEventsUseCase.execute({
-                latitude: lat ? parseFloat(lat) : undefined,
-                longitude: lon ? parseFloat(lon) : undefined,
-                radiusInKm: radius ? parseFloat(radius) : undefined,
+                latitude: lat !== undefined ? parseFloat(lat) : undefined,
+                longitude: lon !== undefined ? parseFloat(lon) : undefined,
+                radiusInKm: radius !== undefined ? parseFloat(radius) : undefined,
                 cuisine: cuisine ? (Array.isArray(cuisine) ? cuisine : [cuisine]) : undefined,
                 vibe: vibe ? (Array.isArray(vibe) ? vibe : [vibe]) : undefined,
                 priceMin: priceMin ? parseFloat(priceMin) : undefined,
@@ -162,25 +148,80 @@ export class EventController {
                 eventType: eventType ? (Array.isArray(eventType) ? eventType[0] : eventType) : undefined,
                 excludeHostId: excludeHostId ? (Array.isArray(excludeHostId) ? excludeHostId[0] : excludeHostId) : undefined
             });
-            return reply.send(events);
+            return reply.send(events.map((event) => this.serializeEvent(event)));
         } catch (error) {
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
     async getById(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as { id: string };
         try {
-            console.log('[DEBUG] EventController.getById - Fetching event:', id);
             const event = await this.listEventsUseCase.getById(id);
             if (!event) {
-                console.log('[DEBUG] EventController.getById - Event not found');
                 return reply.code(404).send({ message: 'Event not found' });
             }
-            return reply.send(event);
+            const viewer = await getOptionalAuthenticatedUserContext(request);
+            return reply.send(this.serializeEvent(event, viewer?.userId));
         } catch (error) {
-            return reply.code(500).send({ message: 'Internal server error', error });
+            if (error instanceof UnauthorizedRequestError) {
+                return reply.code(401).send({ message: error.message });
+            }
+            return reply.code(500).send({ message: 'Internal server error' });
         }
+    }
+
+    private serializeEvent(event: any, viewerId?: string) {
+        const canSeeExactLocation = viewerId === event.hostId || event.bookings?.some(
+            (booking: any) => booking.userId === viewerId && booking.status === 'APPROVED'
+        );
+
+        return {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            price: event.price,
+            maxGuests: event.maxGuests,
+            eventDate: event.eventDate,
+            endTime: event.endTime,
+            reservationDeadline: event.reservationDeadline,
+            location: canSeeExactLocation ? event.location : this.getLocationSummary(event.location),
+            latitude: canSeeExactLocation ? event.latitude : null,
+            longitude: canSeeExactLocation ? event.longitude : null,
+            coverImageUrl: event.coverImageUrl,
+            imageGallery: event.imageGallery,
+            eventType: event.eventType,
+            cuisineTypes: event.cuisineTypes,
+            vibe: event.vibe,
+            facilities: event.facilities,
+            rules: event.rules,
+            dietaryOptions: event.dietaryOptions,
+            hostId: event.hostId,
+            accessType: event.accessType,
+            requiresApproval: event.requiresApproval,
+            allowWaitlist: event.allowWaitlist,
+            autoApproveIfAttended: event.autoApproveIfAttended,
+            autoApproveMinRating: event.autoApproveMinRating,
+            createdAt: event.createdAt,
+            updatedAt: event.updatedAt,
+            host: event.host ? {
+                id: event.host.id,
+                fullName: event.host.fullName,
+                username: event.host.username,
+                avatarUrl: event.host.avatarUrl,
+                isSuperhost: event.host.isSuperhost,
+            } : undefined,
+            dishes: event.dishes,
+            questions: event.questions,
+            reviews: event.reviews,
+            participantCount: event.bookings?.filter(
+                (booking: any) => booking.status === 'PENDING' || booking.status === 'APPROVED'
+            ).length || 0,
+        };
+    }
+
+    private getLocationSummary(location: string): string {
+        return location ? 'Local exato informado apos a confirmacao' : 'Local informado apos a confirmacao';
     }
 
     async update(request: FastifyRequest, reply: FastifyReply) {
@@ -190,7 +231,7 @@ export class EventController {
             const hostId = await getAuthenticatedUserId(request);
             const updateData = body;
             const event = await this.updateEventUseCase.execute(id, hostId, updateData);
-            return reply.send(event);
+            return reply.send(this.serializeEvent(event, hostId));
         } catch (error) {
             console.error('Update Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
@@ -207,7 +248,7 @@ export class EventController {
                     return reply.code(403).send({ message: error.message });
                 }
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -230,7 +271,7 @@ export class EventController {
                     return reply.code(403).send({ message: error.message });
                 }
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 }

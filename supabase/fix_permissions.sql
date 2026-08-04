@@ -6,7 +6,7 @@ ADD COLUMN IF NOT EXISTS expo_push_token TEXT;
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
 -- 3. Garantir permissões básicas de leitura em tabelas comuns para autenticados e anonimos (ajuste conforme necessidade de segurança)
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 
 -- 4. Garantir permissão de atualização no próprio perfil para o token
 -- (Assumindo que RLS já existe, se não, isso habilita RLS e cria política)

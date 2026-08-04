@@ -12,39 +12,8 @@ export class WithdrawalController {
     constructor(
         private requestWithdrawalUseCase: RequestWithdrawalUseCase,
         private approveWithdrawalUseCase: ApproveWithdrawalUseCase,
-        private withdrawalRepository: any,
-        private efiPixService?: any
+        private withdrawalRepository: any
     ) {}
-
-    async handleWebhook(_request: FastifyRequest, reply: FastifyReply) {
-        console.log('[Webhook EFI] Notification received');
-        return reply.code(200).send();
-    }
-
-    async setupWebhook(request: FastifyRequest, reply: FastifyReply) {
-        if (!this.efiPixService) {
-            return reply.code(500).send({ message: 'Servico EFI nao injetado' });
-        }
-
-        try {
-            await requireAdminUser(request);
-            const { url } = request.query as { url: string };
-            if (!url) {
-                return reply.code(400).send({ message: 'URL e obrigatoria. Use ?url=https://sua-url.com/webhook/pix' });
-            }
-
-            const result = await this.efiPixService.configWebhook(url);
-            return reply.send({ success: true, result });
-        } catch (error: any) {
-            if (error instanceof UnauthorizedRequestError) {
-                return reply.code(401).send({ message: error.message });
-            }
-            if (error instanceof ForbiddenRequestError) {
-                return reply.code(403).send({ message: error.message });
-            }
-            return reply.code(500).send({ message: error.message || 'Erro ao configurar webhook' });
-        }
-    }
 
     async requestWithdrawal(request: FastifyRequest, reply: FastifyReply) {
         try {
@@ -83,7 +52,12 @@ export class WithdrawalController {
             if (error instanceof ForbiddenRequestError) {
                 return reply.code(403).send({ message: error.message });
             }
-            if (error.message.includes('ja foi processado') || error.message.includes('EFI')) {
+            if (
+                error.message.includes('ja foi processado') ||
+                error.message.includes('Asaas') ||
+                error.message.includes('chave Pix') ||
+                error.message.includes('processamento')
+            ) {
                 return reply.code(400).send({ message: error.message });
             }
             if (error.message === 'Pedido de saque nao encontrado') {
