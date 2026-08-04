@@ -1,5 +1,6 @@
 import { CreateEventDTO, Event, UpdateEventDTO } from '../../domain/entities/Event';
 import { EventRepository } from '../../domain/repositories/EventRepository';
+import { filterAndSortEventsByProximity } from '../../domain/services/EventProximity';
 import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRepository implements EventRepository {
@@ -72,7 +73,7 @@ export class PrismaEventRepository implements EventRepository {
 
         const events = await prisma.event.findMany({
             where,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { eventDate: 'asc' },
             include: {
                 host: true,
                 bookings: { select: { status: true } },
@@ -86,35 +87,14 @@ export class PrismaEventRepository implements EventRepository {
             filters.longitude !== undefined &&
             filters.radiusInKm !== undefined
         ) {
-            return mappedEvents.filter(event => {
-                if (event.latitude === null || event.longitude === null) return false;
-                const distance = this.getDistanceFromLatLonInKm(
-                    filters.latitude!,
-                    filters.longitude!,
-                    event.latitude,
-                    event.longitude
-                );
-                return distance <= filters.radiusInKm!;
-            });
+            return filterAndSortEventsByProximity(
+                mappedEvents,
+                { latitude: filters.latitude, longitude: filters.longitude },
+                filters.radiusInKm
+            );
         }
 
         return mappedEvents;
-    }
-
-    private getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-        const R = 6371;
-        const dLat = this.deg2rad(lat2 - lat1);
-        const dLon = this.deg2rad(lon2 - lon1);
-        const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    private deg2rad(deg: number) {
-        return deg * (Math.PI / 180);
     }
 
     async findById(id: string): Promise<Event | null> {

@@ -145,14 +145,33 @@ export class EventController {
     async list(request: FastifyRequest, reply: FastifyReply) {
         try {
             const { lat, lon, radius, cuisine, vibe, priceMin, priceMax, eventType, excludeHostId } = request.query as any;
+            const latitude = this.parseOptionalNumber(lat);
+            const longitude = this.parseOptionalNumber(lon);
+            const radiusInKm = this.parseOptionalNumber(radius);
+            const minimumPrice = this.parseOptionalNumber(priceMin);
+            const maximumPrice = this.parseOptionalNumber(priceMax);
+
+            if ([latitude, longitude, radiusInKm, minimumPrice, maximumPrice].some(Number.isNaN)) {
+                return reply.code(400).send({ message: 'Invalid numeric event filter' });
+            }
+            if ((latitude === undefined) !== (longitude === undefined)) {
+                return reply.code(400).send({ message: 'Latitude and longitude must be provided together' });
+            }
+            if (radiusInKm !== undefined && radiusInKm <= 0) {
+                return reply.code(400).send({ message: 'Radius must be greater than zero' });
+            }
+            if (minimumPrice !== undefined && maximumPrice !== undefined && minimumPrice > maximumPrice) {
+                return reply.code(400).send({ message: 'Minimum price cannot exceed maximum price' });
+            }
+
             const events = await this.listEventsUseCase.execute({
-                latitude: lat !== undefined ? parseFloat(lat) : undefined,
-                longitude: lon !== undefined ? parseFloat(lon) : undefined,
-                radiusInKm: radius !== undefined ? parseFloat(radius) : undefined,
+                latitude,
+                longitude,
+                radiusInKm,
                 cuisine: cuisine ? (Array.isArray(cuisine) ? cuisine : [cuisine]) : undefined,
                 vibe: vibe ? (Array.isArray(vibe) ? vibe : [vibe]) : undefined,
-                priceMin: priceMin ? parseFloat(priceMin) : undefined,
-                priceMax: priceMax ? parseFloat(priceMax) : undefined,
+                priceMin: minimumPrice,
+                priceMax: maximumPrice,
                 eventType: eventType ? (Array.isArray(eventType) ? eventType[0] : eventType) : undefined,
                 excludeHostId: excludeHostId ? (Array.isArray(excludeHostId) ? excludeHostId[0] : excludeHostId) : undefined
             });
@@ -160,6 +179,14 @@ export class EventController {
         } catch (error) {
             return reply.code(500).send({ message: 'Internal server error' });
         }
+    }
+
+    private parseOptionalNumber(value: unknown): number | undefined {
+        const rawValue = Array.isArray(value) ? value[0] : value;
+        if (rawValue === undefined || rawValue === null || rawValue === '') return undefined;
+
+        const parsed = Number(rawValue);
+        return Number.isFinite(parsed) ? parsed : Number.NaN;
     }
 
     async getById(request: FastifyRequest, reply: FastifyReply) {
@@ -199,6 +226,7 @@ export class EventController {
             location: canSeeExactLocation ? event.location : this.getLocationSummary(event.location),
             latitude: canSeeExactLocation ? event.latitude : null,
             longitude: canSeeExactLocation ? event.longitude : null,
+            distanceKm: event.distanceKm,
             coverImageUrl: event.coverImageUrl,
             imageGallery: event.imageGallery,
             eventType: event.eventType,

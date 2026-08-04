@@ -76,6 +76,7 @@ export interface Event {
     location: string;
     latitude?: number | null;
     longitude?: number | null;
+    distanceKm?: number;
     coverImageUrl?: string | null;
     imageGallery?: string[];
     eventType?: string;

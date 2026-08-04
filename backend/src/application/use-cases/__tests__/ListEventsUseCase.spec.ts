@@ -46,4 +46,23 @@ describe('ListEventsUseCase', () => {
 
         expect(result.map((event) => event.id)).toEqual(['open-event', 'deadline-today']);
     });
+
+    it('forwards location and feed filters to the repository', async () => {
+        const filters = {
+            latitude: -23.5505,
+            longitude: -46.6333,
+            radiusInKm: 25,
+            cuisine: ['Brasileira'],
+            vibe: ['Casual'],
+            priceMin: 20,
+            priceMax: 80,
+            excludeHostId: 'current-user',
+        };
+        eventRepository.findAll.mockResolvedValue([]);
+
+        const useCase = new ListEventsUseCase(eventRepository, () => now);
+        await useCase.execute(filters);
+
+        expect(eventRepository.findAll).toHaveBeenCalledWith(filters);
+    });
 });

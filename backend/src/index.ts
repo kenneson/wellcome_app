@@ -395,7 +395,25 @@ const start = async () => {
                     properties: {
                         lat: { type: 'string', description: 'Latitude' },
                         lon: { type: 'string', description: 'Longitude' },
-                        radius: { type: 'string', description: 'Radius in KM' }
+                        radius: { type: 'string', description: 'Radius in KM' },
+                        cuisine: {
+                            anyOf: [
+                                { type: 'string' },
+                                { type: 'array', items: { type: 'string' } }
+                            ],
+                            description: 'Cuisine types'
+                        },
+                        vibe: {
+                            anyOf: [
+                                { type: 'string' },
+                                { type: 'array', items: { type: 'string' } }
+                            ],
+                            description: 'Event vibes'
+                        },
+                        priceMin: { type: 'string', description: 'Minimum price' },
+                        priceMax: { type: 'string', description: 'Maximum price' },
+                        eventType: { type: 'string', description: 'Event type' },
+                        excludeHostId: { type: 'string', description: 'Host to exclude' }
                     }
                 },
                 response: {

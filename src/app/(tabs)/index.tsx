@@ -1,269 +1,399 @@
 import { EnhancedEventCard } from '@/components/ui/EnhancedEventCard';
-import { useBlockedIds } from '@/hooks/useBlockedIds';
 import { FilterCriteria, FilterModal } from '@/components/ui/events/FilterModal';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { QuickStats } from '@/components/ui/QuickStats';
 import { SideMenu } from '@/components/ui/SideMenu';
+import { useBlockedIds } from '@/hooks/useBlockedIds';
 import { eventService } from '@/services/api/EventService';
 import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_LOCATION_KEY = '@user_location';
+const DEFAULT_RADIUS_KM = 60;
+const DEFAULT_FILTERS: FilterCriteria = { radiusInKm: DEFAULT_RADIUS_KM };
+
+type FeedCoordinates = { lat: number; lon: number };
+
+interface StoredFeedLocation {
+  label: string;
+  latitude: number;
+  longitude: number;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const blockedIds = useBlockedIds();
+  const eventsRequestId = useRef(0);
+
   const [location, setLocation] = useState<string | null>(null);
+  const [locationCoords, setLocationCoords] = useState<FeedCoordinates | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
-  const blockedIds = useBlockedIds();
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [eventsError, setEventsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Manual Location State
-  // const [modalVisible, setModalVisible] = useState(false); // Removed in favor of showLocationModal
-  // const [manualLocation, setManualLocation] = useState(''); // Removed
-
-  // Filter State
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [filters, setFilters] = useState<FilterCriteria>({});
-
-  // Side Menu State
+  const [filters, setFilters] = useState<FilterCriteria>(DEFAULT_FILTERS);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, []);
+    void fetchCurrentUser();
+    void initializeFeed();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchCurrentUser() {
     const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-      setCurrentUser(profile);
-    }
+    if (!session?.user) return;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+    setCurrentUser(profile);
   }
 
-  useEffect(() => {
-    loadStoredLocation();
-    getEvents();
-  }, []);
-
-  async function loadStoredLocation() {
+  async function initializeFeed() {
     try {
       setLoadingLocation(true);
-      const stored = await AsyncStorage.getItem(STORAGE_LOCATION_KEY);
-      if (stored) {
-        setLocation(stored);
-      } else {
-        // First run or no stored pos -> try GPS
-        await getLocation();
+      const storedLocation = await readStoredLocation();
+
+      if (storedLocation) {
+        const coords = {
+          lat: storedLocation.latitude,
+          lon: storedLocation.longitude,
+        };
+        setLocation(storedLocation.label);
+        setLocationCoords(coords);
+        await getEvents(coords, DEFAULT_FILTERS);
+        return;
       }
-    } catch (e) {
-      await getLocation(); // Fallback to GPS
+
+      await getLocation(DEFAULT_FILTERS);
+    } catch {
+      await getLocation(DEFAULT_FILTERS);
     } finally {
       setLoadingLocation(false);
     }
   }
 
-  async function fetchData() {
-    await Promise.all([getEvents()]); // Location handled separately or via modal
+  async function readStoredLocation(): Promise<StoredFeedLocation | null> {
+    const stored = await AsyncStorage.getItem(STORAGE_LOCATION_KEY);
+    if (!stored) return null;
+
+    try {
+      const parsed = JSON.parse(stored) as Partial<StoredFeedLocation>;
+      if (
+        typeof parsed.label === 'string' &&
+        typeof parsed.latitude === 'number' &&
+        typeof parsed.longitude === 'number'
+      ) {
+        return parsed as StoredFeedLocation;
+      }
+    } catch {
+      // Older versions stored only the city label.
+    }
+
+    const geocoded = await eventService.geocodeLocation(stored);
+    if (geocoded.latitude === null || geocoded.longitude === null) return null;
+
+    const migratedLocation: StoredFeedLocation = {
+      label: stored,
+      latitude: geocoded.latitude,
+      longitude: geocoded.longitude,
+    };
+    try {
+      await AsyncStorage.setItem(STORAGE_LOCATION_KEY, JSON.stringify(migratedLocation));
+    } catch {
+      // The current session can still use the migrated coordinates.
+    }
+    return migratedLocation;
   }
 
-  async function getLocation() {
+  async function persistLocation(label: string, coords: FeedCoordinates) {
+    const storedLocation: StoredFeedLocation = {
+      label,
+      latitude: coords.lat,
+      longitude: coords.lon,
+    };
+    try {
+      await AsyncStorage.setItem(STORAGE_LOCATION_KEY, JSON.stringify(storedLocation));
+    } catch {
+      // Storage failure should not block the current nearby search.
+    }
+  }
+
+  async function getLocation(appliedFilters: FilterCriteria = filters) {
     try {
       setLoadingLocation(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
 
-      let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        // If permission denied, open modal to ask user to type
-        Alert.alert('Preciso da sua localização', 'Não conseguimos acesso ao GPS. Por favor, digite sua cidade manualmente.');
+        Alert.alert(
+          'Precisamos da sua localização',
+          'Não foi possível acessar o GPS. Escolha sua cidade para ver eventos próximos.'
+        );
+        setEvents([]);
+        setEventsError(null);
+        setLoadingEvents(false);
         setShowLocationModal(true);
-        setLoadingLocation(false);
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      let address = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude
-      });
+      const currentPosition = await Location.getCurrentPositionAsync({});
+      const coords = {
+        lat: currentPosition.coords.latitude,
+        lon: currentPosition.coords.longitude,
+      };
+      let locationLabel = 'Localização atual';
 
-      if (address && address.length > 0) {
-        const { city, region, subregion } = address[0];
-        const cityDisplay = city || subregion;
-        const regionDisplay = region;
+      try {
+        const addresses = await Location.reverseGeocodeAsync({
+          latitude: coords.lat,
+          longitude: coords.lon,
+        });
+        const address = addresses[0];
 
-        let finalLocation = 'Localização desconhecida';
-        if (cityDisplay && regionDisplay) {
-          finalLocation = `${cityDisplay} - ${regionDisplay}`;
-        } else if (cityDisplay || regionDisplay) {
-          finalLocation = cityDisplay || regionDisplay || '';
+        if (address) {
+          const city = address.city || address.subregion;
+          if (city && address.region) locationLabel = `${city} - ${address.region}`;
+          else if (city || address.region) locationLabel = city || address.region || locationLabel;
         }
-
-        setLocation(finalLocation);
-        AsyncStorage.setItem(STORAGE_LOCATION_KEY, finalLocation);
-      } else {
-        // GPS worked but empty address?
-        setLocation('Localização desconhecida');
+      } catch {
+        // Coordinates still allow the nearby search when the label lookup fails.
       }
-    } catch (error) {
-      // On error (e.g. PC without GPS), ask for manual
+
+      setLocation(locationLabel);
+      setLocationCoords(coords);
+      await persistLocation(locationLabel, coords);
+      await getEvents(coords, appliedFilters);
+    } catch {
+      setEvents([]);
+      setEventsError('Não foi possível obter sua localização.');
+      setLoadingEvents(false);
       setShowLocationModal(true);
     } finally {
       setLoadingLocation(false);
     }
   }
 
-  // Location Selection
-  const [showLocationModal, setShowLocationModal] = useState(false);
-
-  const openLocationModal = () => {
-    setShowLocationModal(true);
-  };
-
-  const handleSelectCity = async (municipality: any, coords?: { lat: number; lon: number }) => {
-    const cityName = municipality.fullName;
-    setLocation(cityName);
-    await AsyncStorage.setItem(STORAGE_LOCATION_KEY, cityName);
-
-    setShowLocationModal(false);
-
-    await getEvents(coords);
-  };
-
-  const useGPS = async () => {
-    setShowLocationModal(false);
-    await getLocation();
-  };
-
-  async function getEvents(coords?: { lat: number; lon: number }) {
+  const handleSelectCity = async (
+    municipality: { fullName: string },
+    coords?: FeedCoordinates
+  ) => {
     try {
-      setLoadingEvents(true);
+      setLoadingLocation(true);
+      let selectedCoords = coords;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUserId = session?.user?.id;
-
-      let lat = coords?.lat;
-      let lon = coords?.lon;
-
-      if (lat === undefined || lon === undefined) {
-        try {
-          const { status } = await Location.getForegroundPermissionsAsync();
-          if (status === 'granted') {
-            const pos = await Location.getCurrentPositionAsync({});
-            lat = pos.coords.latitude;
-            lon = pos.coords.longitude;
-          }
-        } catch (error) {
-          console.log('Error getting location', error);
+      if (!selectedCoords) {
+        const geocoded = await eventService.geocodeLocation(municipality.fullName);
+        if (geocoded.latitude !== null && geocoded.longitude !== null) {
+          selectedCoords = { lat: geocoded.latitude, lon: geocoded.longitude };
         }
       }
 
+      if (!selectedCoords) {
+        Alert.alert('Cidade não encontrada', 'Não conseguimos localizar essa cidade. Tente novamente.');
+        return;
+      }
+
+      setLocation(municipality.fullName);
+      setLocationCoords(selectedCoords);
+      await persistLocation(municipality.fullName, selectedCoords);
+      setShowLocationModal(false);
+      await getEvents(selectedCoords, filters);
+    } finally {
+      setLoadingLocation(false);
+    }
+  };
+
+  async function getEvents(
+    coords: FeedCoordinates | null,
+    appliedFilters: FilterCriteria = filters
+  ) {
+    const requestId = ++eventsRequestId.current;
+
+    if (!coords) {
+      setEvents([]);
+      setEventsError(null);
+      setLoadingEvents(false);
+      return;
+    }
+
+    try {
+      setLoadingEvents(true);
+      setEventsError(null);
+
+      const { data: { session } } = await supabase.auth.getSession();
       const data = await eventService.listEvents({
-        lat: lat?.toString(),
-        lon: lon?.toString(),
-        radius: lat !== undefined && lon !== undefined ? '60' : undefined,
-        cuisine: filters.cuisine,
-        vibe: filters.vibe,
-        priceMin: filters.priceMin?.trim() || undefined,
-        priceMax: filters.priceMax?.trim() || undefined,
-        excludeHostId: currentUserId,
+        lat: coords.lat.toString(),
+        lon: coords.lon.toString(),
+        radius: (appliedFilters.radiusInKm || DEFAULT_RADIUS_KM).toString(),
+        cuisine: appliedFilters.cuisine,
+        vibe: appliedFilters.vibe,
+        priceMin: appliedFilters.priceMin?.trim() || undefined,
+        priceMax: appliedFilters.priceMax?.trim() || undefined,
+        excludeHostId: session?.user?.id,
       });
-      setEvents(data || []);
+
+      if (requestId === eventsRequestId.current) setEvents(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
+      if (requestId === eventsRequestId.current) {
+        setEvents([]);
+        setEventsError('Não foi possível carregar os eventos. Verifique sua conexão e tente novamente.');
+      }
     } finally {
-      setLoadingEvents(false);
+      if (requestId === eventsRequestId.current) setLoadingEvents(false);
     }
   }
 
-
   const onRefresh = async () => {
     setRefreshing(true);
-    await getEvents();
-    if (!location) await loadStoredLocation();
-    setRefreshing(false);
+    try {
+      if (locationCoords) await getEvents(locationCoords, filters);
+      else await getLocation(filters);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyStateContainer}>
-      <View style={styles.emptyStateIconContainer}>
-        <Ionicons name="calendar-outline" size={64} color="#CDCDE0" />
-      </View>
-      <Text style={styles.emptyStateTitle}>Nenhum evento por perto</Text>
-      <Text style={styles.emptyStateBody}>
-        Que tal ser o primeiro a criar um evento na sua região?
-        Junte a galera para comer ou cozinhar!
-      </Text>
-      <TouchableOpacity
-        style={styles.createEventButton}
-        onPress={() => router.push('/events/create')}
-      >
-        <Text style={styles.createEventButtonText}>Criar meu primeiro evento</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const activeFilterCount = [
+    Boolean(filters.priceMin || filters.priceMax),
+    Boolean(filters.cuisine?.length),
+    Boolean(filters.vibe?.length),
+    (filters.radiusInKm || DEFAULT_RADIUS_KM) !== DEFAULT_RADIUS_KM,
+  ].filter(Boolean).length;
 
-  // Calculate quick stats from events
+  const clearFilters = async () => {
+    setFilters(DEFAULT_FILTERS);
+    await getEvents(locationCoords, DEFAULT_FILTERS);
+  };
+
+  const renderEmptyState = () => {
+    if (!locationCoords) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.emptyStateIconContainer}>
+            <Ionicons name="location-outline" size={56} color="#CDCDE0" />
+          </View>
+          <Text style={styles.emptyStateTitle}>Defina sua localização</Text>
+          <Text style={styles.emptyStateBody}>
+            Escolha sua cidade para encontrar eventos realmente próximos a você.
+          </Text>
+          <TouchableOpacity style={styles.emptyStateButton} onPress={() => setShowLocationModal(true)}>
+            <Text style={styles.emptyStateButtonText}>Escolher cidade</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (eventsError) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.emptyStateIconContainer}>
+            <Ionicons name="cloud-offline-outline" size={56} color="#CDCDE0" />
+          </View>
+          <Text style={styles.emptyStateTitle}>Não foi possível carregar</Text>
+          <Text style={styles.emptyStateBody}>{eventsError}</Text>
+          <TouchableOpacity
+            style={styles.emptyStateButton}
+            onPress={() => void getEvents(locationCoords, filters)}
+          >
+            <Text style={styles.emptyStateButtonText}>Tentar novamente</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (activeFilterCount > 0) {
+      return (
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.emptyStateIconContainer}>
+            <Ionicons name="search-outline" size={56} color="#CDCDE0" />
+          </View>
+          <Text style={styles.emptyStateTitle}>Nenhum evento encontrado</Text>
+          <Text style={styles.emptyStateBody}>
+            Amplie a distância ou remova alguns filtros para ver mais opções.
+          </Text>
+          <TouchableOpacity style={styles.emptyStateButton} onPress={() => void clearFilters()}>
+            <Text style={styles.emptyStateButtonText}>Limpar filtros</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyStateContainer}>
+        <View style={styles.emptyStateIconContainer}>
+          <Ionicons name="calendar-outline" size={56} color="#CDCDE0" />
+        </View>
+        <Text style={styles.emptyStateTitle}>Nenhum evento por perto</Text>
+        <Text style={styles.emptyStateBody}>
+          Que tal ser o primeiro a criar um evento na sua região?
+        </Text>
+        <TouchableOpacity
+          style={styles.emptyStateButton}
+          onPress={() => router.push('/events/create')}
+        >
+          <Text style={styles.emptyStateButtonText}>Criar evento</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const getQuickStats = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const eventsToday = events.filter(e => {
-      const eventDate = new Date(e.eventDate || e.event_date);
-      return eventDate >= today && eventDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    const eventsToday = events.filter((event) => {
+      const eventDate = new Date(event.eventDate || event.event_date);
+      return eventDate >= today && eventDate < tomorrow;
     }).length;
-
-    const eventsThisWeek = events.filter(e => {
-      const eventDate = new Date(e.eventDate || e.event_date);
+    const eventsThisWeek = events.filter((event) => {
+      const eventDate = new Date(event.eventDate || event.event_date);
       return eventDate >= today && eventDate < weekFromNow;
     }).length;
-
-    // Count unique hosts from recent events
-    const uniqueHosts = new Set(events.map(e => e.hostId || e.host_id)).size;
 
     return {
       eventsToday,
       eventsThisWeek,
-      newHosts: uniqueHosts,
+      newHosts: new Set(events.map((event) => event.hostId || event.host_id)).size,
     };
   };
 
   const quickStats = getQuickStats();
-
-  // MOCK DATA for UI
-  const CATEGORIES = [
-    { id: '1', name: 'Jantar', image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500' },
-    { id: '2', name: 'Almoço', image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=500' },
-    { id: '3', name: 'Brunch', image: 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=500' },
-    { id: '4', name: 'Café', image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500' },
-  ];
-
-  const FILTERS = ['Ordenar', 'Data', 'Culinária', 'Opções'];
+  const visibleEvents = events.filter((event) => !blockedIds.has(event.hostId || event.host_id));
+  const radiusInKm = filters.radiusInKm || DEFAULT_RADIUS_KM;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header Customizado */}
       <View style={styles.mainHeader}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setMenuVisible(true)}
           accessibilityRole="button"
           accessibilityLabel="Abrir menu de navegação"
-          accessibilityHint="Toque para ver opções de navegação e configurações"
           style={styles.headerButton}
         >
           <Ionicons name="menu" size={Dimensions.icon.xlarge} color="#FFF" />
@@ -273,24 +403,22 @@ export default function HomeScreen() {
           style={styles.logoImage}
           contentFit="contain"
           tintColor="#FFF"
-          accessible={true}
+          accessible
           accessibilityLabel="Logo Wellcome"
         />
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => router.push('/(tabs)/profile')}
           accessibilityRole="button"
           accessibilityLabel="Ir para perfil"
-          accessibilityHint="Toque para ver seu perfil e configurações"
           style={styles.headerButton}
         >
           <Ionicons name="person-circle-outline" size={30} color="#FFF" />
         </TouchableOpacity>
       </View>
 
-      {/* Location Search Bar */}
-      <TouchableOpacity 
-        style={styles.searchBar} 
-        onPress={openLocationModal}
+      <TouchableOpacity
+        style={styles.searchBar}
+        onPress={() => setShowLocationModal(true)}
         accessibilityRole="button"
         accessibilityLabel={`Localização atual: ${location || 'não definida'}`}
         accessibilityHint="Toque para alterar sua localização"
@@ -308,99 +436,78 @@ export default function HomeScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.primary]} />}
+        refreshControl={(
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.light.primary]}
+          />
+        )}
       >
-        {/* Quick Stats */}
-        <QuickStats 
+        <QuickStats
           eventsToday={quickStats.eventsToday}
           eventsThisWeek={quickStats.eventsThisWeek}
           newHosts={quickStats.newHosts}
         />
 
-        {/* Section Header */}
-        <Text style={styles.sectionTitle}>Explorar por categoria</Text>
-
-        {/* Categories Carousel */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.categoriesContainer}
-          accessibilityLabel="Categorias de eventos"
-        >
-          {CATEGORIES.map(cat => (
-            <TouchableOpacity 
-              key={cat.id} 
-              style={styles.categoryCard}
-              accessibilityRole="button"
-              accessibilityLabel={`Categoria ${cat.name}`}
-              accessibilityHint="Toque para filtrar eventos por esta categoria"
-              activeOpacity={0.8}
-            >
-              <Image 
-                source={{ uri: cat.image }} 
-                style={styles.categoryImage}
-                accessible={true}
-                accessibilityLabel={`Imagem da categoria ${cat.name}`}
-              />
-              <View style={styles.categoryOverlay} />
-              <Text style={styles.categoryText}>{cat.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Section Header */}
         <Text style={styles.sectionTitle}>Eventos próximos a você</Text>
 
-        {/* Filter Pills */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.filtersContainer}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContainer}
           accessibilityLabel="Filtros de eventos"
         >
-          <TouchableOpacity 
-            style={[styles.filterChip, styles.filterChipActive]} 
+          <TouchableOpacity
+            style={[styles.filterChip, styles.filterChipActive]}
             onPress={() => setFilterModalVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel="Abrir filtros avançados"
-            accessibilityHint="Toque para filtrar eventos por preço, culinária e clima"
+            accessibilityLabel={`Abrir filtros${activeFilterCount ? `, ${activeFilterCount} ativos` : ''}`}
           >
-            <Ionicons name="options" size={16} color="#FFF" style={{ marginRight: 6 }} />
-            <Text style={styles.filterTextActive}>Filtros</Text>
+            <Ionicons name="options" size={18} color="#FFF" />
+            <Text style={styles.filterTextActive}>
+              {activeFilterCount ? `Filtros (${activeFilterCount})` : 'Filtros'}
+            </Text>
           </TouchableOpacity>
 
-          {FILTERS.map((f, i) => (
-            <TouchableOpacity 
-              key={i} 
-              style={styles.filterChip}
+          <TouchableOpacity
+            style={styles.filterChip}
+            onPress={() => setFilterModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Alterar raio atual de ${radiusInKm} quilômetros`}
+          >
+            <Ionicons name="navigate-outline" size={18} color={Colors.light.textSecondary} />
+            <Text style={styles.filterText}>Até {radiusInKm} km</Text>
+          </TouchableOpacity>
+
+          {activeFilterCount > 0 && (
+            <TouchableOpacity
+              style={styles.clearFilterButton}
+              onPress={() => void clearFilters()}
               accessibilityRole="button"
-              accessibilityLabel={`Filtrar por ${f}`}
-              accessibilityHint={`Toque para abrir opções de ${f}`}
+              accessibilityLabel="Limpar filtros"
             >
-              <Text style={styles.filterText}>{f}</Text>
-              <Ionicons name="chevron-down" size={12} color={Colors.light.textSecondary} style={{ marginLeft: 4 }} />
+              <Ionicons name="close" size={18} color={Colors.light.primary} />
+              <Text style={styles.clearFilterText}>Limpar</Text>
             </TouchableOpacity>
-          ))}
+          )}
         </ScrollView>
 
-        {/* Events List */}
         {loadingEvents ? (
-          <View style={styles.loadingContainer} accessible={true} accessibilityLabel="Carregando eventos">
+          <View style={styles.loadingContainer} accessible accessibilityLabel="Carregando eventos">
             <ActivityIndicator size="large" color={Colors.light.primary} />
             <Text style={styles.loadingText}>Carregando eventos...</Text>
           </View>
-        ) : events.filter((e) => !blockedIds.has(e.hostId || e.host_id)).length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           renderEmptyState()
         ) : (
-          events
-            .filter((e) => !blockedIds.has(e.hostId || e.host_id))
-            .map((event) => (
-              <EnhancedEventCard
-                key={event.id}
-                event={event}
-                onPress={() => router.push(`/events/${event.id}`)}
-              />
-            ))
+          visibleEvents.map((event) => (
+            <EnhancedEventCard
+              key={event.id}
+              event={event}
+              onPress={() => router.push(`/events/${event.id}`)}
+            />
+          ))
         )}
       </ScrollView>
 
@@ -410,24 +517,20 @@ export default function HomeScreen() {
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel="Criar novo evento"
-        accessibilityHint="Toque para criar um novo evento gastronômico"
       >
         <Ionicons name="add" size={32} color="#FFF" />
       </TouchableOpacity>
 
-      {/* Manual Location Modal */}
-      {/* Location Autocomplete Modal */}
       <LocationAutocomplete
         visible={showLocationModal}
         onClose={() => setShowLocationModal(false)}
         onSelectMunicipality={handleSelectCity}
         type="municipality"
-        asModal={true}
+        asModal
         value={location || ''}
-        placeholder="Digite sua cidade (ex: São Paulo)"
+        placeholder="Digite sua cidade"
       />
 
-      {/* Side Menu */}
       <SideMenu
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
@@ -439,7 +542,7 @@ export default function HomeScreen() {
         onClose={() => setFilterModalVisible(false)}
         onApply={(newFilters) => {
           setFilters(newFilters);
-          getEvents(); // Refresh
+          void getEvents(locationCoords, newFilters);
         }}
         initialFilters={filters}
       />
@@ -476,6 +579,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.card,
     margin: Spacing.lg,
     padding: Spacing.md,
+    minHeight: Dimensions.touchTarget.min,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: Colors.light.border,
@@ -490,49 +594,8 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.sm,
     color: Colors.light.text,
   },
-  loadingContainer: {
-    alignItems: 'center',
-    padding: Spacing.xl,
-    gap: Spacing.sm,
-  },
-  loadingText: {
-    color: Colors.light.textSecondary,
-    fontSize: 14,
-  },
   scrollContent: {
     paddingBottom: 90,
-  },
-  // Categories
-  categoriesContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    flexDirection: 'row',
-  },
-  categoryCard: {
-    width: Dimensions.categoryCard.width,
-    height: Dimensions.categoryCard.height,
-    borderRadius: BorderRadius.md,
-    marginRight: Spacing.md,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  categoryImage: {
-    width: '100%',
-    height: '100%',
-  },
-  categoryOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  categoryText: {
-    position: 'absolute',
-    bottom: 8,
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 19,
@@ -540,29 +603,29 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginLeft: Spacing.lg,
     marginBottom: Spacing.md,
-    marginTop: Spacing.xs,
-    letterSpacing: -0.5,
+    marginTop: Spacing.lg,
+    letterSpacing: 0,
   },
-  // Filters
   filtersContainer: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-    flexDirection: 'row',
+    paddingBottom: Spacing.xl,
+    gap: Spacing.sm,
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.xl,
-    marginRight: Spacing.sm,
-    minHeight: Dimensions.touchTarget.min,
     justifyContent: 'center',
+    gap: 6,
+    minHeight: Dimensions.touchTarget.min,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    backgroundColor: Colors.light.card,
   },
   filterChipActive: {
     backgroundColor: Colors.light.primary,
-    borderWidth: 0,
+    borderColor: Colors.light.primary,
   },
   filterText: {
     fontSize: 14,
@@ -573,7 +636,28 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '600',
   },
-  // Floating Action Button
+  clearFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: Dimensions.touchTarget.min,
+    paddingHorizontal: Spacing.md,
+  },
+  clearFilterText: {
+    color: Colors.light.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  loadingText: {
+    color: Colors.light.textSecondary,
+    fontSize: 14,
+  },
   fab: {
     position: 'absolute',
     right: Spacing.xl,
@@ -595,9 +679,9 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   emptyStateIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -616,21 +700,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.xxxl,
     lineHeight: 22,
-    maxWidth: '80%',
+    maxWidth: 320,
   },
-  createEventButton: {
+  emptyStateButton: {
+    minHeight: Dimensions.touchTarget.min,
+    justifyContent: 'center',
     backgroundColor: Colors.light.primary,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.xxxl,
-    borderRadius: 25,
-    shadowColor: Colors.light.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: BorderRadius.sm,
   },
-  createEventButtonText: {
-    color: 'white',
+  emptyStateButtonText: {
+    color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
   },

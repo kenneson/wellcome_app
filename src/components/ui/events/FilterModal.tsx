@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export interface FilterCriteria {
@@ -8,6 +8,7 @@ export interface FilterCriteria {
     priceMax?: string;
     cuisine?: string[];
     vibe?: string[];
+    radiusInKm?: number;
 }
 
 interface FilterModalProps {
@@ -28,11 +29,25 @@ const VIBES = [
     'Romântico', 'Festa', 'Jantar a dois', 'Negócios'
 ];
 
+const DEFAULT_RADIUS_KM = 60;
+const RADIUS_OPTIONS = [10, 25, 60, 100];
+
 export function FilterModal({ visible, onClose, onApply, initialFilters }: FilterModalProps) {
     const [priceMin, setPriceMin] = useState(initialFilters?.priceMin || '');
     const [priceMax, setPriceMax] = useState(initialFilters?.priceMax || '');
     const [selectedCuisines, setSelectedCuisines] = useState<string[]>(initialFilters?.cuisine || []);
     const [selectedVibes, setSelectedVibes] = useState<string[]>(initialFilters?.vibe || []);
+    const [radiusInKm, setRadiusInKm] = useState(initialFilters?.radiusInKm || DEFAULT_RADIUS_KM);
+
+    useEffect(() => {
+        if (!visible) return;
+
+        setPriceMin(initialFilters?.priceMin || '');
+        setPriceMax(initialFilters?.priceMax || '');
+        setSelectedCuisines(initialFilters?.cuisine || []);
+        setSelectedVibes(initialFilters?.vibe || []);
+        setRadiusInKm(initialFilters?.radiusInKm || DEFAULT_RADIUS_KM);
+    }, [initialFilters, visible]);
 
     const toggleCuisine = (cuisine: string) => {
         if (selectedCuisines.includes(cuisine)) {
@@ -51,11 +66,28 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
     };
 
     const handleApply = () => {
+        const normalizedMin = priceMin.trim().replace(',', '.');
+        const normalizedMax = priceMax.trim().replace(',', '.');
+        const minValue = normalizedMin ? Number(normalizedMin) : undefined;
+        const maxValue = normalizedMax ? Number(normalizedMax) : undefined;
+
+        if ((minValue !== undefined && !Number.isFinite(minValue)) ||
+            (maxValue !== undefined && !Number.isFinite(maxValue))) {
+            Alert.alert('Valor inválido', 'Informe apenas números na faixa de preço.');
+            return;
+        }
+
+        if (minValue !== undefined && maxValue !== undefined && minValue > maxValue) {
+            Alert.alert('Faixa de preço inválida', 'O valor mínimo deve ser menor que o valor máximo.');
+            return;
+        }
+
         onApply({
-            priceMin,
-            priceMax,
+            priceMin: normalizedMin,
+            priceMax: normalizedMax,
             cuisine: selectedCuisines,
-            vibe: selectedVibes
+            vibe: selectedVibes,
+            radiusInKm,
         });
         onClose();
     };
@@ -65,6 +97,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
         setPriceMax('');
         setSelectedCuisines([]);
         setSelectedVibes([]);
+        setRadiusInKm(DEFAULT_RADIUS_KM);
     };
 
     return (
@@ -77,11 +110,21 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
             <View style={styles.overlay}>
                 <View style={styles.modalContainer}>
                     <View style={styles.header}>
-                        <TouchableOpacity onPress={onClose}>
+                        <TouchableOpacity
+                            onPress={onClose}
+                            style={styles.headerAction}
+                            accessibilityRole="button"
+                            accessibilityLabel="Fechar filtros"
+                        >
                             <Ionicons name="close" size={24} color="#333" />
                         </TouchableOpacity>
                         <Text style={styles.title}>Filtros</Text>
-                        <TouchableOpacity onPress={handleClear}>
+                        <TouchableOpacity
+                            onPress={handleClear}
+                            style={styles.headerAction}
+                            accessibilityRole="button"
+                            accessibilityLabel="Limpar filtros"
+                        >
                             <Text style={styles.clearText}>Limpar</Text>
                         </TouchableOpacity>
                     </View>
@@ -94,6 +137,32 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                         keyboardShouldPersistTaps="handled"
                         contentContainerStyle={styles.content}
                     >
+                        <Text style={styles.sectionTitle}>Distância</Text>
+                        <View style={styles.radiusOptions}>
+                            {RADIUS_OPTIONS.map((radius) => (
+                                <TouchableOpacity
+                                    key={radius}
+                                    style={[
+                                        styles.radiusOption,
+                                        radiusInKm === radius && styles.radiusOptionSelected,
+                                    ]}
+                                    onPress={() => setRadiusInKm(radius)}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected: radiusInKm === radius }}
+                                    accessibilityLabel={`Buscar eventos em até ${radius} quilômetros`}
+                                >
+                                    <Text style={[
+                                        styles.radiusOptionText,
+                                        radiusInKm === radius && styles.radiusOptionTextSelected,
+                                    ]}>
+                                        {radius} km
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={styles.divider} />
+
                         {/* Price Range */}
                         <Text style={styles.sectionTitle}>Faixa de Preço</Text>
                         <View style={styles.row}>
@@ -135,6 +204,8 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                                         selectedCuisines.includes(cuisine) && styles.chipSelected
                                     ]}
                                     onPress={() => toggleCuisine(cuisine)}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: selectedCuisines.includes(cuisine) }}
                                 >
                                     <Text style={[
                                         styles.chipText,
@@ -157,6 +228,8 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                                         selectedVibes.includes(vibe) && styles.chipSelected
                                     ]}
                                     onPress={() => toggleVibe(vibe)}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: selectedVibes.includes(vibe) }}
                                 >
                                     <Text style={[
                                         styles.chipText,
@@ -170,7 +243,12 @@ export function FilterModal({ visible, onClose, onApply, initialFilters }: Filte
                     </KeyboardAwareScrollView>
 
                     <View style={styles.footer}>
-                        <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+                        <TouchableOpacity
+                            style={styles.applyButton}
+                            onPress={handleApply}
+                            accessibilityRole="button"
+                            accessibilityLabel="Aplicar filtros"
+                        >
                             <Text style={styles.applyButtonText}>Aplicar Filtros</Text>
                         </TouchableOpacity>
                     </View>
@@ -201,6 +279,12 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
+    headerAction: {
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     title: {
         fontSize: 18,
         fontWeight: 'bold',
@@ -224,6 +308,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+    },
+    radiusOptions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    radiusOption: {
+        flex: 1,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        backgroundColor: '#FAFAFA',
+    },
+    radiusOptionSelected: {
+        borderColor: '#FF8C42',
+        backgroundColor: '#FFF0E6',
+    },
+    radiusOptionText: {
+        color: '#666',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    radiusOptionTextSelected: {
+        color: '#FF8C42',
     },
     inputContainer: {
         flex: 1,
@@ -262,6 +372,8 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     chip: {
+        minHeight: 44,
+        justifyContent: 'center',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,

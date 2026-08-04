@@ -13,6 +13,7 @@ export interface Event {
     location: string;
     latitude: number | null;
     longitude: number | null;
+    distanceKm?: number;
     coverImageUrl: string | null;
     imageGallery: string[];
     eventType: string | null;
@@ -39,7 +40,7 @@ export interface Event {
     updatedAt: Date;
 }
 
-export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'questions' | 'dishes' | 'reviews'> & {
+export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'questions' | 'dishes' | 'reviews' | 'distanceKm'> & {
     questions?: {
         question: string;
         questionType: string;
@@ -55,7 +56,7 @@ export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'que
     }[];
 };
 
-export type UpdateEventDTO = Partial<Omit<Event, 'id' | 'hostId' | 'createdAt' | 'updatedAt' | 'host' | 'bookings' | 'questions' | 'dishes' | 'reviews'>> & {
+export type UpdateEventDTO = Partial<Omit<Event, 'id' | 'hostId' | 'createdAt' | 'updatedAt' | 'host' | 'bookings' | 'questions' | 'dishes' | 'reviews' | 'distanceKm'>> & {
     questions?: {
         question: string;
         questionType: string;
