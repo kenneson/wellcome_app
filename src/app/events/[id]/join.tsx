@@ -92,6 +92,15 @@ export default function JoinEventScreen() {
 
             // Se o evento tem preço, redirecionar para pagamento PIX
             const eventPrice = Number(event.price || 0);
+            if (eventPrice > 0 && registration.status === 'APPROVED') {
+                Alert.alert(
+                    'Inscricao confirmada',
+                    'Sua participacao neste evento ja esta confirmada.',
+                    [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
+                );
+                return;
+            }
+
             if (eventPrice > 0 && registration.id) {
                 router.replace(`/events/${event.id}/payment?bookingId=${registration.id}`);
                 return;

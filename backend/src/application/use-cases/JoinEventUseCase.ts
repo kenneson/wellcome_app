@@ -35,6 +35,20 @@ export class JoinEventUseCase {
             throw new Error('Host cannot join their own event');
         }
 
+        const existingRegistrations = await this.eventRegistrationRepository.findByUserId(data.userId);
+        const existingForEvent = existingRegistrations.find(r => r.eventId === data.eventId);
+
+        if (existingForEvent) {
+            if (
+                existingForEvent.status === RegistrationStatus.REJECTED ||
+                existingForEvent.status === RegistrationStatus.CANCELLED
+            ) {
+                await this.eventRegistrationRepository.deleteByEventAndUser(data.eventId, data.userId);
+            } else {
+                return existingForEvent;
+            }
+        }
+
         // Check if event is full (only count active registrations)
         const activeBookings = event.bookings?.filter(
             b => b.status !== RegistrationStatus.REJECTED && b.status !== RegistrationStatus.CANCELLED
@@ -43,19 +57,6 @@ export class JoinEventUseCase {
 
         if (isFull && !event.allowWaitlist) {
             throw new Error('Event is full');
-        }
-
-        // Check for existing registration (allow re-registration if previously rejected)
-        const existingRegistrations = await this.eventRegistrationRepository.findByUserId(data.userId);
-        const existingForEvent = existingRegistrations.find(r => r.eventId === data.eventId);
-
-        if (existingForEvent) {
-            if (existingForEvent.status === RegistrationStatus.REJECTED) {
-                // Remove rejected registration so user can re-apply
-                await this.eventRegistrationRepository.deleteByEventAndUser(data.eventId, data.userId);
-            } else {
-                throw new Error('User already registered for this event');
-            }
         }
 
         // Determine initial status
