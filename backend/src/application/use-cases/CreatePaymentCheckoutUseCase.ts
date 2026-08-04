@@ -76,7 +76,7 @@ export class CreatePaymentCheckoutUseCase {
             });
         }
 
-        const claimed = await this.paymentRepository.claimCheckoutCreation(payment.id);
+        const claimed = await this.paymentRepository.claimCheckoutCreation(payment.id, price);
         if (!claimed) {
             const current = await this.paymentRepository.findByBookingId(data.bookingId);
             if (current?.checkoutUrl && current.status === PaymentStatus.PENDING) {

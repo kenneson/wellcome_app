@@ -57,7 +57,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         return payment ? this.toDomain(payment) : null;
     }
 
-    async claimCheckoutCreation(id: string): Promise<boolean> {
+    async claimCheckoutCreation(id: string, value: number): Promise<boolean> {
         const claimed = await prisma.payment.updateMany({
             where: {
                 id,
@@ -82,6 +82,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 paymentMethod: null,
                 pixCopiaECola: '',
                 qrcode: '',
+                valor: value,
             },
         });
 

@@ -92,7 +92,27 @@ describe('CreatePaymentCheckoutUseCase', () => {
             checkoutUrl: 'https://sandbox.asaas.com/checkoutSession/show/checkout-1',
             providerStatus: 'ACTIVE',
         });
+        expect(paymentRepository.claimCheckoutCreation).toHaveBeenCalledWith('payment-1', 120);
         expect(result.checkoutId).toBe('checkout-1');
+    });
+
+    it('refreshes the stored amount when retrying a failed checkout', async () => {
+        paymentRepository.findByBookingId.mockResolvedValue({
+            ...payment,
+            valor: 2,
+            providerStatus: 'FAILED',
+        });
+
+        await useCase.execute({
+            bookingId: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+        });
+
+        expect(paymentRepository.claimCheckoutCreation).toHaveBeenCalledWith('payment-1', 120);
+        expect(paymentGateway.createCheckout).toHaveBeenCalledWith(expect.objectContaining({
+            value: 120,
+        }));
     });
 
     it('returns the existing active checkout without creating another one', async () => {

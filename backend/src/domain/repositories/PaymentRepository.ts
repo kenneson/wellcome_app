@@ -16,7 +16,7 @@ export interface PaymentRepository {
     findByBookingId(bookingId: string): Promise<Payment | null>;
     findByTxid(txid: string): Promise<Payment | null>;
     findByProviderPaymentId(providerPaymentId: string): Promise<Payment | null>;
-    claimCheckoutCreation(id: string): Promise<boolean>;
+    claimCheckoutCreation(id: string, value: number): Promise<boolean>;
     saveCheckout(data: {
         paymentId: string;
         checkoutId: string;
