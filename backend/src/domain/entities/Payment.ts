@@ -8,6 +8,7 @@ export interface Payment {
     txid: string;
     pixCopiaECola: string;
     qrcode: string;
+    pixExpirationDate?: Date;
     provider?: string;
     checkoutUrl?: string;
     providerPaymentId?: string;

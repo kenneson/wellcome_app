@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { CheckPaymentUseCase } from '../../../application/use-cases/CheckPaymentUseCase';
 import { CreatePaymentCheckoutUseCase } from '../../../application/use-cases/CreatePaymentCheckoutUseCase';
 import {
+    CreatePixPaymentUseCase,
+    PayWithSavedCardUseCase,
+} from '../../../application/use-cases/CreateTransparentPaymentUseCases';
+import {
     AsaasWebhookPayload,
     HandleAsaasWebhookUseCase,
 } from '../../../application/use-cases/HandleAsaasWebhookUseCase';
@@ -14,6 +18,10 @@ import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/aut
 const createCheckoutSchema = z.object({
     bookingId: z.string().uuid(),
     eventId: z.string().uuid(),
+});
+
+const payWithCardSchema = createCheckoutSchema.extend({
+    cardId: z.string().uuid(),
 });
 
 const checkPaymentSchema = z.object({
@@ -56,9 +64,31 @@ const checkoutReturnQuerySchema = z.object({
 export class PaymentController {
     constructor(
         private createCheckoutUseCase: CreatePaymentCheckoutUseCase,
+        private createPixPaymentUseCase: CreatePixPaymentUseCase,
+        private payWithSavedCardUseCase: PayWithSavedCardUseCase,
         private checkPaymentUseCase: CheckPaymentUseCase,
         private handleAsaasWebhookUseCase: HandleAsaasWebhookUseCase
     ) {}
+
+    async createPixPayment(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            const body = createCheckoutSchema.parse(request.body);
+            const userId = await getAuthenticatedUserId(request);
+            return reply.code(201).send(await this.createPixPaymentUseCase.execute({ ...body, userId }));
+        } catch (error) {
+            return this.handleTransparentPaymentError(request, reply, error, 'Nao foi possivel gerar o Pix');
+        }
+    }
+
+    async payWithCard(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            const body = payWithCardSchema.parse(request.body);
+            const userId = await getAuthenticatedUserId(request);
+            return reply.send(await this.payWithSavedCardUseCase.execute({ ...body, userId }));
+        } catch (error) {
+            return this.handleTransparentPaymentError(request, reply, error, 'Nao foi possivel processar o cartao');
+        }
+    }
 
     async createCheckout(request: FastifyRequest, reply: FastifyReply) {
         try {
@@ -163,6 +193,47 @@ export class PaymentController {
         const received = Buffer.from(receivedToken);
         const expected = Buffer.from(expectedToken);
         return received.length === expected.length && timingSafeEqual(received, expected);
+    }
+
+    private handleTransparentPaymentError(
+        request: FastifyRequest,
+        reply: FastifyReply,
+        error: unknown,
+        fallback: string
+    ) {
+        if (error instanceof UnauthorizedRequestError) {
+            return reply.code(401).send({ message: error.message });
+        }
+        if (error instanceof z.ZodError) {
+            return reply.code(400).send({ message: 'Dados invalidos', errors: error.issues });
+        }
+
+        const message = error instanceof Error ? error.message : fallback;
+        if (message === 'Event not found' || message === 'Booking not found' || message === 'Cartao nao encontrado') {
+            return reply.code(404).send({ message });
+        }
+        if (message.includes('does not belong')) return reply.code(403).send({ message });
+        if (message === 'Payment already confirmed' || message === 'Payment cannot be reopened') {
+            return reply.code(409).send({ message });
+        }
+        if (message === 'Payment is being created' || message === 'Payment is being processed') {
+            return reply.code(409).send({ message });
+        }
+        if (
+            message === 'Event has no price set' ||
+            message === INVALID_EVENT_PRICE_MESSAGE ||
+            message.includes('Complete seus dados')
+        ) {
+            return reply.code(400).send({ message });
+        }
+        if (error instanceof PaymentGatewayError) {
+            request.log.warn({ statusCode: error.statusCode, code: error.code }, 'Asaas payment request rejected');
+            return reply.code(error.isDefinitiveClientError ? 422 : 502).send({
+                message: error.isDefinitiveClientError ? error.message : fallback,
+            });
+        }
+        request.log.error(error, fallback);
+        return reply.code(500).send({ message: fallback });
     }
 
     private renderReturnPage(state: 'success' | 'cancel' | 'expired', bookingId: string, eventId: string): string {

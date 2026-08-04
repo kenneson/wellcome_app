@@ -57,6 +57,103 @@ export class PrismaPaymentRepository implements PaymentRepository {
         return payment ? this.toDomain(payment) : null;
     }
 
+    async resetForProviderPayment(id: string): Promise<boolean> {
+        const reset = await prisma.payment.updateMany({
+            where: { id, status: { in: [PaymentStatus.PENDING, PaymentStatus.EXPIRED] } },
+            data: {
+                status: PaymentStatus.PENDING,
+                provider: 'ASAAS',
+                providerStatus: 'NEW',
+                checkoutUrl: null,
+                providerPaymentId: null,
+                paymentMethod: null,
+                pixCopiaECola: '',
+                qrcode: '',
+                pixExpirationDate: null,
+            },
+        });
+        return reset.count === 1;
+    }
+
+    async claimProviderPaymentCreation(id: string, value: number): Promise<boolean> {
+        const claimed = await prisma.payment.updateMany({
+            where: {
+                id,
+                status: PaymentStatus.PENDING,
+                checkoutUrl: null,
+                providerPaymentId: null,
+                OR: [
+                    { providerStatus: null },
+                    { providerStatus: { in: ['NEW', 'FAILED', 'EXPIRED', 'DELETED'] } },
+                ],
+            },
+            data: {
+                provider: 'ASAAS',
+                providerStatus: 'CREATING',
+                paymentMethod: null,
+                pixCopiaECola: '',
+                qrcode: '',
+                pixExpirationDate: null,
+                valor: value,
+            },
+        });
+        return claimed.count === 1;
+    }
+
+    async saveProviderPayment(data: {
+        paymentId: string;
+        providerPaymentId: string;
+        providerStatus: string;
+        value: number;
+    }): Promise<Payment> {
+        const payment = await prisma.payment.update({
+            where: { id: data.paymentId },
+            data: {
+                txid: data.providerPaymentId,
+                providerPaymentId: data.providerPaymentId,
+                providerStatus: data.providerStatus,
+                valor: data.value,
+                checkoutUrl: null,
+            },
+        });
+        return this.toDomain(payment);
+    }
+
+    async savePixData(data: {
+        paymentId: string;
+        payload: string;
+        expirationDate: Date;
+    }): Promise<Payment> {
+        const payment = await prisma.payment.update({
+            where: { id: data.paymentId },
+            data: {
+                pixCopiaECola: data.payload,
+                pixExpirationDate: data.expirationDate,
+                paymentMethod: 'PIX',
+            },
+        });
+        return this.toDomain(payment);
+    }
+
+    async claimCardPaymentAttempt(paymentId: string, providerPaymentId: string): Promise<boolean> {
+        const claimed = await prisma.payment.updateMany({
+            where: {
+                id: paymentId,
+                providerPaymentId,
+                status: PaymentStatus.PENDING,
+                OR: [
+                    { providerStatus: { not: 'PROCESSING_CARD' } },
+                    { updatedAt: { lt: new Date(Date.now() - 120_000) } },
+                ],
+            },
+            data: {
+                paymentMethod: 'CREDIT_CARD',
+                providerStatus: 'PROCESSING_CARD',
+            },
+        });
+        return claimed.count === 1;
+    }
+
     async claimCheckoutCreation(id: string, value: number): Promise<boolean> {
         const claimed = await prisma.payment.updateMany({
             where: {
@@ -82,6 +179,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 paymentMethod: null,
                 pixCopiaECola: '',
                 qrcode: '',
+                pixExpirationDate: null,
                 valor: value,
             },
         });
@@ -305,6 +403,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
             txid: raw.txid,
             pixCopiaECola: raw.pixCopiaECola,
             qrcode: raw.qrcode,
+            pixExpirationDate: raw.pixExpirationDate ?? undefined,
             provider: raw.provider,
             checkoutUrl: raw.checkoutUrl ?? undefined,
             providerPaymentId: raw.providerPaymentId ?? undefined,

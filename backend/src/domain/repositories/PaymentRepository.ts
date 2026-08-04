@@ -16,6 +16,20 @@ export interface PaymentRepository {
     findByBookingId(bookingId: string): Promise<Payment | null>;
     findByTxid(txid: string): Promise<Payment | null>;
     findByProviderPaymentId(providerPaymentId: string): Promise<Payment | null>;
+    resetForProviderPayment(id: string): Promise<boolean>;
+    claimProviderPaymentCreation(id: string, value: number): Promise<boolean>;
+    saveProviderPayment(data: {
+        paymentId: string;
+        providerPaymentId: string;
+        providerStatus: string;
+        value: number;
+    }): Promise<Payment>;
+    savePixData(data: {
+        paymentId: string;
+        payload: string;
+        expirationDate: Date;
+    }): Promise<Payment>;
+    claimCardPaymentAttempt(paymentId: string, providerPaymentId: string): Promise<boolean>;
     claimCheckoutCreation(id: string, value: number): Promise<boolean>;
     saveCheckout(data: {
         paymentId: string;

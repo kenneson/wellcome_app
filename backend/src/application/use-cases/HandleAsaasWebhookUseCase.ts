@@ -2,8 +2,9 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { WebhookEventRepository } from '../../domain/repositories/WebhookEventRepository';
 import { WithdrawalRequestRepository } from '../../domain/repositories/WithdrawalRequestRepository';
-import { PaymentGateway } from '../../domain/services/PaymentGateway';
-import { NotificationType } from '../../domain/value-objects/NotificationType';
+import { PaymentGateway, ProviderPayment } from '../../domain/services/PaymentGateway';
+import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { ConfirmAsaasPaymentService } from '../services/ConfirmAsaasPaymentService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
 
 export interface AsaasWebhookPayload {
@@ -17,6 +18,11 @@ export interface AsaasWebhookPayload {
         id: string;
         status?: string;
         value?: number;
+        netValue?: number;
+        billingType?: string;
+        externalReference?: string | null;
+        paymentDate?: string | null;
+        confirmedDate?: string | null;
         checkoutSession?: string | null;
         refunds?: Array<{
             status?: string;
@@ -37,6 +43,8 @@ export interface HandleWebhookResult {
 }
 
 export class HandleAsaasWebhookUseCase {
+    private confirmPaymentService: ConfirmAsaasPaymentService;
+
     constructor(
         private paymentGateway: PaymentGateway,
         private paymentRepository: PaymentRepository,
@@ -44,7 +52,13 @@ export class HandleAsaasWebhookUseCase {
         private withdrawalRepository: WithdrawalRequestRepository,
         private webhookEventRepository: WebhookEventRepository,
         private sendNotificationUseCase: SendNotificationUseCase
-    ) {}
+    ) {
+        this.confirmPaymentService = new ConfirmAsaasPaymentService(
+            paymentRepository,
+            eventRepository,
+            sendNotificationUseCase
+        );
+    }
 
     async execute(payload: AsaasWebhookPayload): Promise<HandleWebhookResult> {
         const shouldProcess = await this.webhookEventRepository.startProcessing({
@@ -74,6 +88,19 @@ export class HandleAsaasWebhookUseCase {
             case 'CHECKOUT_PAID':
                 await this.confirmCheckout(payload);
                 return 'payment_confirmed';
+            case 'PAYMENT_CONFIRMED':
+            case 'PAYMENT_RECEIVED':
+                return await this.confirmProviderPayment(payload)
+                    ? 'payment_confirmed'
+                    : 'payment_awaiting_settlement';
+            case 'PAYMENT_CREDIT_CARD_CAPTURE_REFUSED':
+            case 'PAYMENT_REPROVED_BY_RISK_ANALYSIS':
+                await this.recordProviderFailure(payload);
+                return 'payment_refused';
+            case 'PAYMENT_OVERDUE':
+            case 'PAYMENT_DELETED':
+                await this.expireProviderPayment(payload);
+                return 'payment_expired';
             case 'CHECKOUT_CANCELED':
             case 'CHECKOUT_EXPIRED':
                 await this.expireCheckout(payload);
@@ -120,47 +147,54 @@ export class HandleAsaasWebhookUseCase {
             paymentMethod: providerPayment.billingType,
             providerStatus: providerPayment.status,
         });
+        await this.confirmPaymentService.execute(payment, providerPayment as ProviderPayment);
+    }
 
-        const event = await this.eventRepository.findById(payment.eventId);
-        if (!event?.hostId) throw new Error('Event host not found');
+    private async confirmProviderPayment(payload: AsaasWebhookPayload): Promise<boolean> {
+        const providerPaymentId = payload.payment?.id;
+        if (!providerPaymentId) throw new Error('Payment ID ausente no webhook');
 
-        const feePercentage = this.getAppFeePercentage();
-        const platformFee = Number((payment.valor * feePercentage).toFixed(2));
-        const providerValue = this.toFiniteMoney(providerPayment.value, payment.valor);
-        const providerNetValue = this.toFiniteMoney(providerPayment.netValue, providerValue);
-        const processorFee = Number(Math.max(0, providerValue - providerNetValue).toFixed(2));
-        const hostPaysProcessorFee = process.env.PAYMENT_PROCESSING_FEE_PAYER === 'HOST';
-        const netAmount = Number(
-            Math.max(
-                0,
-                payment.valor - platformFee - (hostPaysProcessorFee ? processorFee : 0)
-            ).toFixed(2)
-        );
-        const paidAt = providerPayment.paymentDate
-            ? new Date(providerPayment.paymentDate)
-            : new Date();
+        const payment = await this.paymentRepository.findByProviderPaymentId(providerPaymentId);
+        if (!payment) return false;
 
-        const confirmed = await this.paymentRepository.confirmAndCreditHost({
-            paymentId: payment.id,
-            bookingId: payment.bookingId,
-            hostId: event.hostId,
-            platformFee,
-            processorFee,
-            netAmount,
-            paidAt: Number.isNaN(paidAt.getTime()) ? new Date() : paidAt,
-            providerStatus: providerPayment.status,
-        });
-
-        if (confirmed && event.host) {
-            await this.sendNotificationUseCase.execute(
-                event.host.id,
-                event.host.expoPushToken || null,
-                'Pagamento confirmado',
-                `Um participante confirmou o pagamento para "${event.title}".`,
-                NotificationType.NEW_REGISTRATION_CONFIRMED,
-                { eventId: event.id }
-            );
+        const providerPayment = await this.paymentGateway.getPayment(providerPaymentId);
+        if (!isProviderPaymentSettled(providerPayment)) {
+            await this.paymentRepository.updateProviderPayment({
+                paymentId: payment.id,
+                providerPaymentId,
+                paymentMethod: providerPayment.billingType,
+                providerStatus: providerPayment.status,
+            });
+            if (providerPayment.billingType === 'PIX' && providerPayment.status === 'CONFIRMED') {
+                return false;
+            }
+            throw new Error(`Cobranca Asaas ${providerPaymentId} ainda nao esta confirmada`);
         }
+        await this.confirmPaymentService.execute(payment, providerPayment);
+        return true;
+    }
+
+    private async recordProviderFailure(payload: AsaasWebhookPayload): Promise<void> {
+        const providerPaymentId = payload.payment?.id;
+        if (!providerPaymentId) throw new Error('Payment ID ausente no webhook');
+        const payment = await this.paymentRepository.findByProviderPaymentId(providerPaymentId);
+        if (!payment) return;
+
+        await this.paymentRepository.updateProviderPayment({
+            paymentId: payment.id,
+            providerPaymentId,
+            paymentMethod: payload.payment?.billingType || payment.paymentMethod || 'CREDIT_CARD',
+            providerStatus: payload.payment?.status || payload.event,
+        });
+    }
+
+    private async expireProviderPayment(payload: AsaasWebhookPayload): Promise<void> {
+        const providerPaymentId = payload.payment?.id;
+        if (!providerPaymentId) throw new Error('Payment ID ausente no webhook');
+        await this.paymentRepository.expirePendingByTxid(
+            providerPaymentId,
+            payload.payment?.status || payload.event
+        );
     }
 
     private async expireCheckout(payload: AsaasWebhookPayload): Promise<void> {
@@ -233,14 +267,4 @@ export class HandleAsaasWebhookUseCase {
         );
     }
 
-    private getAppFeePercentage(): number {
-        const percentage = Number(process.env.APP_FEE_PERCENTAGE || '10');
-        if (!Number.isFinite(percentage)) return 0.1;
-        return Math.min(100, Math.max(0, percentage)) / 100;
-    }
-
-    private toFiniteMoney(value: unknown, fallback: number): number {
-        const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : fallback;
-    }
 }

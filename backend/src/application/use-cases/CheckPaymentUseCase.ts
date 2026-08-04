@@ -6,6 +6,9 @@ export interface CheckPaymentResult {
     checkoutId: string;
     checkoutUrl?: string;
     status: string;
+    providerStatus?: string;
+    paymentMethod?: string;
+    pixExpirationDate?: string;
     paid: boolean;
 }
 
@@ -24,6 +27,9 @@ export class CheckPaymentUseCase {
             checkoutId: payment.txid,
             checkoutUrl: payment.checkoutUrl,
             status: payment.status,
+            providerStatus: payment.providerStatus,
+            paymentMethod: payment.paymentMethod,
+            pixExpirationDate: payment.pixExpirationDate?.toISOString(),
             paid:
                 payment.status === PaymentStatus.CONFIRMED ||
                 payment.status === PaymentStatus.PARTIALLY_REFUNDED,

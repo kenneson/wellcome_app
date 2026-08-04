@@ -385,6 +385,14 @@ export default function ProfileScreen() {
 
                 <Text style={styles.sectionTitle}>CONFIGURAÇÕES</Text>
 
+                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/payments' as any)}>
+                    <View style={[styles.menuIconCircle, { backgroundColor: '#EDF3FB' }]}>
+                        <Ionicons name="wallet-outline" size={20} color="#315E9E" />
+                    </View>
+                    <Text style={styles.menuText}>Meus Pagamentos</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/pix-key')}>
                     <View style={styles.menuIconCircle}>
                         <Ionicons name="card-outline" size={20} color="#FF8C42" />

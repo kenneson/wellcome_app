@@ -1,12 +1,11 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
-  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["auth", "public"]
+  schemas  = ["auth", "private", "public"]
 }
 
 model User {
@@ -51,6 +50,8 @@ model User {
   kycSubmittedAt      DateTime?           @map("kyc_submitted_at") @db.Timestamptz(6)
   kycReviewedAt       DateTime?           @map("kyc_reviewed_at") @db.Timestamptz(6)
   kycRejectionReason  String?             @map("kyc_rejection_reason")
+  billingProfile      BillingProfile?
+  paymentCards        PaymentCard[]
 
   @@map("profiles")
   @@schema("public")
@@ -292,6 +293,7 @@ model Payment {
   txid              String        @unique
   pixCopiaECola     String        @map("pix_copia_e_cola")
   qrcode            String
+  pixExpirationDate DateTime?     @map("pix_expiration_date") @db.Timestamptz(6)
   provider          String        @default("EFI")
   checkoutUrl       String?       @map("checkout_url")
   providerPaymentId String?       @unique @map("provider_payment_id")
@@ -313,6 +315,48 @@ model Payment {
   @@index([txid], map: "idx_payments_txid")
   @@map("payments")
   @@schema("public")
+}
+
+model BillingProfile {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String        @unique @map("user_id") @db.Uuid
+  asaasCustomerId   String?       @unique @map("asaas_customer_id")
+  fullName          String        @map("full_name")
+  cpfCnpj           String        @map("cpf_cnpj")
+  email             String
+  mobilePhone       String        @map("mobile_phone")
+  postalCode        String?       @map("postal_code")
+  addressNumber     String?       @map("address_number")
+  addressComplement String?       @map("address_complement")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards             PaymentCard[]
+
+  @@map("billing_profiles")
+  @@schema("private")
+}
+
+model PaymentCard {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  billingProfileId String         @map("billing_profile_id") @db.Uuid
+  provider         String         @default("ASAAS")
+  providerToken    String         @unique @map("provider_token")
+  brand            String
+  lastFour         String         @map("last_four")
+  holderName       String         @map("holder_name")
+  expiryMonth      Int            @map("expiry_month")
+  expiryYear       Int            @map("expiry_year")
+  isDefault        Boolean        @default(false) @map("is_default")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingProfile   BillingProfile @relation(fields: [billingProfileId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt], map: "idx_payment_cards_user_created")
+  @@map("payment_cards")
+  @@schema("private")
 }
 
 model PaymentWebhookEvent {

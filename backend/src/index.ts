@@ -8,6 +8,11 @@ import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
 import { CheckPaymentUseCase } from './application/use-cases/CheckPaymentUseCase';
+import { AddPaymentCardUseCase } from './application/use-cases/AddPaymentCardUseCase';
+import { CreatePixPaymentUseCase, PayWithSavedCardUseCase } from './application/use-cases/CreateTransparentPaymentUseCases';
+import { GetBillingWalletUseCase } from './application/use-cases/GetBillingWalletUseCase';
+import { DeletePaymentCardUseCase, SetDefaultPaymentCardUseCase } from './application/use-cases/ManagePaymentCardUseCases';
+import { SaveBillingProfileUseCase } from './application/use-cases/SaveBillingProfileUseCase';
 import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
 import { ApproveWithdrawalUseCase } from './application/use-cases/ApproveWithdrawalUseCase';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
@@ -26,6 +31,7 @@ import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
 import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
+import { PrismaBillingRepository } from './infrastructure/repositories/PrismaBillingRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
 import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
@@ -37,6 +43,7 @@ import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories
 import { PrismaWebhookEventRepository } from './infrastructure/repositories/PrismaWebhookEventRepository';
 import { AdminController } from './presentation/http/controllers/AdminController';
 import { AuthController } from './presentation/http/controllers/AuthController';
+import { BillingController } from './presentation/http/controllers/BillingController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
 import { ModerationController } from './presentation/http/controllers/ModerationController';
@@ -50,9 +57,19 @@ import { ForbiddenRequestError, getAuthenticatedUserContext, getAuthenticatedUse
 
 const fastify = Fastify({
     logger: {
-        redact: ['req.headers.authorization', 'req.headers.asaas-access-token', 'req.params.token', 'req.url'],
+        redact: [
+            'req.headers.authorization',
+            'req.headers.asaas-access-token',
+            'req.params.token',
+            'req.url',
+            'req.body.number',
+            'req.body.ccv',
+            'req.body.creditCard.number',
+            'req.body.creditCard.ccv',
+        ],
     },
-    ignoreTrailingSlash: true
+    trustProxy: 1,
+    routerOptions: { ignoreTrailingSlash: true },
 });
 
 const corsAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
@@ -148,6 +165,7 @@ const start = async () => {
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
         const eventReviewRepository = new PrismaEventReviewRepository();
         const paymentRepository = new PrismaPaymentRepository();
+        const billingRepository = new PrismaBillingRepository();
         const withdrawalRepository = new PrismaWithdrawalRequestRepository();
         const webhookEventRepository = new PrismaWebhookEventRepository();
         const asaasPaymentService = new AsaasPaymentService();
@@ -171,6 +189,22 @@ const start = async () => {
             eventRegistrationRepository,
             paymentRepository
         );
+        const createPixPaymentUseCase = new CreatePixPaymentUseCase(
+            asaasPaymentService,
+            eventRepository,
+            eventRegistrationRepository,
+            paymentRepository,
+            billingRepository,
+            sendNotificationUseCase
+        );
+        const payWithSavedCardUseCase = new PayWithSavedCardUseCase(
+            asaasPaymentService,
+            eventRepository,
+            eventRegistrationRepository,
+            paymentRepository,
+            billingRepository,
+            sendNotificationUseCase
+        );
         const checkPaymentUseCase = new CheckPaymentUseCase(paymentRepository);
         const handleAsaasWebhookUseCase = new HandleAsaasWebhookUseCase(
             asaasPaymentService,
@@ -180,6 +214,17 @@ const start = async () => {
             webhookEventRepository,
             sendNotificationUseCase
         );
+        const getBillingWalletUseCase = new GetBillingWalletUseCase(billingRepository);
+        const saveBillingProfileUseCase = new SaveBillingProfileUseCase(
+            billingRepository,
+            asaasPaymentService
+        );
+        const addPaymentCardUseCase = new AddPaymentCardUseCase(
+            billingRepository,
+            asaasPaymentService
+        );
+        const deletePaymentCardUseCase = new DeletePaymentCardUseCase(billingRepository);
+        const setDefaultPaymentCardUseCase = new SetDefaultPaymentCardUseCase(billingRepository);
 
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
@@ -207,8 +252,17 @@ const start = async () => {
         const moderationController = new ModerationController(moderationRepository);
         const paymentController = new PaymentController(
             createPaymentCheckoutUseCase,
+            createPixPaymentUseCase,
+            payWithSavedCardUseCase,
             checkPaymentUseCase,
             handleAsaasWebhookUseCase
+        );
+        const billingController = new BillingController(
+            getBillingWalletUseCase,
+            saveBillingProfileUseCase,
+            addPaymentCardUseCase,
+            deletePaymentCardUseCase,
+            setDefaultPaymentCardUseCase
         );
         const withdrawalController = new WithdrawalController(
             requestWithdrawalUseCase,
@@ -1375,6 +1429,88 @@ const start = async () => {
             }
         }, (req, reply) => paymentController.createCheckout(req, reply));
 
+        fastify.post('/payments/pix', {
+            schema: {
+                summary: 'Create an in-app Pix payment',
+                tags: ['Payments'],
+                body: {
+                    type: 'object',
+                    required: ['bookingId', 'eventId'],
+                    properties: {
+                        bookingId: { type: 'string' },
+                        eventId: { type: 'string' },
+                    },
+                },
+            },
+        }, (req, reply) => paymentController.createPixPayment(req, reply));
+
+        fastify.post('/payments/card', {
+            schema: {
+                summary: 'Pay in-app with a saved card',
+                tags: ['Payments'],
+                body: {
+                    type: 'object',
+                    required: ['bookingId', 'eventId', 'cardId'],
+                    properties: {
+                        bookingId: { type: 'string' },
+                        eventId: { type: 'string' },
+                        cardId: { type: 'string' },
+                    },
+                },
+            },
+        }, (req, reply) => paymentController.payWithCard(req, reply));
+
+        fastify.get('/billing', {
+            schema: { summary: 'Get private billing wallet', tags: ['Payments'] },
+        }, (req, reply) => billingController.getWallet(req, reply));
+
+        fastify.put('/billing/profile', {
+            schema: {
+                summary: 'Save private billing profile',
+                tags: ['Payments'],
+                body: {
+                    type: 'object',
+                    required: ['fullName', 'cpfCnpj', 'email', 'mobilePhone'],
+                    properties: {
+                        fullName: { type: 'string' },
+                        cpfCnpj: { type: 'string' },
+                        email: { type: 'string' },
+                        mobilePhone: { type: 'string' },
+                        postalCode: { type: 'string' },
+                        addressNumber: { type: 'string' },
+                        addressComplement: { type: 'string' },
+                    },
+                },
+            },
+        }, (req, reply) => billingController.saveProfile(req, reply));
+
+        fastify.post('/billing/cards', {
+            schema: {
+                summary: 'Tokenize and save a card',
+                tags: ['Payments'],
+                body: {
+                    type: 'object',
+                    required: ['holderName', 'number', 'expiryMonth', 'expiryYear', 'ccv'],
+                    properties: {
+                        holderName: { type: 'string' },
+                        number: { type: 'string' },
+                        expiryMonth: { type: 'number' },
+                        expiryYear: { type: 'number' },
+                        ccv: { type: 'string' },
+                        isDefault: { type: 'boolean' },
+                    },
+                },
+            },
+        }, (req, reply) => billingController.addCard(req, reply));
+
+        fastify.delete('/billing/cards/:cardId', {
+            schema: { summary: 'Remove a saved card', tags: ['Payments'] },
+        }, (req, reply) => billingController.deleteCard(req, reply));
+
+        fastify.put('/billing/cards/:cardId/default', {
+            schema: { summary: 'Set the default card', tags: ['Payments'] },
+        }, (req, reply) => billingController.setDefaultCard(req, reply));
+
         fastify.get('/payments/:bookingId', {
             schema: {
                 summary: 'Check payment status',
@@ -1395,6 +1531,9 @@ const start = async () => {
                             checkoutId: { type: 'string' },
                             checkoutUrl: { type: 'string', nullable: true },
                             status: { type: 'string' },
+                            providerStatus: { type: 'string', nullable: true },
+                            paymentMethod: { type: 'string', nullable: true },
+                            pixExpirationDate: { type: 'string', nullable: true },
                             paid: { type: 'boolean' }
                         }
                     }
