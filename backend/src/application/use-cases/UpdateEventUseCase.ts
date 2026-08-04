@@ -2,6 +2,7 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { EventQuestionRepository } from '../../domain/repositories/EventQuestionRepository';
 import { Event, UpdateEventDTO } from '../../domain/entities/Event';
 import { QuestionType } from '../../domain/value-objects/QuestionType';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice } from '../../domain/constants/payments';
 
 export class UpdateEventUseCase {
     constructor(
@@ -17,6 +18,10 @@ export class UpdateEventUseCase {
 
         if (event.hostId !== hostId) {
             throw new Error('Only the host can update this event');
+        }
+
+        if (data.price !== undefined && !isValidEventPrice(Number(data.price))) {
+            throw new Error(INVALID_EVENT_PRICE_MESSAGE);
         }
 
         // Update questions if provided

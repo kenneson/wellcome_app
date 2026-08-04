@@ -7,11 +7,16 @@ import { z } from 'zod';
 
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
 import { UnauthorizedRequestError, getAuthenticatedUserId, getOptionalAuthenticatedUserContext } from '../helpers/auth';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice } from '../../../domain/constants/payments';
+
+const eventPriceSchema = z.number().nonnegative().refine(isValidEventPrice, {
+    message: INVALID_EVENT_PRICE_MESSAGE,
+});
 
 const createEventSchema = z.object({
     title: z.string(),
     description: z.string(),
-    price: z.number(),
+    price: eventPriceSchema,
     maxGuests: z.number(),
     eventDate: z.string().transform((str) => new Date(str)),
     endTime: z.string().transform((str) => new Date(str)).optional().nullable(),
@@ -51,7 +56,7 @@ const createEventSchema = z.object({
 const updateEventSchema = z.object({
     title: z.string().optional(),
     description: z.string().nullable().optional(),
-    price: z.number().optional(),
+    price: eventPriceSchema.optional(),
     maxGuests: z.number().optional(),
     eventDate: z.string().transform((str) => new Date(str)).optional(),
     endTime: z.string().transform((str) => new Date(str)).optional().nullable(),
@@ -130,6 +135,9 @@ export class EventController {
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ message: 'Validation error', errors: error.issues });
             }
+            if (error instanceof Error && error.message === INVALID_EVENT_PRICE_MESSAGE) {
+                return reply.code(400).send({ message: error.message });
+            }
             return reply.code(500).send({ message: 'Internal server error' });
         }
     }
@@ -175,6 +183,9 @@ export class EventController {
         const canSeeExactLocation = viewerId === event.hostId || event.bookings?.some(
             (booking: any) => booking.userId === viewerId && booking.status === 'APPROVED'
         );
+        const viewerBookings = viewerId
+            ? event.bookings?.filter((booking: any) => booking.userId === viewerId) ?? []
+            : [];
 
         return {
             id: event.id,
@@ -214,6 +225,17 @@ export class EventController {
             dishes: event.dishes,
             questions: event.questions,
             reviews: event.reviews,
+            bookings: viewerBookings.map((booking: any) => ({
+                id: booking.id,
+                eventId: booking.eventId,
+                userId: booking.userId,
+                status: booking.status,
+                createdAt: booking.createdAt,
+                updatedAt: booking.updatedAt,
+                reviewedBy: booking.reviewedBy,
+                reviewedAt: booking.reviewedAt,
+                rejectionReason: booking.rejectionReason,
+            })),
             participantCount: event.bookings?.filter(
                 (booking: any) => booking.status === 'PENDING' || booking.status === 'APPROVED'
             ).length || 0,
@@ -246,6 +268,9 @@ export class EventController {
                 }
                 if (error.message === 'Only the host can update this event') {
                     return reply.code(403).send({ message: error.message });
+                }
+                if (error.message === INVALID_EVENT_PRICE_MESSAGE) {
+                    return reply.code(400).send({ message: error.message });
                 }
             }
             return reply.code(500).send({ message: 'Internal server error' });

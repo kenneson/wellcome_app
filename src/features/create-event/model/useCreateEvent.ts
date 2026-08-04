@@ -134,8 +134,8 @@ export function useEventCreationViewModel() {
 
         setData(prev => ({
             ...prev,
-            eventType: event.event_type || '',
-            cuisineTypes: event.cuisine_types || [],
+            eventType: event.eventType ?? event.event_type ?? '',
+            cuisineTypes: event.cuisineTypes ?? event.cuisine_types ?? [],
             vibe: event.vibe || [],
             dishes: (event.dishes || []).map((d: any) => ({
                 id: d.id || Math.random().toString(36).substr(2, 9),
@@ -152,14 +152,16 @@ export function useEventCreationViewModel() {
             },
             details: {
                 pricePerGuest: event.price?.toString() || '',
-                maxGuests: event.max_guests?.toString() || '',
-                date: event.event_date ? new Date(event.event_date) : null,
-                endTime: event.end_time ? new Date(event.end_time) : null,
-                registrationDeadline: event.reservation_deadline ? new Date(event.reservation_deadline) : null,
+                maxGuests: (event.maxGuests ?? event.max_guests)?.toString() || '',
+                date: event.eventDate || event.event_date ? new Date(event.eventDate ?? event.event_date) : null,
+                endTime: event.endTime || event.end_time ? new Date(event.endTime ?? event.end_time) : null,
+                registrationDeadline: event.reservationDeadline || event.reservation_deadline
+                    ? new Date(event.reservationDeadline ?? event.reservation_deadline)
+                    : null,
                 title: event.title,
                 description: event.description,
-                coverImage: event.cover_image_url,
-                accessType: event.access_type || 'OPEN',
+                coverImage: event.coverImageUrl ?? event.cover_image_url,
+                accessType: event.accessType ?? event.access_type ?? 'OPEN',
                 questions: event.questions || []
             },
             veganOptions: dietaryOpts.includes('Opções veganas e vegetarianas disponíveis'),

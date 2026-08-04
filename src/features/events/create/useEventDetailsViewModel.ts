@@ -3,6 +3,7 @@ import { Platform, Alert } from 'react-native';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
 
 export function useEventDetailsViewModel() {
     const router = useRouter();
@@ -46,6 +47,12 @@ export function useEventDetailsViewModel() {
     const handleSubmit = async () => {
         if (!data.details.title || !data.details.pricePerGuest || !data.details.maxGuests || !data.details.date) {
             Alert.alert('Dados incompletos', 'Preencha todos os campos obrigatórios (Título, Preço, Vagas, Data).');
+            return;
+        }
+
+        const price = parseEventPrice(data.details.pricePerGuest);
+        if (!isValidEventPrice(price)) {
+            Alert.alert('Valor invalido', INVALID_EVENT_PRICE_MESSAGE);
             return;
         }
 

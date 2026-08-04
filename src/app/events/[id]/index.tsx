@@ -49,6 +49,7 @@ export default function EventDetailsScreen() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [submittingReview, setSubmittingReview] = useState(false);
     const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
+    const [myBookingId, setMyBookingId] = useState<string | null>(null);
     const [reportVisible, setReportVisible] = useState(false);
 
     const isPastEvent = React.useMemo(() => {
@@ -75,6 +76,7 @@ export default function EventDetailsScreen() {
 
             const eventData = await eventService.getEventById(id as string);
             setEvent(eventData);
+            setParticipantCount(eventData.participantCount ?? 0);
 
             if (userId && eventData.hostId === userId) {
                 setIsHost(true);
@@ -84,10 +86,11 @@ export default function EventDetailsScreen() {
                 const myParticipation = eventData.bookings.find(b => b.userId === userId);
                 setIsParticipant(!!myParticipation);
                 setMyBookingStatus(myParticipation?.status || null);
-                const validBookings = eventData.bookings.filter(b => b.status === 'APPROVED' || b.status === 'PENDING');
-                setParticipantCount(validBookings.length);
+                setMyBookingId(myParticipation?.id || null);
             } else {
-                setParticipantCount(0);
+                setIsParticipant(false);
+                setMyBookingStatus(null);
+                setMyBookingId(null);
             }
 
         } catch (error) {
@@ -579,6 +582,19 @@ export default function EventDetailsScreen() {
                     </View>
                 </View>
             </KeyboardAwareScrollView>
+
+            {/* Action Bar - Participant: Resume pending payment */}
+            {!isHost && isParticipant && myBookingStatus === 'PENDING' && Number(event.price) > 0 && myBookingId && (
+                <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
+                    <TouchableOpacity
+                        className="bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"
+                        onPress={() => router.push(`/events/${id}/payment?bookingId=${myBookingId}`)}
+                    >
+                        <Ionicons name="card-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text className="text-white font-bold text-[16px]">Continuar pagamento</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
 
             {/* Action Bar - Participant: View Ticket (approved) */}
             {isParticipant && myBookingStatus === 'APPROVED' && (

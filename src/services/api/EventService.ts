@@ -4,6 +4,7 @@ import { Event } from '@/entities/event/types';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { API_URL } from '@/shared/config/api';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
 
 export class EventService {
     private async getAuthHeaders(includeJsonContentType: boolean = true): Promise<Record<string, string>> {
@@ -79,6 +80,9 @@ export class EventService {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Usuário não autenticado');
 
+            const price = parseEventPrice(data.details.pricePerGuest);
+            if (!isValidEventPrice(price)) throw new Error(INVALID_EVENT_PRICE_MESSAGE);
+
             let coverImageUrl = null;
             if (data.details.coverImage) {
                 coverImageUrl = await this.uploadImage(data.details.coverImage, session.user.id);
@@ -87,7 +91,7 @@ export class EventService {
             const payload = {
                 title: data.details.title,
                 description: data.details.description,
-                price: parseFloat(data.details.pricePerGuest.replace('R$', '').replace(',', '.') || '0'),
+                price,
                 maxGuests: parseInt(data.details.maxGuests || '0'),
                 eventDate: data.details.date ? data.details.date.toISOString() : new Date().toISOString(),
                 endTime: data.details.endTime ? data.details.endTime.toISOString() : null,
@@ -182,6 +186,10 @@ export class EventService {
 
         const details = data.details;
         const location = data.location;
+        const price = details?.pricePerGuest ? parseEventPrice(details.pricePerGuest) : undefined;
+        if (price !== undefined && !isValidEventPrice(price)) {
+            throw new Error(INVALID_EVENT_PRICE_MESSAGE);
+        }
 
         // Build dietaryOptions from boolean flags
         const dietaryOptions: string[] = [];
@@ -192,7 +200,7 @@ export class EventService {
         const payload = {
             title: details?.title,
             description: details?.description,
-            price: details?.pricePerGuest ? parseFloat(details.pricePerGuest.replace('R$', '').replace('.', '').replace(',', '.') || '0') : undefined,
+            price,
             maxGuests: details?.maxGuests ? parseInt(details.maxGuests) : undefined,
             eventDate: details?.date ? details.date.toISOString() : undefined,
             endTime: details?.endTime ? details.endTime.toISOString() : undefined,

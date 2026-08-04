@@ -176,4 +176,16 @@ describe('UpdateEventUseCase', () => {
         expect(mockEventQuestionRepository.deleteByEventId).toHaveBeenCalledWith('event-123');
         expect(mockEventQuestionRepository.createMany).toHaveBeenCalled();
     });
+
+    it('should reject a paid event below the payment provider minimum', async () => {
+        mockEventRepository.findById.mockResolvedValue({
+            id: 'event-123',
+            hostId: 'host-123',
+        } as Event);
+
+        await expect(
+            updateEventUseCase.execute('event-123', 'host-123', { price: 2 })
+        ).rejects.toThrow('Eventos pagos devem custar no minimo R$ 5,00 ou ser gratuitos');
+        expect(mockEventRepository.update).not.toHaveBeenCalled();
+    });
 });

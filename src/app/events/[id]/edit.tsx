@@ -1,6 +1,7 @@
 import { SelectionSection } from '@/components/ui/SelectionSection';
 import { eventService } from '@/services/api/EventService';
 import { EventCreationProvider, useEventCreation } from '@/shared/context/EventCreationContext';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -63,8 +64,14 @@ function EditEventForm() {
     }
 
     async function handleSave() {
-        if (!data.details.title || !data.details.date || !data.location.address) {
+        if (!data.details.title || !data.details.pricePerGuest.trim() || !data.details.date || !data.location.address) {
             Alert.alert('Erro', 'Preencha os campos obrigatórios (Título, Data, Local).');
+            return;
+        }
+
+        const price = parseEventPrice(data.details.pricePerGuest);
+        if (!isValidEventPrice(price)) {
+            Alert.alert('Valor invalido', INVALID_EVENT_PRICE_MESSAGE);
             return;
         }
 

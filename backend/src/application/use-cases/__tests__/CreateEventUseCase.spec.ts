@@ -200,4 +200,17 @@ describe('CreateEventUseCase', () => {
         expect(mockUserRepository.findById).not.toHaveBeenCalled();
         expect(mockEventRepository.create).not.toHaveBeenCalled();
     });
+
+    it('should reject a paid event below the payment provider minimum', async () => {
+        const eventData = {
+            price: 2,
+            maxGuests: 10,
+        } as CreateEventDTO;
+
+        await expect(createEventUseCase.execute(eventData)).rejects.toThrow(
+            'Eventos pagos devem custar no minimo R$ 5,00 ou ser gratuitos'
+        );
+        expect(mockUserRepository.findById).not.toHaveBeenCalled();
+        expect(mockEventRepository.create).not.toHaveBeenCalled();
+    });
 });

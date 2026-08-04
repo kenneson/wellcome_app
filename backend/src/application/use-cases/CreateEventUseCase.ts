@@ -3,6 +3,7 @@ import { EventQuestionRepository } from '../../domain/repositories/EventQuestion
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { CreateEventDTO, Event } from '../../domain/entities/Event';
 import { QuestionType } from '../../domain/value-objects/QuestionType';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice } from '../../domain/constants/payments';
 
 export class CreateEventUseCase {
     constructor(
@@ -14,6 +15,10 @@ export class CreateEventUseCase {
     async execute(data: CreateEventDTO): Promise<Event> {
         if (data.maxGuests < 1) {
             throw new Error('Event must have at least 1 guest');
+        }
+
+        if (!isValidEventPrice(Number(data.price))) {
+            throw new Error(INVALID_EVENT_PRICE_MESSAGE);
         }
 
         // Validate host exists

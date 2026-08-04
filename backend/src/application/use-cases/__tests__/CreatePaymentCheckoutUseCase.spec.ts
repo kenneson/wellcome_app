@@ -111,4 +111,21 @@ describe('CreatePaymentCheckoutUseCase', () => {
         expect(result.checkoutId).toBe('checkout-existing');
         expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
     });
+
+    it('rejects checkout for an event below the payment provider minimum', async () => {
+        eventRepository.findById.mockResolvedValue({
+            id: 'event-1',
+            title: 'Evento abaixo do minimo',
+            price: 2,
+        });
+
+        await expect(useCase.execute({
+            bookingId: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+        })).rejects.toThrow('Eventos pagos devem custar no minimo R$ 5,00 ou ser gratuitos');
+
+        expect(registrationRepository.findById).not.toHaveBeenCalled();
+        expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
+    });
 });

@@ -92,6 +92,7 @@ export interface Event {
     reviews?: EventReview[];
     facilities?: string[];
     rules?: string[];
+    participantCount?: number;
     createdAt: string;
     updatedAt: string;
 }

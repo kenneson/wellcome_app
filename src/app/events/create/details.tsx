@@ -1,6 +1,7 @@
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { useEventDetailsViewModel } from '@/features/events/create/useEventDetailsViewModel';
+import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -253,6 +254,12 @@ export default function EventCreateStep4() {
             Alert.alert('Dados incompletos', 'Preencha Título, Preço, Vagas e Data.');
             return;
         }
+        const price = parseEventPrice(vm.data.details.pricePerGuest);
+        if (!isValidEventPrice(price)) {
+            Alert.alert('Valor invalido', INVALID_EVENT_PRICE_MESSAGE);
+            return;
+        }
+
         router.push('/events/create/settings');
     };
 

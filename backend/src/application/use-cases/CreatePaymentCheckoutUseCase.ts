@@ -4,6 +4,7 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { PaymentGateway } from '../../domain/services/PaymentGateway';
+import { INVALID_EVENT_PRICE_MESSAGE, MIN_PAID_EVENT_PRICE } from '../../domain/constants/payments';
 
 export interface CreatePaymentCheckoutDTO {
     bookingId: string;
@@ -34,6 +35,7 @@ export class CreatePaymentCheckoutUseCase {
 
         const price = Number(event.price);
         if (!price || price <= 0) throw new Error('Event has no price set');
+        if (price < MIN_PAID_EVENT_PRICE) throw new Error(INVALID_EVENT_PRICE_MESSAGE);
 
         const registration = await this.eventRegistrationRepository.findById(data.bookingId);
         if (!registration) throw new Error('Booking not found');

@@ -8,6 +8,7 @@ import {
     HandleAsaasWebhookUseCase,
 } from '../../../application/use-cases/HandleAsaasWebhookUseCase';
 import { PaymentGatewayError } from '../../../domain/services/PaymentGateway';
+import { INVALID_EVENT_PRICE_MESSAGE } from '../../../domain/constants/payments';
 import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
 const createCheckoutSchema = z.object({
@@ -75,7 +76,7 @@ export class PaymentController {
             if (error.message === 'Event not found' || error.message === 'Booking not found') {
                 return reply.code(404).send({ message: error.message });
             }
-            if (error.message === 'Event has no price set') {
+            if (error.message === 'Event has no price set' || error.message === INVALID_EVENT_PRICE_MESSAGE) {
                 return reply.code(400).send({ message: error.message });
             }
             if (error.message === 'Payment already confirmed' || error.message === 'Payment cannot be reopened') {
