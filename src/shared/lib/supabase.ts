@@ -2,7 +2,6 @@
 import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { createClient } from '@supabase/supabase-js';
 
 // Better to use environment variables, but for now we'll use placeholders
@@ -19,19 +18,19 @@ const ExpoStorage = {
         if (Platform.OS === 'web' && typeof window === 'undefined') {
             return Promise.resolve(null);
         }
-        return Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key);
+        return AsyncStorage.getItem(key);
     },
     setItem: (key: string, value: string) => {
         if (Platform.OS === 'web' && typeof window === 'undefined') {
             return Promise.resolve();
         }
-        return Platform.OS === 'web' ? AsyncStorage.setItem(key, value) : SecureStore.setItemAsync(key, value);
+        return AsyncStorage.setItem(key, value);
     },
     removeItem: (key: string) => {
         if (Platform.OS === 'web' && typeof window === 'undefined') {
             return Promise.resolve();
         }
-        return Platform.OS === 'web' ? AsyncStorage.removeItem(key) : SecureStore.deleteItemAsync(key);
+        return AsyncStorage.removeItem(key);
     },
 };
 
