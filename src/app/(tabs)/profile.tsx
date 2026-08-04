@@ -2,7 +2,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { registrationService } from '@/services/api/RegistrationService';
 import { userService } from '@/services/api/UserService';
-import { API_URL } from '@/shared/config/api';
 import { Colors, Dimensions } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { formatFirstName, formatShortDate } from '@/utils/formatters';
@@ -87,15 +86,6 @@ export default function ProfileScreen() {
         }, [refetch, session?.user?.id])
     );
 
-    async function handleSignOut() {
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) Alert.alert('Erro ao sair', error.message);
-        } catch (error) {
-            Alert.alert('Erro', 'Ocorreu um erro inesperado.');
-        }
-    }
-
     async function handleCancelBooking(eventId: string) {
         if (processing) return;
         Alert.alert(
@@ -112,7 +102,7 @@ export default function ProfileScreen() {
                             await registrationService.cancelBooking(eventId, session.user.id);
                             refetch(); // Refresh list
                             Alert.alert('Sucesso', 'Solicitação cancelada.');
-                        } catch (error) {
+                        } catch {
                             Alert.alert('Erro', 'Não foi possível cancelar.');
                         } finally {
                             setProcessing(false);
@@ -121,52 +111,6 @@ export default function ProfileScreen() {
                 }
             ]
         );
-    }
-
-    async function handleTestNotification() {
-        if (processing) return;
-        setProcessing(true);
-        try {
-            // Get token from storage or context if available, but for now we rely on what's in DB or re-fetch
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('expo_push_token')
-                .eq('id', session.user.id)
-                .single();
-
-            if (!profile?.expo_push_token) {
-                Alert.alert('Erro', 'Token de notificação não encontrado. Verifique as permissões.');
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/notifications/test`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session.access_token}`,
-                },
-                body: JSON.stringify({
-                    token: profile.expo_push_token,
-                    title: 'Olá!',
-                    body: 'Esta é uma notificação de teste do Wellcome.',
-                    data: { test: true }
-                })
-            });
-
-            if (response.ok) {
-                Alert.alert('Sucesso', 'Notificação enviada! Verifique seu dispositivo.');
-            } else {
-                Alert.alert('Erro', 'Falha ao enviar notificação.');
-            }
-        } catch (error) {
-            Alert.alert('Erro', 'Erro de conexão.');
-            console.error(error);
-        } finally {
-            setProcessing(false);
-        }
     }
 
     // Show loading if session is not yet loaded or query is loading
@@ -210,7 +154,7 @@ export default function ProfileScreen() {
                         accessibilityLabel="Notificações"
                         accessibilityHint="Abrir notificações"
                         onPress={() => router.push('/notifications')}
-                        style={{ marginRight: 16 }}
+                        style={[styles.headerAction, styles.notificationAction]}
                     >
                         <Ionicons name="notifications-outline" size={Dimensions.icon.large} color={Colors.light.text} />
                     </TouchableOpacity>
@@ -218,6 +162,8 @@ export default function ProfileScreen() {
                         accessibilityRole="button"
                         accessibilityLabel="Configurações"
                         accessibilityHint="Abrir configurações do perfil"
+                        onPress={() => router.push('/profile/settings' as any)}
+                        style={styles.headerAction}
                     >
                         <Ionicons name="settings-outline" size={Dimensions.icon.large} color={Colors.light.text} />
                     </TouchableOpacity>
@@ -383,52 +329,6 @@ export default function ProfileScreen() {
                     </View>
                 )}
 
-                <Text style={styles.sectionTitle}>CONFIGURAÇÕES</Text>
-
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/payments' as any)}>
-                    <View style={[styles.menuIconCircle, { backgroundColor: '#EDF3FB' }]}>
-                        <Ionicons name="wallet-outline" size={20} color="#315E9E" />
-                    </View>
-                    <Text style={styles.menuText}>Meus Pagamentos</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/pix-key')}>
-                    <View style={styles.menuIconCircle}>
-                        <Ionicons name="card-outline" size={20} color="#FF8C42" />
-                    </View>
-                    <Text style={styles.menuText}>Minha Chave PIX</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
-                    <View style={[styles.menuIconCircle, { backgroundColor: '#E3F2FD' }]}>
-                        <Ionicons name="notifications-outline" size={20} color="#2196F3" />
-                    </View>
-                    <Text style={styles.menuText}>Notificações</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/profile/delete-account')}>
-                    <View style={[styles.menuIconCircle, { backgroundColor: '#FFF1F0' }]}>
-                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                    </View>
-                    <Text style={[styles.menuText, { color: '#FF3B30' }]}>Excluir conta</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.menuItem, { marginTop: 20 }]} onPress={handleSignOut}>
-                    <Text style={[styles.menuText, { color: '#FF3B30' }]}>Sair da conta</Text>
-                    <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-
-                {__DEV__ && (
-                <TouchableOpacity style={[styles.menuItem, { marginTop: 20, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, borderBottomWidth: 0 }]} onPress={handleTestNotification}>
-                    <Text style={[styles.menuText, { color: '#666', fontSize: 14 }]}>Testar Notificação Push</Text>
-                    <Ionicons name="paper-plane-outline" size={18} color="#666" />
-                </TouchableOpacity>
-                )}
-
                 <View style={{ height: 40 }} />
             </ScrollView>
         </SafeAreaView>
@@ -456,6 +356,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#000',
     },
+    headerAction: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    notificationAction: { marginRight: 4 },
     content: {
         paddingHorizontal: 24,
     },
@@ -654,28 +561,6 @@ const styles = StyleSheet.create({
         color: '#FF8C42',
         fontWeight: '600',
         fontSize: 12,
-    },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    menuIconCircle: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#FFF3E0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    menuText: {
-        flex: 1,
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
     },
     manageEventsCard: {
         flexDirection: 'row',
