@@ -1,58 +1,58 @@
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
-import './env';
 import Fastify from 'fastify';
+import { AddPaymentCardUseCase } from './application/use-cases/AddPaymentCardUseCase';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
+import { ApproveWithdrawalUseCase } from './application/use-cases/ApproveWithdrawalUseCase';
 import { LoginUseCase } from './application/use-cases/Auth/LoginUseCase';
 import { RegisterUseCase } from './application/use-cases/Auth/RegisterUseCase';
 import { CancelEventRegistrationUseCase } from './application/use-cases/CancelEventRegistrationUseCase';
 import { CheckPaymentUseCase } from './application/use-cases/CheckPaymentUseCase';
-import { AddPaymentCardUseCase } from './application/use-cases/AddPaymentCardUseCase';
-import { CreatePixPaymentUseCase, PayWithSavedCardUseCase } from './application/use-cases/CreateTransparentPaymentUseCases';
-import { GetBillingWalletUseCase } from './application/use-cases/GetBillingWalletUseCase';
-import { DeletePaymentCardUseCase, SetDefaultPaymentCardUseCase } from './application/use-cases/ManagePaymentCardUseCases';
-import { SaveBillingProfileUseCase } from './application/use-cases/SaveBillingProfileUseCase';
-import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
-import { ApproveWithdrawalUseCase } from './application/use-cases/ApproveWithdrawalUseCase';
 import { CreateEventUseCase } from './application/use-cases/CreateEventUseCase';
 import { CreatePaymentCheckoutUseCase } from './application/use-cases/CreatePaymentCheckoutUseCase';
 import { CreateReviewUseCase } from './application/use-cases/CreateReviewUseCase';
+import { CreatePixPaymentUseCase, PayWithSavedCardUseCase } from './application/use-cases/CreateTransparentPaymentUseCases';
 import { DeleteEventUseCase } from './application/use-cases/DeleteEventUseCase';
-import { DeleteUserAccountUseCase } from './application/use-cases/DeleteUserAccountUseCase';
 import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase';
+import { DeleteUserAccountUseCase } from './application/use-cases/DeleteUserAccountUseCase';
+import { GetBillingWalletUseCase } from './application/use-cases/GetBillingWalletUseCase';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
 import { HandleAsaasWebhookUseCase } from './application/use-cases/HandleAsaasWebhookUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
-import { ManageEventDraftsUseCase } from './application/use-cases/ManageEventDraftsUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
+import { ManageEventDraftsUseCase } from './application/use-cases/ManageEventDraftsUseCase';
+import { DeletePaymentCardUseCase, SetDefaultPaymentCardUseCase } from './application/use-cases/ManagePaymentCardUseCases';
 import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
+import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
+import { SaveBillingProfileUseCase } from './application/use-cases/SaveBillingProfileUseCase';
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
+import './env';
 import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
 import { GeoapifyLocationService } from './infrastructure/external/GeoapifyLocationService';
-import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaBillingRepository } from './infrastructure/repositories/PrismaBillingRepository';
+import { PrismaEventDraftRepository } from './infrastructure/repositories/PrismaEventDraftRepository';
+import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
-import { PrismaEventDraftRepository } from './infrastructure/repositories/PrismaEventDraftRepository';
 import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
 import { PrismaModerationRepository } from './infrastructure/repositories/PrismaModerationRepository';
 import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
 import { PrismaPaymentRepository } from './infrastructure/repositories/PrismaPaymentRepository';
 import { PrismaUserRepository } from './infrastructure/repositories/PrismaUserRepository';
-import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories/PrismaWithdrawalRequestRepository';
 import { PrismaWebhookEventRepository } from './infrastructure/repositories/PrismaWebhookEventRepository';
+import { PrismaWithdrawalRequestRepository } from './infrastructure/repositories/PrismaWithdrawalRequestRepository';
 import { AdminController } from './presentation/http/controllers/AdminController';
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { BillingController } from './presentation/http/controllers/BillingController';
 import { EventController } from './presentation/http/controllers/EventController';
 import { EventDraftController } from './presentation/http/controllers/EventDraftController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
+import { LocationController } from './presentation/http/controllers/LocationController';
 import { ModerationController } from './presentation/http/controllers/ModerationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
-import { LocationController } from './presentation/http/controllers/LocationController';
 import { PaymentController } from './presentation/http/controllers/PaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
@@ -75,6 +75,20 @@ const fastify = Fastify({
     },
     trustProxy: 1,
     routerOptions: { ignoreTrailingSlash: true },
+});
+
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+    const rawBody = body === null || body === undefined ? '' : body.toString();
+    if (rawBody === '') {
+        done(null, {});
+        return;
+    }
+
+    try {
+        done(null, JSON.parse(rawBody));
+    } catch (error) {
+        done(error as Error, undefined);
+    }
 });
 
 const corsAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')

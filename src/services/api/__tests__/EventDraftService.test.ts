@@ -19,6 +19,7 @@ import {
     eventDraftService,
     resolveDraftRestore,
 } from '../EventDraftService';
+import { supabase } from '@/shared/lib/supabase';
 
 function remoteDraft(payload: Record<string, unknown> = {}): EventDraftRecord {
     return {
@@ -34,7 +35,12 @@ function remoteDraft(payload: Record<string, unknown> = {}): EventDraftRecord {
 }
 
 describe('EventDraftService', () => {
-    beforeEach(() => mockStorage.clear());
+    beforeEach(() => {
+        mockStorage.clear();
+        (supabase.auth.getSession as jest.Mock).mockResolvedValue({
+            data: { session: { access_token: 'test-access-token' } },
+        });
+    });
 
     it('keeps unsynced local edits when the cloud revision has not advanced', () => {
         const restored = resolveDraftRestore(
@@ -81,5 +87,43 @@ describe('EventDraftService', () => {
             currentStep: 3,
             revision: 7,
         });
+    });
+
+    it('publishes without sending a JSON content type for an empty body', async () => {
+        const fetchMock = jest.fn().mockResolvedValue({
+            status: 200,
+            ok: true,
+            json: async () => ({ id: 'event-1' }),
+        });
+        global.fetch = fetchMock as typeof fetch;
+
+        await eventDraftService.publish('draft-1', 'publish-key');
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            expect.stringContaining('/event-drafts/draft-1/publish'),
+            expect.objectContaining({
+                method: 'POST',
+                headers: {
+                    Authorization: 'Bearer test-access-token',
+                    'Idempotency-Key': 'publish-key',
+                },
+            }),
+        );
+        expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('body');
+    });
+
+    it('deletes a draft without sending an empty JSON body', async () => {
+        const fetchMock = jest.fn().mockResolvedValue({ status: 204, ok: true });
+        global.fetch = fetchMock as typeof fetch;
+
+        await eventDraftService.delete('draft-1');
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            expect.stringContaining('/event-drafts/draft-1'),
+            expect.objectContaining({
+                method: 'DELETE',
+                headers: { Authorization: 'Bearer test-access-token' },
+            }),
+        );
     });
 });

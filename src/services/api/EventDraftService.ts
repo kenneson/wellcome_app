@@ -56,13 +56,20 @@ export class EventDraftApiError extends Error {
 }
 
 class EventDraftService {
-    private async headers(extra: Record<string, string> = {}) {
+    private async headers(extra: Record<string, string> = {}, hasJsonBody = false) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new EventDraftApiError('Sessão expirada', 'UNAUTHORIZED');
+        const headers = { ...extra };
+        if (hasJsonBody) {
+            headers['Content-Type'] ??= 'application/json';
+        } else {
+            delete headers['Content-Type'];
+            delete headers['content-type'];
+        }
+
         return {
-            'Content-Type': 'application/json',
+            ...headers,
             Authorization: `Bearer ${session.access_token}`,
-            ...extra,
         };
     }
 
@@ -179,7 +186,10 @@ class EventDraftService {
     private async request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
         const response = await fetch(`${API_URL}${path}`, {
             ...options,
-            headers: await this.headers(options.headers as Record<string, string> | undefined),
+            headers: await this.headers(
+                options.headers as Record<string, string> | undefined,
+                options.body !== undefined && options.body !== null,
+            ),
         });
         if (response.status === 204) return undefined as T;
         const body = await response.json().catch(() => ({}));
