@@ -24,16 +24,19 @@ import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
 import { HandleAsaasWebhookUseCase } from './application/use-cases/HandleAsaasWebhookUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
+import { ManageEventDraftsUseCase } from './application/use-cases/ManageEventDraftsUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
 import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
 import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
+import { MapboxLocationService } from './infrastructure/external/MapboxLocationService';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaBillingRepository } from './infrastructure/repositories/PrismaBillingRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
 import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
+import { PrismaEventDraftRepository } from './infrastructure/repositories/PrismaEventDraftRepository';
 import { PrismaEventReviewRepository } from './infrastructure/repositories/PrismaEventReviewRepository';
 import { PrismaModerationRepository } from './infrastructure/repositories/PrismaModerationRepository';
 import { PrismaNotificationRepository } from './infrastructure/repositories/PrismaNotificationRepository';
@@ -45,9 +48,11 @@ import { AdminController } from './presentation/http/controllers/AdminController
 import { AuthController } from './presentation/http/controllers/AuthController';
 import { BillingController } from './presentation/http/controllers/BillingController';
 import { EventController } from './presentation/http/controllers/EventController';
+import { EventDraftController } from './presentation/http/controllers/EventDraftController';
 import { EventRegistrationController } from './presentation/http/controllers/EventRegistrationController';
 import { ModerationController } from './presentation/http/controllers/ModerationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
+import { LocationController } from './presentation/http/controllers/LocationController';
 import { PaymentController } from './presentation/http/controllers/PaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
@@ -87,7 +92,7 @@ const start = async () => {
                 }
                 callback(new Error('Origin not allowed by CORS'), false);
             },
-            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             credentials: true
         });
 
@@ -156,6 +161,7 @@ const start = async () => {
 
         // Dependency Injection (Manual for now)
         const eventRepository = new PrismaEventRepository();
+        const eventDraftRepository = new PrismaEventDraftRepository();
         const eventQuestionRepository = new PrismaEventQuestionRepository();
         const userRepository = new PrismaUserRepository();
         const { notificationService } = require('./application/services/NotificationService'); // Import service
@@ -169,13 +175,19 @@ const start = async () => {
         const withdrawalRepository = new PrismaWithdrawalRequestRepository();
         const webhookEventRepository = new PrismaWebhookEventRepository();
         const asaasPaymentService = new AsaasPaymentService();
+        const mapboxLocationService = new MapboxLocationService();
 
         // Use Cases
         const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
         const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(withdrawalRepository, asaasPaymentService);
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
+        const manageEventDraftsUseCase = new ManageEventDraftsUseCase(
+            eventDraftRepository,
+            eventRepository,
+            createEventUseCase,
+        );
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
-        const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository);
+        const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository, sendNotificationUseCase);
         
         const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
@@ -238,6 +250,10 @@ const start = async () => {
 
         // Controllers
         const eventController = new EventController(createEventUseCase, listEventsUseCase, updateEventUseCase, deleteEventUseCase);
+        const eventDraftController = new EventDraftController(
+            manageEventDraftsUseCase,
+            eventController.serializeEvent.bind(eventController),
+        );
         const reviewController = new ReviewController(createReviewUseCase, deleteReviewUseCase);
         const authController = new AuthController(loginUseCase, registerUseCase);
         const eventRegistrationController = new EventRegistrationController(
@@ -249,6 +265,7 @@ const start = async () => {
         );
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
+        const locationController = new LocationController(mapboxLocationService);
         const moderationController = new ModerationController(moderationRepository);
         const paymentController = new PaymentController(
             createPaymentCheckoutUseCase,
@@ -331,6 +348,58 @@ const start = async () => {
         }, (req, reply) => authController.register(req, reply));
 
         // Routes
+        fastify.get('/locations/suggest', {
+            schema: { summary: 'Suggest Brazilian addresses', tags: ['General'] },
+        }, (req, reply) => locationController.suggest(req, reply));
+
+        fastify.get('/locations/retrieve/:id', {
+            schema: { summary: 'Resolve a Mapbox address', tags: ['General'] },
+        }, (req, reply) => locationController.retrieve(req, reply));
+
+        fastify.get('/locations/reverse', {
+            schema: { summary: 'Reverse geocode coordinates', tags: ['General'] },
+        }, (req, reply) => locationController.reverse(req, reply));
+
+        fastify.get('/event-drafts', {
+            schema: { summary: 'List current user event drafts', tags: ['Events'] },
+        }, (req, reply) => eventDraftController.list(req, reply));
+
+        fastify.post('/event-drafts', {
+            schema: { summary: 'Create event draft', tags: ['Events'] },
+        }, (req, reply) => eventDraftController.create(req, reply));
+
+        fastify.get('/event-drafts/:id', {
+            schema: {
+                summary: 'Get event draft',
+                tags: ['Events'],
+                params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+            },
+        }, (req, reply) => eventDraftController.get(req, reply));
+
+        fastify.patch('/event-drafts/:id', {
+            schema: {
+                summary: 'Autosave event draft',
+                tags: ['Events'],
+                params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+            },
+        }, (req, reply) => eventDraftController.update(req, reply));
+
+        fastify.delete('/event-drafts/:id', {
+            schema: {
+                summary: 'Delete event draft',
+                tags: ['Events'],
+                params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+            },
+        }, (req, reply) => eventDraftController.delete(req, reply));
+
+        fastify.post('/event-drafts/:id/publish', {
+            schema: {
+                summary: 'Validate and publish event draft',
+                tags: ['Events'],
+                params: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+            },
+        }, (req, reply) => eventDraftController.publish(req, reply));
+
         fastify.post('/events', {
             schema: {
                 summary: 'Create event',
@@ -338,18 +407,43 @@ const start = async () => {
                 tags: ['Events'],
                 body: {
                     type: 'object',
-                    required: ['title', 'description', 'price', 'maxGuests', 'eventDate', 'location'],
+                    required: [
+                        'title', 'description', 'price', 'maxGuests', 'eventDate', 'endTime',
+                        'location', 'city', 'state', 'latitude', 'longitude', 'coverImageUrl',
+                        'eventType', 'cuisineTypes', 'dishes'
+                    ],
                     properties: {
                         title: { type: 'string' },
                         description: { type: 'string' },
                         price: { type: 'number' },
                         maxGuests: { type: 'integer' },
                         eventDate: { type: 'string', format: 'date-time' },
+                        endTime: { type: 'string', format: 'date-time' },
+                        reservationDeadline: { type: 'string', format: 'date-time', nullable: true },
                         location: { type: 'string' },
-                        latitude: { type: 'number', nullable: true },
-                        longitude: { type: 'number', nullable: true },
-                        coverImageUrl: { type: 'string', nullable: true },
-                        hostId: { type: 'string' },
+                        city: { type: 'string' },
+                        state: { type: 'string' },
+                        latitude: { type: 'number' },
+                        longitude: { type: 'number' },
+                        coverImageUrl: { type: 'string', format: 'uri' },
+                        eventType: { type: 'string' },
+                        cuisineTypes: { type: 'array', minItems: 1, maxItems: 5, items: { type: 'string' } },
+                        isServedInSequence: { type: 'boolean' },
+                        accessType: { type: 'string', enum: ['OPEN', 'OPEN_WITH_APPROVAL'] },
+                        dishes: {
+                            type: 'array',
+                            minItems: 1,
+                            items: {
+                                type: 'object',
+                                required: ['name', 'category'],
+                                properties: {
+                                    name: { type: 'string' },
+                                    description: { type: 'string' },
+                                    category: { type: 'string', enum: ['ENTRADA', 'PRATO_PRINCIPAL', 'SOBREMESA', 'BEBIDA'] },
+                                    order: { type: 'integer' }
+                                }
+                            }
+                        },
                         questions: {
                             type: 'array',
                             items: {
@@ -1282,13 +1376,16 @@ const start = async () => {
                     type: 'object',
                     required: [],
                     properties: {
-                        hostId: { type: 'string' },
                         title: { type: 'string' },
                         description: { type: 'string', nullable: true },
                         price: { type: 'number' },
                         maxGuests: { type: 'integer' },
                         eventDate: { type: 'string', format: 'date-time' },
+                        endTime: { type: 'string', format: 'date-time', nullable: true },
+                        reservationDeadline: { type: 'string', format: 'date-time', nullable: true },
                         location: { type: 'string' },
+                        city: { type: 'string', nullable: true },
+                        state: { type: 'string', nullable: true },
                         latitude: { type: 'number', nullable: true },
                         longitude: { type: 'number', nullable: true },
                         coverImageUrl: { type: 'string', nullable: true },
@@ -1297,8 +1394,8 @@ const start = async () => {
                         vibe: { type: 'array', items: { type: 'string' } },
                         facilities: { type: 'array', items: { type: 'string' } },
                         rules: { type: 'array', items: { type: 'string' } },
+                        isServedInSequence: { type: 'boolean' },
                         accessType: { type: 'string' },
-                        requiresApproval: { type: 'boolean' },
                         allowWaitlist: { type: 'boolean' },
                         autoApproveIfAttended: { type: 'boolean' },
                         autoApproveMinRating: { type: 'number', nullable: true },
@@ -1355,13 +1452,6 @@ const start = async () => {
                     type: 'object',
                     properties: { id: { type: 'string' } }
                 },
-                body: {
-                    type: 'object',
-                    required: [],
-                    properties: {
-                        hostId: { type: 'string' }
-                    }
-                },
                 response: {
                     204: { description: 'Event deleted successfully' },
                     403: {
@@ -1416,6 +1506,29 @@ const start = async () => {
                 }
             }
         }, (req, reply) => reviewController.delete(req, reply));
+
+        fastify.get('/payments/config', {
+            schema: {
+                summary: 'Get public payment configuration',
+                tags: ['Payments'],
+                response: {
+                    200: {
+                        type: 'object',
+                        required: ['platformFeePercentage'],
+                        properties: {
+                            platformFeePercentage: { type: 'number' },
+                        },
+                    },
+                },
+            },
+        }, async () => {
+            const configuredFee = Number(process.env.APP_FEE_PERCENTAGE || '10');
+            return {
+                platformFeePercentage: Number.isFinite(configuredFee)
+                    ? Math.min(100, Math.max(0, configuredFee))
+                    : 10,
+            };
+        });
 
         fastify.post('/payments/checkout', {
             schema: {

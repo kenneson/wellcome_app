@@ -9,10 +9,17 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             data: {
                 eventId: data.eventId,
                 userId: data.userId,
-                status: RegistrationStatus.PENDING, // Default status
-                // If answers are provided, we would handle them here, but Booking model in Prisma might not have relation set up in code yet if we didn't update types
-                // logic for answers will be added in Phase 4
-            }
+                status: data.status ?? RegistrationStatus.PENDING,
+                ...(data.answers?.length ? {
+                    answers: {
+                        create: data.answers.map((answer) => ({
+                            questionId: answer.questionId,
+                            answer: answer.answer.trim(),
+                        })),
+                    },
+                } : {}),
+            },
+            include: { answers: true },
         });
         return this.mapToDomain(booking);
     }

@@ -26,7 +26,6 @@ export class PrismaUserRepository implements UserRepository {
 
         if (!user) return null;
 
-        console.log('DEBUG: Prisma User found:', Object.keys(user));
         return this.mapToDomain(user);
     }
 
@@ -71,6 +70,13 @@ export class PrismaUserRepository implements UserRepository {
             walletBalance: prismaUser.walletBalance ? Number(prismaUser.walletBalance) : 0,
             pixKey: prismaUser.pixKey ?? null,
             pixKeyType: prismaUser.pixKeyType ?? null,
+            kycStatus: prismaUser.kycStatus ?? null,
+            kycDocumentUrl: prismaUser.kycDocumentUrl ?? null,
+            kycSelfieUrl: prismaUser.kycSelfieUrl ?? null,
+            kycSimilarityScore: prismaUser.kycSimilarityScore ?? null,
+            kycSubmittedAt: prismaUser.kycSubmittedAt ?? null,
+            kycReviewedAt: prismaUser.kycReviewedAt ?? null,
+            kycRejectionReason: prismaUser.kycRejectionReason ?? null,
             events: prismaUser.events ?? [],
             bookings: prismaUser.bookings ? prismaUser.bookings.map((b: any) => ({
                 id: b.id,

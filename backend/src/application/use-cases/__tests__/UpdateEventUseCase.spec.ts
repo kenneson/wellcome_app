@@ -173,8 +173,8 @@ describe('UpdateEventUseCase', () => {
 
         await updateEventUseCase.execute('event-123', 'host-123', updateData);
 
-        expect(mockEventQuestionRepository.deleteByEventId).toHaveBeenCalledWith('event-123');
-        expect(mockEventQuestionRepository.createMany).toHaveBeenCalled();
+        expect(mockEventRepository.update).toHaveBeenCalledWith('event-123', updateData);
+        expect(mockEventQuestionRepository.deleteByEventId).not.toHaveBeenCalled();
     });
 
     it('should reject a paid event below the payment provider minimum', async () => {
@@ -185,7 +185,68 @@ describe('UpdateEventUseCase', () => {
 
         await expect(
             updateEventUseCase.execute('event-123', 'host-123', { price: 2 })
-        ).rejects.toThrow('Eventos pagos devem custar no minimo R$ 5,00 ou ser gratuitos');
+        ).rejects.toThrow('Eventos pagos devem custar entre R$ 5,00 e R$ 100.000,00, ou ser gratuitos');
+        expect(mockEventRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('does not allow a free event to become paid without KYC and Pix', async () => {
+        mockEventRepository.findById.mockResolvedValue({
+            id: 'event-123',
+            hostId: 'host-123',
+            price: 0,
+        } as Event);
+        const userRepository = {
+            findById: jest.fn().mockResolvedValue({
+                id: 'host-123',
+                kycStatus: 'PENDING',
+                pixKey: null,
+                pixKeyType: null,
+            }),
+        };
+        const useCase = new UpdateEventUseCase(
+            mockEventRepository,
+            mockEventQuestionRepository,
+            userRepository as any,
+        );
+
+        await expect(useCase.execute('event-123', 'host-123', { price: 50 })).rejects.toMatchObject({
+            code: 'HOST_PAYOUT_SETUP_REQUIRED',
+        });
+        expect(mockEventRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects an incoherent schedule during editing', async () => {
+        const start = new Date(Date.now() + 48 * 60 * 60 * 1000);
+        mockEventRepository.findById.mockResolvedValue({
+            id: 'event-123',
+            hostId: 'host-123',
+            eventDate: start,
+            endTime: new Date(start.getTime() + 4 * 60 * 60 * 1000),
+            reservationDeadline: null,
+        } as Event);
+
+        await expect(updateEventUseCase.execute('event-123', 'host-123', {
+            eventDate: start,
+            endTime: new Date(start.getTime() - 60_000),
+        })).rejects.toMatchObject({
+            code: 'INVALID_EVENT',
+            fieldErrors: { endTime: expect.any(String) },
+        });
+        expect(mockEventRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('requires fresh coordinates when the address changes', async () => {
+        mockEventRepository.findById.mockResolvedValue({
+            id: 'event-123',
+            hostId: 'host-123',
+        } as Event);
+
+        await expect(updateEventUseCase.execute('event-123', 'host-123', {
+            location: 'Rua Nova, 100',
+        })).rejects.toMatchObject({
+            code: 'INVALID_EVENT',
+            fieldErrors: expect.objectContaining({ coordinates: expect.any(String) }),
+        });
         expect(mockEventRepository.update).not.toHaveBeenCalled();
     });
 });

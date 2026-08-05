@@ -31,6 +31,7 @@ model User {
   created_at          DateTime?           @default(now()) @db.Timestamptz(6)
   bookings            Booking[]
   events              Event[]
+  eventDrafts         EventDraft[]
   notifications       Notification[]
   pushTokens          PushToken[]
   eventReviews        EventReview[]
@@ -67,6 +68,8 @@ model Event {
   endTime               DateTime?       @map("end_time") @db.Timestamptz(6)
   reservationDeadline   DateTime?       @map("reservation_deadline") @db.Timestamptz(6)
   location              String
+  city                  String?
+  state                 String?
   maxGuests             Int?            @default(0) @map("max_guests")
   coverImageUrl         String?         @map("cover_image_url")
   imageGallery          String[]        @default([]) @map("image_gallery")
@@ -79,6 +82,8 @@ model Event {
   facilities            String[]        @default([])
   rules                 String[]        @default([])
   dietaryOptions        String[]        @default([]) @map("dietary_options")
+  isServedInSequence    Boolean         @default(false) @map("is_served_in_sequence")
+  creationKey           String?         @unique @map("creation_key")
   updated_at            DateTime        @default(now()) @db.Timestamptz(6)
   accessType            EventAccessType @default(OPEN) @map("access_type")
   requiresApproval      Boolean         @default(false) @map("requires_approval")
@@ -92,6 +97,25 @@ model Event {
   host                  User            @relation(fields: [hostId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("events")
+  @@schema("public")
+}
+
+model EventDraft {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hostId           String    @map("host_id") @db.Uuid
+  payload          Json      @default("{}")
+  currentStep      Int       @default(0) @map("current_step")
+  schemaVersion    Int       @default(1) @map("schema_version")
+  revision         Int       @default(0)
+  publishKey       String?   @map("publish_key")
+  publishedEventId String?   @map("published_event_id") @db.Uuid
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  host             User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([hostId, updatedAt(sort: Desc)], map: "idx_event_drafts_host_updated")
+  @@map("event_drafts")
   @@schema("public")
 }
 

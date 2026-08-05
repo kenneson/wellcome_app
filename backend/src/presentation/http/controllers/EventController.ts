@@ -8,87 +8,57 @@ import { z } from 'zod';
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
 import { UnauthorizedRequestError, getAuthenticatedUserId, getOptionalAuthenticatedUserContext } from '../helpers/auth';
 import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice } from '../../../domain/constants/payments';
+import {
+    createEventInputSchema,
+    DISH_CATEGORIES,
+    EVENT_TYPES,
+    QUESTION_TYPES,
+    zodFieldErrors,
+} from '../../../application/validation/EventCreationSchema';
+import { EventCreationError } from '../../../application/errors/EventCreationError';
 
 const eventPriceSchema = z.number().nonnegative().refine(isValidEventPrice, {
     message: INVALID_EVENT_PRICE_MESSAGE,
 });
 
-const createEventSchema = z.object({
-    title: z.string(),
-    description: z.string(),
-    price: eventPriceSchema,
-    maxGuests: z.number(),
-    eventDate: z.string().transform((str) => new Date(str)),
-    endTime: z.string().transform((str) => new Date(str)).optional().nullable(),
-    reservationDeadline: z.string().transform((str) => new Date(str)).optional().nullable(),
-    location: z.string(),
-    latitude: z.number().nullable(),
-    longitude: z.number().nullable(),
-    coverImageUrl: z.string().nullable(),
-    imageGallery: z.array(z.string()).optional().default([]),
-    hostId: z.string(),
-    eventType: z.string().optional(),
-    cuisineTypes: z.array(z.string()).optional(),
-    vibe: z.array(z.string()).optional(),
-    facilities: z.array(z.string()).optional(),
-    rules: z.array(z.string()).optional(),
-    dietaryOptions: z.array(z.string()).optional().default([]),
-    // Approval fields
-    accessType: z.nativeEnum(EventAccessType).optional().default(EventAccessType.OPEN),
-    requiresApproval: z.boolean().optional().default(false),
-    allowWaitlist: z.boolean().optional().default(false),
-    autoApproveIfAttended: z.boolean().optional().default(false),
-    autoApproveMinRating: z.number().nullable().optional().default(null),
-    questions: z.array(z.object({
-        question: z.string(),
-        questionType: z.string(),
-        required: z.boolean(),
-        options: z.array(z.string()).optional()
-    })).optional(),
-    dishes: z.array(z.object({
-        name: z.string(),
-        description: z.string().optional(),
-        category: z.string(),
-        order: z.number().optional().default(0)
-    })).optional()
-});
-
 const updateEventSchema = z.object({
-    title: z.string().optional(),
-    description: z.string().nullable().optional(),
+    title: z.string().trim().min(5).max(80).optional(),
+    description: z.string().trim().min(30).max(1500).optional(),
     price: eventPriceSchema.optional(),
-    maxGuests: z.number().optional(),
-    eventDate: z.string().transform((str) => new Date(str)).optional(),
-    endTime: z.string().transform((str) => new Date(str)).optional().nullable(),
-    reservationDeadline: z.string().transform((str) => new Date(str)).optional().nullable(),
-    location: z.string().optional(),
-    latitude: z.number().nullable().optional(),
-    longitude: z.number().nullable().optional(),
-    coverImageUrl: z.string().nullable().optional(),
-    imageGallery: z.array(z.string()).optional(),
-    eventType: z.string().nullable().optional(),
-    cuisineTypes: z.array(z.string()).optional(),
-    vibe: z.array(z.string()).optional(),
-    facilities: z.array(z.string()).optional(),
-    rules: z.array(z.string()).optional(),
-    dietaryOptions: z.array(z.string()).optional(),
+    maxGuests: z.number().int().min(1).max(1000).optional(),
+    eventDate: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
+    endTime: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
+    reservationDeadline: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional().nullable(),
+    location: z.string().trim().min(5).max(500).optional(),
+    city: z.string().trim().min(2).max(120).optional(),
+    state: z.string().trim().min(2).max(80).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+    coverImageUrl: z.string().url().optional(),
+    imageGallery: z.array(z.string().url()).max(8).optional(),
+    eventType: z.enum(EVENT_TYPES).optional(),
+    cuisineTypes: z.array(z.string().trim().min(2).max(80)).min(1).max(5).optional(),
+    vibe: z.array(z.string().trim().min(1).max(80)).max(5).optional(),
+    facilities: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
+    rules: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
+    dietaryOptions: z.array(z.string().trim().min(1).max(160)).max(10).optional(),
+    isServedInSequence: z.boolean().optional(),
     accessType: z.nativeEnum(EventAccessType).optional(),
-    requiresApproval: z.boolean().optional(),
     allowWaitlist: z.boolean().optional(),
     autoApproveIfAttended: z.boolean().optional(),
     autoApproveMinRating: z.number().nullable().optional(),
     questions: z.array(z.object({
-        question: z.string(),
-        questionType: z.string(),
+        question: z.string().trim().min(5).max(180),
+        questionType: z.enum(QUESTION_TYPES),
         required: z.boolean(),
-        options: z.array(z.string()).optional()
-    })).optional(),
+        options: z.array(z.string().trim().min(1).max(100)).max(10).optional()
+    })).max(5).optional(),
     dishes: z.array(z.object({
-        name: z.string(),
-        description: z.string().optional(),
-        category: z.string(),
-        order: z.number().optional()
-    })).optional()
+        name: z.string().trim().min(2).max(80),
+        description: z.string().trim().max(300).optional(),
+        category: z.enum(DISH_CATEGORIES),
+        order: z.number().int().nonnegative().optional()
+    })).min(1).max(20).optional()
 });
 
 export class EventController {
@@ -101,44 +71,47 @@ export class EventController {
 
     async create(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const body = createEventSchema.parse(request.body);
+            const body = createEventInputSchema.parse(request.body);
             const hostId = await getAuthenticatedUserId(request);
+            const rawCreationKey = request.headers['idempotency-key'];
+            const creationKey = Array.isArray(rawCreationKey) ? rawCreationKey[0] : rawCreationKey;
             
             const event = await this.createEventUseCase.execute({
                 ...body,
-                eventType: body.eventType ?? '',
-                cuisineTypes: body.cuisineTypes ?? [],
-                vibe: body.vibe ?? [],
-                facilities: body.facilities ?? [],
-                rules: body.rules ?? [],
-                imageGallery: body.imageGallery ?? [],
                 hostId,
-                dietaryOptions: body.dietaryOptions ?? [],
-                endTime: body.endTime ?? null,
-                reservationDeadline: body.reservationDeadline ?? null,
-                questions: body.questions?.map((q, index) => ({
+                creationKey: creationKey?.trim() || null,
+                requiresApproval: body.accessType === EventAccessType.OPEN_WITH_APPROVAL,
+                questions: body.questions.map((q, index) => ({
                     ...q,
                     order: index
-                })) ?? [],
-                dishes: body.dishes?.map((d, index) => ({
+                })),
+                dishes: body.dishes.map((d, index) => ({
                     ...d,
                     order: d.order ?? index
-                })) ?? []
+                })),
             });
             
             return reply.code(201).send(this.serializeEvent(event, hostId));
         } catch (error) {
-            console.error('Create Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
-                return reply.code(401).send({ message: error.message });
+                return reply.code(401).send({ code: 'UNAUTHORIZED', message: error.message, fieldErrors: {} });
             }
             if (error instanceof z.ZodError) {
-                return reply.code(400).send({ message: 'Validation error', errors: error.issues });
+                return reply.code(422).send({
+                    code: 'INVALID_EVENT',
+                    message: 'Revise os campos destacados',
+                    fieldErrors: zodFieldErrors(error),
+                });
             }
-            if (error instanceof Error && error.message === INVALID_EVENT_PRICE_MESSAGE) {
-                return reply.code(400).send({ message: error.message });
+            if (error instanceof EventCreationError) {
+                return reply.code(error.statusCode).send({
+                    code: error.code,
+                    message: error.message,
+                    fieldErrors: error.fieldErrors,
+                });
             }
-            return reply.code(500).send({ message: 'Internal server error' });
+            request.log.error({ err: error }, 'Failed to create event');
+            return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Não foi possível criar o evento', fieldErrors: {} });
         }
     }
 
@@ -152,16 +125,16 @@ export class EventController {
             const maximumPrice = this.parseOptionalNumber(priceMax);
 
             if ([latitude, longitude, radiusInKm, minimumPrice, maximumPrice].some(Number.isNaN)) {
-                return reply.code(400).send({ message: 'Invalid numeric event filter' });
+                return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'Filtro numerico invalido', fieldErrors: {} });
             }
             if ((latitude === undefined) !== (longitude === undefined)) {
-                return reply.code(400).send({ message: 'Latitude and longitude must be provided together' });
+                return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'Informe latitude e longitude juntas', fieldErrors: {} });
             }
             if (radiusInKm !== undefined && radiusInKm <= 0) {
-                return reply.code(400).send({ message: 'Radius must be greater than zero' });
+                return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'O raio deve ser maior que zero', fieldErrors: {} });
             }
             if (minimumPrice !== undefined && maximumPrice !== undefined && minimumPrice > maximumPrice) {
-                return reply.code(400).send({ message: 'Minimum price cannot exceed maximum price' });
+                return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'O valor minimo nao pode superar o maximo', fieldErrors: {} });
             }
 
             const events = await this.listEventsUseCase.execute({
@@ -178,7 +151,8 @@ export class EventController {
             });
             return reply.send(events.map((event) => this.serializeEvent(event)));
         } catch (error) {
-            return reply.code(500).send({ message: 'Internal server error' });
+            request.log.error({ err: error }, 'Failed to list events');
+            return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Nao foi possivel listar os eventos', fieldErrors: {} });
         }
     }
 
@@ -195,21 +169,24 @@ export class EventController {
         try {
             const event = await this.listEventsUseCase.getById(id);
             if (!event) {
-                return reply.code(404).send({ message: 'Event not found' });
+                return reply.code(404).send({ code: 'EVENT_NOT_FOUND', message: 'Evento nao encontrado', fieldErrors: {} });
             }
             const viewer = await getOptionalAuthenticatedUserContext(request);
             return reply.send(this.serializeEvent(event, viewer?.userId));
         } catch (error) {
             if (error instanceof UnauthorizedRequestError) {
-                return reply.code(401).send({ message: error.message });
+                return reply.code(401).send({ code: 'UNAUTHORIZED', message: error.message, fieldErrors: {} });
             }
-            return reply.code(500).send({ message: 'Internal server error' });
+            request.log.error({ err: error }, 'Failed to load event');
+            return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Nao foi possivel carregar o evento', fieldErrors: {} });
         }
     }
 
-    private serializeEvent(event: any, viewerId?: string) {
+    serializeEvent(event: any, viewerId?: string) {
         const canSeeExactLocation = viewerId === event.hostId || event.bookings?.some(
-            (booking: any) => booking.userId === viewerId && booking.status === 'APPROVED'
+            (booking: any) => booking.userId === viewerId
+                && booking.status === 'APPROVED'
+                && (Number(event.price) <= 0 || booking.paymentStatus === 'CONFIRMED')
         );
         const viewerBookings = viewerId
             ? event.bookings?.filter((booking: any) => booking.userId === viewerId) ?? []
@@ -224,7 +201,12 @@ export class EventController {
             eventDate: event.eventDate,
             endTime: event.endTime,
             reservationDeadline: event.reservationDeadline,
-            location: canSeeExactLocation ? event.location : this.getLocationSummary(event.location),
+            location: canSeeExactLocation
+                ? event.location
+                : [event.city, event.state].filter(Boolean).join(' - ') || this.getLocationSummary(event.location),
+            city: event.city ?? null,
+            state: event.state ?? null,
+            locationNeedsReview: !event.city || !event.state,
             latitude: canSeeExactLocation ? event.latitude : null,
             longitude: canSeeExactLocation ? event.longitude : null,
             distanceKm: event.distanceKm,
@@ -236,6 +218,7 @@ export class EventController {
             facilities: event.facilities,
             rules: event.rules,
             dietaryOptions: event.dietaryOptions,
+            isServedInSequence: event.isServedInSequence ?? false,
             hostId: event.hostId,
             accessType: event.accessType,
             requiresApproval: event.requiresApproval,
@@ -284,25 +267,28 @@ export class EventController {
             const event = await this.updateEventUseCase.execute(id, hostId, updateData);
             return reply.send(this.serializeEvent(event, hostId));
         } catch (error) {
-            console.error('Update Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
-                return reply.code(401).send({ message: error.message });
+                return reply.code(401).send({ code: 'UNAUTHORIZED', message: error.message, fieldErrors: {} });
             }
             if (error instanceof z.ZodError) {
-                return reply.code(400).send({ message: 'Validation error', errors: error.issues });
+                return reply.code(422).send({ code: 'INVALID_EVENT', message: 'Revise os campos destacados', fieldErrors: zodFieldErrors(error) });
+            }
+            if (error instanceof EventCreationError) {
+                return reply.code(error.statusCode).send({ code: error.code, message: error.message, fieldErrors: error.fieldErrors });
             }
             if (error instanceof Error) {
                 if (error.message === 'Event not found') {
-                    return reply.code(404).send({ message: error.message });
+                    return reply.code(404).send({ code: 'EVENT_NOT_FOUND', message: error.message, fieldErrors: {} });
                 }
                 if (error.message === 'Only the host can update this event') {
-                    return reply.code(403).send({ message: error.message });
+                    return reply.code(403).send({ code: 'FORBIDDEN', message: error.message, fieldErrors: {} });
                 }
                 if (error.message === INVALID_EVENT_PRICE_MESSAGE) {
-                    return reply.code(400).send({ message: error.message });
+                    return reply.code(422).send({ code: 'INVALID_EVENT_PRICE', message: error.message, fieldErrors: { price: error.message } });
                 }
             }
-            return reply.code(500).send({ message: 'Internal server error' });
+            request.log.error({ err: error }, 'Failed to update event');
+            return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Nao foi possivel atualizar o evento', fieldErrors: {} });
         }
     }
 
@@ -313,19 +299,19 @@ export class EventController {
             await this.deleteEventUseCase.execute(id, hostId);
             return reply.code(204).send();
         } catch (error) {
-            console.error('Delete Event Error:', error);
             if (error instanceof UnauthorizedRequestError) {
-                return reply.code(401).send({ message: error.message });
+                return reply.code(401).send({ code: 'UNAUTHORIZED', message: error.message, fieldErrors: {} });
             }
             if (error instanceof Error) {
                 if (error.message === 'Event not found') {
-                    return reply.code(404).send({ message: error.message });
+                    return reply.code(404).send({ code: 'EVENT_NOT_FOUND', message: error.message, fieldErrors: {} });
                 }
                 if (error.message === 'Only the host can delete this event') {
-                    return reply.code(403).send({ message: error.message });
+                    return reply.code(403).send({ code: 'FORBIDDEN', message: error.message, fieldErrors: {} });
                 }
             }
-            return reply.code(500).send({ message: 'Internal server error' });
+            request.log.error({ err: error }, 'Failed to delete event');
+            return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Nao foi possivel excluir o evento', fieldErrors: {} });
         }
     }
 }

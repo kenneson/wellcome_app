@@ -74,7 +74,8 @@ export class JoinEventUseCase {
         const registration = await this.eventRegistrationRepository.create({
             eventId: data.eventId,
             userId: data.userId,
-            answers: data.answers
+            status: initialStatus,
+            answers: data.answers,
         });
 
         // Notify Host (skip if event requires payment — notification will be sent after payment confirmation)

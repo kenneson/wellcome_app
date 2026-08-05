@@ -6,7 +6,7 @@ import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRepository implements EventRepository {
     async create(data: CreateEventDTO): Promise<Event> {
-        const { dishes, ...eventData } = data;
+        const { dishes, questions, ...eventData } = data;
 
         const event = await prisma.event.create({
             data: {
@@ -18,6 +18,8 @@ export class PrismaEventRepository implements EventRepository {
                 endTime: eventData.endTime,
                 reservationDeadline: eventData.reservationDeadline,
                 location: eventData.location,
+                city: eventData.city,
+                state: eventData.state,
                 latitude: eventData.latitude,
                 longitude: eventData.longitude,
                 coverImageUrl: eventData.coverImageUrl,
@@ -28,6 +30,13 @@ export class PrismaEventRepository implements EventRepository {
                 facilities: eventData.facilities,
                 rules: eventData.rules,
                 dietaryOptions: eventData.dietaryOptions,
+                isServedInSequence: eventData.isServedInSequence ?? false,
+                creationKey: eventData.creationKey,
+                accessType: eventData.accessType,
+                requiresApproval: eventData.accessType === 'OPEN_WITH_APPROVAL',
+                allowWaitlist: eventData.allowWaitlist,
+                autoApproveIfAttended: eventData.autoApproveIfAttended,
+                autoApproveMinRating: eventData.autoApproveMinRating,
                 host: {
                     connect: { id: eventData.hostId }
                 },
@@ -41,8 +50,23 @@ export class PrismaEventRepository implements EventRepository {
                         }))
                     }
                 } : {}),
+                ...(questions && questions.length > 0 ? {
+                    questions: {
+                        create: questions.map((question, index) => ({
+                            question: question.question,
+                            questionType: question.questionType as any,
+                            options: question.options ?? [],
+                            required: question.required,
+                            order: question.order ?? index,
+                        })),
+                    },
+                } : {}),
             },
-            include: { dishes: { orderBy: { order: 'asc' } }, host: true }
+            include: {
+                dishes: { orderBy: { order: 'asc' } },
+                questions: { orderBy: { order: 'asc' } },
+                host: true,
+            }
         });
 
         return this.mapToDomain(event);
@@ -75,7 +99,7 @@ export class PrismaEventRepository implements EventRepository {
 
         const city = filters?.city;
         if (city) {
-            mappedEvents = mappedEvents.filter((event) => isEventInCity(event.location, city));
+            mappedEvents = mappedEvents.filter((event) => isEventInCity(event.city || event.location, city));
         }
 
         if (
@@ -97,7 +121,7 @@ export class PrismaEventRepository implements EventRepository {
         const event = await prisma.event.findUnique({
             where: { id },
             include: {
-                bookings: true,
+                bookings: { include: { payment: { select: { status: true } } } },
                 host: true,
                 dishes: { orderBy: { order: 'asc' } },
                 reviews: {
@@ -113,6 +137,19 @@ export class PrismaEventRepository implements EventRepository {
         return this.mapToDomain(event);
     }
 
+    async findByCreationKey(creationKey: string): Promise<Event | null> {
+        const event = await prisma.event.findUnique({
+            where: { creationKey },
+            include: {
+                bookings: { include: { payment: { select: { status: true } } } },
+                host: true,
+                dishes: { orderBy: { order: 'asc' } },
+                questions: { orderBy: { order: 'asc' } },
+            },
+        });
+        return event ? this.mapToDomain(event) : null;
+    }
+
     async update(id: string, data: UpdateEventDTO): Promise<Event> {
         const { questions, dishes, ...eventData } = data;
         const updateData: any = {};
@@ -125,6 +162,8 @@ export class PrismaEventRepository implements EventRepository {
         if (eventData.endTime !== undefined) updateData.endTime = eventData.endTime;
         if (eventData.reservationDeadline !== undefined) updateData.reservationDeadline = eventData.reservationDeadline;
         if (eventData.location !== undefined) updateData.location = eventData.location;
+        if (eventData.city !== undefined) updateData.city = eventData.city;
+        if (eventData.state !== undefined) updateData.state = eventData.state;
         if (eventData.latitude !== undefined) updateData.latitude = eventData.latitude;
         if (eventData.longitude !== undefined) updateData.longitude = eventData.longitude;
         if (eventData.coverImageUrl !== undefined) updateData.coverImageUrl = eventData.coverImageUrl;
@@ -135,17 +174,21 @@ export class PrismaEventRepository implements EventRepository {
         if (eventData.facilities !== undefined) updateData.facilities = eventData.facilities;
         if (eventData.rules !== undefined) updateData.rules = eventData.rules;
         if (eventData.dietaryOptions !== undefined) updateData.dietaryOptions = eventData.dietaryOptions;
-        if (eventData.accessType !== undefined) updateData.accessType = eventData.accessType;
-        if (eventData.requiresApproval !== undefined) updateData.requiresApproval = eventData.requiresApproval;
+        if (eventData.isServedInSequence !== undefined) updateData.isServedInSequence = eventData.isServedInSequence;
+        if (eventData.accessType !== undefined) {
+            updateData.accessType = eventData.accessType;
+            updateData.requiresApproval = eventData.accessType === 'OPEN_WITH_APPROVAL';
+        }
         if (eventData.allowWaitlist !== undefined) updateData.allowWaitlist = eventData.allowWaitlist;
         if (eventData.autoApproveIfAttended !== undefined) updateData.autoApproveIfAttended = eventData.autoApproveIfAttended;
         if (eventData.autoApproveMinRating !== undefined) updateData.autoApproveMinRating = eventData.autoApproveMinRating;
 
+        return prisma.$transaction(async (tx) => {
         // Replace dishes if provided
         if (dishes !== undefined) {
-            await prisma.eventDish.deleteMany({ where: { eventId: id } });
+            await tx.eventDish.deleteMany({ where: { eventId: id } });
             if (dishes.length > 0) {
-                await prisma.eventDish.createMany({
+                await tx.eventDish.createMany({
                     data: dishes.map((d, idx) => ({
                         eventId: id,
                         name: d.name,
@@ -159,9 +202,9 @@ export class PrismaEventRepository implements EventRepository {
 
         // Replace questions if provided
         if (questions !== undefined) {
-            await prisma.eventQuestion.deleteMany({ where: { eventId: id } });
+            await tx.eventQuestion.deleteMany({ where: { eventId: id } });
             if (questions.length > 0) {
-                await prisma.eventQuestion.createMany({
+                await tx.eventQuestion.createMany({
                     data: questions.map((q, idx) => ({
                         eventId: id,
                         question: q.question,
@@ -174,7 +217,7 @@ export class PrismaEventRepository implements EventRepository {
             }
         }
 
-        const event = await prisma.event.update({
+        const event = await tx.event.update({
             where: { id },
             data: updateData,
             include: {
@@ -190,6 +233,7 @@ export class PrismaEventRepository implements EventRepository {
         });
 
         return this.mapToDomain(event);
+        });
     }
 
     async delete(id: string): Promise<void> {
@@ -211,6 +255,8 @@ export class PrismaEventRepository implements EventRepository {
             endTime: prismaEvent.endTime,
             reservationDeadline: prismaEvent.reservationDeadline,
             location: prismaEvent.location,
+            city: prismaEvent.city ?? null,
+            state: prismaEvent.state ?? null,
             latitude: prismaEvent.latitude,
             longitude: prismaEvent.longitude,
             coverImageUrl: prismaEvent.coverImageUrl,
@@ -221,6 +267,8 @@ export class PrismaEventRepository implements EventRepository {
             facilities: prismaEvent.facilities || [],
             rules: prismaEvent.rules || [],
             dietaryOptions: prismaEvent.dietaryOptions || [],
+            isServedInSequence: prismaEvent.isServedInSequence ?? false,
+            creationKey: prismaEvent.creationKey ?? null,
             hostId: prismaEvent.hostId,
             accessType: prismaEvent.accessType,
             requiresApproval: prismaEvent.requiresApproval,
@@ -228,7 +276,7 @@ export class PrismaEventRepository implements EventRepository {
             autoApproveIfAttended: prismaEvent.autoApproveIfAttended,
             autoApproveMinRating: prismaEvent.autoApproveMinRating?.toNumber() || null,
             createdAt: prismaEvent.createdAt,
-            updatedAt: prismaEvent.updatedAt,
+            updatedAt: prismaEvent.updatedAt ?? prismaEvent.updated_at,
             host: prismaEvent.host ? {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,
@@ -258,7 +306,8 @@ export class PrismaEventRepository implements EventRepository {
                 attendedBefore: b.attendedBefore,
                 noShowCount: b.noShowCount,
                 createdAt: b.createdAt,
-                updatedAt: b.updatedAt
+                updatedAt: b.updatedAt,
+                paymentStatus: b.payment?.status,
             })) : [],
             dishes: prismaEvent.dishes ? prismaEvent.dishes.map((d: any) => ({
                 id: d.id,

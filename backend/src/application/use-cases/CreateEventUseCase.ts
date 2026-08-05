@@ -4,6 +4,7 @@ import { UserRepository } from '../../domain/repositories/UserRepository';
 import { CreateEventDTO, Event } from '../../domain/entities/Event';
 import { QuestionType } from '../../domain/value-objects/QuestionType';
 import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice } from '../../domain/constants/payments';
+import { EventCreationError } from '../errors/EventCreationError';
 
 export class CreateEventUseCase {
     constructor(
@@ -13,36 +14,54 @@ export class CreateEventUseCase {
     ) { }
 
     async execute(data: CreateEventDTO): Promise<Event> {
+        if (data.creationKey && this.eventRepository.findByCreationKey) {
+            const existingEvent = await this.eventRepository.findByCreationKey(data.creationKey);
+            if (existingEvent) return existingEvent;
+        }
+
         if (data.maxGuests < 1) {
-            throw new Error('Event must have at least 1 guest');
+            throw new EventCreationError('INVALID_EVENT', 'Revise os dados do evento', {
+                maxGuests: 'O evento deve aceitar pelo menos uma pessoa',
+            });
         }
 
         if (!isValidEventPrice(Number(data.price))) {
-            throw new Error(INVALID_EVENT_PRICE_MESSAGE);
+            throw new EventCreationError('INVALID_EVENT_PRICE', INVALID_EVENT_PRICE_MESSAGE, {
+                price: INVALID_EVENT_PRICE_MESSAGE,
+            });
         }
 
         // Validate host exists
         const host = await this.userRepository.findById(data.hostId);
         if (!host) {
-            throw new Error('Host user not found');
+            throw new EventCreationError('HOST_NOT_FOUND', 'Perfil do anfitrião não encontrado', {}, 404);
         }
 
-        const event = await this.eventRepository.create(data);
-
-        // Save custom questions if any
-        if (data.questions && data.questions.length > 0) {
-            await this.eventQuestionRepository.createMany(
-                data.questions.map((q, index) => ({
-                    eventId: event.id,
-                    question: q.question,
-                    questionType: q.questionType as QuestionType,
-                    options: q.options || [],
-                    required: q.required,
-                    order: index
-                }))
-            );
+        if (Number(data.price) > 0) {
+            const fieldErrors: Record<string, string> = {};
+            if (host.kycStatus !== 'APPROVED') {
+                fieldErrors.kyc = 'Conclua a verificação de identidade antes de publicar um evento pago';
+            }
+            if (!host.pixKey || !host.pixKeyType) {
+                fieldErrors.pixKey = 'Cadastre uma chave Pix para receber pelos seus eventos';
+            }
+            if (Object.keys(fieldErrors).length > 0) {
+                throw new EventCreationError(
+                    'HOST_PAYOUT_SETUP_REQUIRED',
+                    'Configure o recebimento antes de publicar este evento',
+                    fieldErrors,
+                );
+            }
         }
 
-        return event;
+        try {
+            return await this.eventRepository.create(data);
+        } catch (error: any) {
+            if (data.creationKey && error?.code === 'P2002' && this.eventRepository.findByCreationKey) {
+                const existingEvent = await this.eventRepository.findByCreationKey(data.creationKey);
+                if (existingEvent) return existingEvent;
+            }
+            throw error;
+        }
     }
 }

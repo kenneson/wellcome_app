@@ -86,7 +86,10 @@ describe('CreateEventUseCase', () => {
             events: [],
             bookings: [],
             expoPushToken: null,
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            kycStatus: 'APPROVED',
+            pixKey: 'test@example.com',
+            pixKeyType: 'EMAIL',
         };
 
         // Explicitly construct Event without spread to avoid type issues with questions
@@ -163,7 +166,7 @@ describe('CreateEventUseCase', () => {
 
         mockUserRepository.findById.mockResolvedValue(null);
 
-        await expect(createEventUseCase.execute(eventData)).rejects.toThrow('Host user not found');
+        await expect(createEventUseCase.execute(eventData)).rejects.toMatchObject({ code: 'HOST_NOT_FOUND' });
         expect(mockEventRepository.create).not.toHaveBeenCalled();
     });
 
@@ -196,7 +199,10 @@ describe('CreateEventUseCase', () => {
             dietaryOptions: [],
         };
 
-        await expect(createEventUseCase.execute(eventData)).rejects.toThrow('Event must have at least 1 guest');
+        await expect(createEventUseCase.execute(eventData)).rejects.toMatchObject({
+            code: 'INVALID_EVENT',
+            fieldErrors: { maxGuests: expect.any(String) },
+        });
         expect(mockUserRepository.findById).not.toHaveBeenCalled();
         expect(mockEventRepository.create).not.toHaveBeenCalled();
     });
@@ -208,9 +214,34 @@ describe('CreateEventUseCase', () => {
         } as CreateEventDTO;
 
         await expect(createEventUseCase.execute(eventData)).rejects.toThrow(
-            'Eventos pagos devem custar no minimo R$ 5,00 ou ser gratuitos'
+            'Eventos pagos devem custar entre R$ 5,00 e R$ 100.000,00, ou ser gratuitos'
         );
         expect(mockUserRepository.findById).not.toHaveBeenCalled();
+        expect(mockEventRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should block a paid event when payout setup is incomplete', async () => {
+        mockUserRepository.findById.mockResolvedValue({
+            id: 'host-123',
+            fullName: 'Host',
+            avatarUrl: null,
+            updatedAt: new Date(),
+            kycStatus: 'PENDING',
+            pixKey: null,
+            pixKeyType: null,
+        });
+
+        await expect(createEventUseCase.execute({
+            hostId: 'host-123',
+            price: 50,
+            maxGuests: 8,
+        } as CreateEventDTO)).rejects.toMatchObject({
+            code: 'HOST_PAYOUT_SETUP_REQUIRED',
+            fieldErrors: {
+                kyc: expect.any(String),
+                pixKey: expect.any(String),
+            },
+        });
         expect(mockEventRepository.create).not.toHaveBeenCalled();
     });
 });

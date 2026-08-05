@@ -11,6 +11,8 @@ export interface Event {
     endTime: Date | null;
     reservationDeadline: Date | null;
     location: string;
+    city?: string | null;
+    state?: string | null;
     latitude: number | null;
     longitude: number | null;
     distanceKm?: number;
@@ -22,6 +24,8 @@ export interface Event {
     facilities: string[];
     rules: string[];
     dietaryOptions: string[];
+    isServedInSequence?: boolean;
+    creationKey?: string | null;
     hostId: string;
     host?: import('./User').User;
     bookings?: import('./EventRegistration').EventRegistration[];

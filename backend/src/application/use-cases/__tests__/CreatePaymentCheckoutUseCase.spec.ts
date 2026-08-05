@@ -143,7 +143,7 @@ describe('CreatePaymentCheckoutUseCase', () => {
             bookingId: 'booking-1',
             eventId: 'event-1',
             userId: 'user-1',
-        })).rejects.toThrow('Eventos pagos devem custar no minimo R$ 5,00 ou ser gratuitos');
+        })).rejects.toThrow('Eventos pagos devem custar entre R$ 5,00 e R$ 100.000,00, ou ser gratuitos');
 
         expect(registrationRepository.findById).not.toHaveBeenCalled();
         expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
