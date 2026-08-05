@@ -89,7 +89,7 @@ describe('EventDraftService', () => {
         });
     });
 
-    it('publishes without sending a JSON content type for an empty body', async () => {
+    it('publishes with a valid empty JSON object', async () => {
         const fetchMock = jest.fn().mockResolvedValue({
             status: 200,
             ok: true,
@@ -103,13 +103,14 @@ describe('EventDraftService', () => {
             expect.stringContaining('/event-drafts/draft-1/publish'),
             expect.objectContaining({
                 method: 'POST',
+                body: '{}',
                 headers: {
+                    'Content-Type': 'application/json',
                     Authorization: 'Bearer test-access-token',
                     'Idempotency-Key': 'publish-key',
                 },
             }),
         );
-        expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('body');
     });
 
     it('deletes a draft without sending an empty JSON body', async () => {

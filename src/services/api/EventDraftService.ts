@@ -99,6 +99,7 @@ class EventDraftService {
     async publish(id: string, idempotencyKey: string): Promise<Event> {
         return this.request(`/event-drafts/${id}/publish`, {
             method: 'POST',
+            body: JSON.stringify({}),
             headers: { 'Idempotency-Key': idempotencyKey },
         });
     }
