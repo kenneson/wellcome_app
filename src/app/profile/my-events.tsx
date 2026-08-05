@@ -10,10 +10,18 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type EventFilter = 'todos' | 'ativos' | 'concluidos' | 'rascunhos';
+
+const DRAFT_STEP_ROUTES = [
+    '/events/create',
+    '/events/create/menu',
+    '/events/create/location',
+    '/events/create/details',
+    '/events/create/settings',
+] as const;
 
 export default function MyEventsScreen() {
     const router = useRouter();
@@ -121,20 +129,23 @@ export default function MyEventsScreen() {
     const renderDraft = ({ item }: { item: EventDraftRecord }) => {
         const payload = item.payload as any;
         const title = payload.details?.title?.trim() || 'Evento em criação';
-        const cover = payload.details?.coverImage;
+        const cover = payload.details?.coverImage
+            || payload.details?.coverImageUrl
+            || payload.coverImage
+            || payload.coverImageUrl;
+        const savedStep = Math.min(Math.max(Number(item.currentStep) || 0, 0), DRAFT_STEP_ROUTES.length - 1);
         return (
             <View style={styles.card}>
-                {cover ? <Image source={{ uri: cover }} style={styles.cardImage} contentFit="cover" /> : (
-                    <View style={[styles.cardImage, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6' }]}>
-                        <Ionicons name="restaurant-outline" size={36} color="#9CA3AF" />
-                    </View>
-                )}
+                <DraftCover uri={getOptimizedImageUrl(cover, { width: 500 })} />
                 <View style={styles.cardContent}>
                     <Text style={{ fontSize: 18, fontWeight: '800', color: '#202124' }}>{title}</Text>
-                    <Text style={{ fontSize: 13, color: '#73787E', marginTop: 5 }}>Etapa {item.currentStep + 1} de 5 · salvo {new Date(item.updatedAt).toLocaleDateString('pt-BR')}</Text>
+                    <Text style={{ fontSize: 13, color: '#73787E', marginTop: 5 }}>Etapa {savedStep + 1} de 5 · salvo {new Date(item.updatedAt).toLocaleDateString('pt-BR')}</Text>
                 </View>
                 <View style={styles.cardActions}>
-                    <TouchableOpacity style={styles.actionButton} onPress={() => router.push(`/events/create?draftId=${item.id}` as any)}>
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => router.push({ pathname: DRAFT_STEP_ROUTES[savedStep], params: { draftId: item.id } } as any)}
+                    >
                         <Text style={styles.actionButtonText}>Continuar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -336,7 +347,12 @@ export default function MyEventsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.filterTabs}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterTabsScroll}
+                    contentContainerStyle={styles.filterTabs}
+                >
                     {(['todos', 'ativos', 'concluidos', 'rascunhos'] as EventFilter[]).map((filter) => (
                         <TouchableOpacity
                             key={filter}
@@ -346,14 +362,14 @@ export default function MyEventsScreen() {
                             <Text style={[
                                 styles.filterText, 
                                 activeFilter === filter && styles.activeFilterText
-                            ]}>
+                            ]} numberOfLines={1}>
                                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
                                 {filter === 'ativos' && ` (${events.filter(e => !isEventRegistrationClosed(e)).length})`}
                                 {filter === 'rascunhos' && ` (${drafts.length})`}
                             </Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </ScrollView>
 
                 {loading ? (
                     <ActivityIndicator size="large" color="#FF8C42" style={{ marginTop: 40 }} />
@@ -381,6 +397,29 @@ export default function MyEventsScreen() {
                     />
                 )}
             </View>
+        </View>
+    );
+}
+
+function DraftCover({ uri }: { uri?: string }) {
+    const [hasError, setHasError] = useState(false);
+
+    return (
+        <View style={styles.draftImageContainer}>
+            {uri && !hasError ? (
+                <Image
+                    source={{ uri }}
+                    style={styles.cardImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    onError={() => setHasError(true)}
+                />
+            ) : (
+                <View style={styles.draftImageFallback}>
+                    <Ionicons name="restaurant-outline" size={36} color="#9CA3AF" />
+                    <Text style={styles.draftImageFallbackText}>Capa pendente</Text>
+                </View>
+            )}
         </View>
     );
 }
@@ -461,12 +500,17 @@ const styles = StyleSheet.create({
     filterTabs: {
         flexDirection: 'row',
         paddingHorizontal: 16,
-        marginBottom: 16,
         gap: 8,
+    },
+    filterTabsScroll: {
+        flexGrow: 0,
+        marginBottom: 16,
     },
     filterTab: {
         paddingVertical: 6,
         paddingHorizontal: 16,
+        minWidth: 76,
+        flexShrink: 0,
         borderRadius: 20,
         backgroundColor: '#fff',
         borderWidth: 1,
@@ -506,6 +550,22 @@ const styles = StyleSheet.create({
     cardImage: {
         width: '100%',
         height: '100%',
+    },
+    draftImageContainer: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        backgroundColor: '#F3F4F6',
+    },
+    draftImageFallback: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    draftImageFallbackText: {
+        color: '#9CA3AF',
+        fontSize: 12,
+        fontWeight: '600',
     },
     imageOverlay: {
         position: 'absolute',
