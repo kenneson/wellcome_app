@@ -101,7 +101,7 @@ class LocationService {
     }
 
     /**
-     * Search addresses through the authenticated Mapbox proxy.
+     * Search addresses through the authenticated geocoding proxy.
      */
     async searchAddresses(query: string, sessionToken: string, proximity?: { latitude: number; longitude: number }): Promise<GeocodingSuggestion[]> {
         if (!query.trim() || query.length < 3) {

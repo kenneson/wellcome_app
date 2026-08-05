@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { MapboxLocationService } from '../../../infrastructure/external/MapboxLocationService';
+import { GeoapifyLocationService } from '../../../infrastructure/external/GeoapifyLocationService';
 import { getAuthenticatedUserId, UnauthorizedRequestError } from '../helpers/auth';
 
 const suggestSchema = z.object({
@@ -15,7 +15,7 @@ const reverseSchema = z.object({
 });
 
 export class LocationController {
-    constructor(private readonly locations: MapboxLocationService) {}
+    constructor(private readonly locations: GeoapifyLocationService) {}
 
     async suggest(request: FastifyRequest, reply: FastifyReply) {
         return this.handle(request, reply, async () => {
@@ -51,7 +51,7 @@ export class LocationController {
             if (error instanceof z.ZodError) {
                 return reply.code(400).send({ code: 'INVALID_LOCATION_QUERY', message: 'Busca de endereço inválida', fieldErrors: {} });
             }
-            if (error?.message === 'MAPBOX_NOT_CONFIGURED') {
+            if (error?.message === 'GEOAPIFY_NOT_CONFIGURED') {
                 return reply.code(503).send({ code: 'LOCATION_SERVICE_UNAVAILABLE', message: 'Busca de endereços indisponível', fieldErrors: {} });
             }
             request.log.error({ err: error }, 'Location lookup failed');

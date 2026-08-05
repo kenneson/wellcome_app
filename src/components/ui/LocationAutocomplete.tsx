@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
+    Linking,
     Modal,
     Platform,
     StyleSheet,
@@ -225,6 +226,16 @@ export function LocationAutocomplete({
                     <Text style={styles.emptyText}>Nenhum resultado encontrado</Text>
                 </View>
             )}
+
+            {type === 'address' && query.length > 2 && (
+                <TouchableOpacity
+                    accessibilityRole="link"
+                    onPress={() => void Linking.openURL('https://www.geoapify.com/')}
+                    style={styles.attribution}
+                >
+                    <Text style={styles.attributionText}>Powered by Geoapify</Text>
+                </TouchableOpacity>
+            )}
         </View>
     );
 
@@ -351,5 +362,16 @@ const styles = StyleSheet.create({
         color: '#999',
         fontSize: 14,
         marginTop: 12,
+    },
+    attribution: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 44,
+        paddingHorizontal: 16,
+    },
+    attributionText: {
+        color: '#6B7280',
+        fontSize: 12,
+        textDecorationLine: 'underline',
     },
 });

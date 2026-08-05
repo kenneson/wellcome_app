@@ -31,7 +31,7 @@ import { SendNotificationUseCase } from './application/use-cases/SendNotificatio
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
 import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProfileUseCase';
 import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
-import { MapboxLocationService } from './infrastructure/external/MapboxLocationService';
+import { GeoapifyLocationService } from './infrastructure/external/GeoapifyLocationService';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaBillingRepository } from './infrastructure/repositories/PrismaBillingRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
@@ -175,7 +175,7 @@ const start = async () => {
         const withdrawalRepository = new PrismaWithdrawalRequestRepository();
         const webhookEventRepository = new PrismaWebhookEventRepository();
         const asaasPaymentService = new AsaasPaymentService();
-        const mapboxLocationService = new MapboxLocationService();
+        const geoapifyLocationService = new GeoapifyLocationService();
 
         // Use Cases
         const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
@@ -265,7 +265,7 @@ const start = async () => {
         );
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
-        const locationController = new LocationController(mapboxLocationService);
+        const locationController = new LocationController(geoapifyLocationService);
         const moderationController = new ModerationController(moderationRepository);
         const paymentController = new PaymentController(
             createPaymentCheckoutUseCase,
@@ -353,7 +353,7 @@ const start = async () => {
         }, (req, reply) => locationController.suggest(req, reply));
 
         fastify.get('/locations/retrieve/:id', {
-            schema: { summary: 'Resolve a Mapbox address', tags: ['General'] },
+            schema: { summary: 'Resolve a Brazilian address', tags: ['General'] },
         }, (req, reply) => locationController.retrieve(req, reply));
 
         fastify.get('/locations/reverse', {
