@@ -1,86 +1,26 @@
-import { useState } from 'react';
-import { Platform, Alert } from 'react-native';
-import { useEventCreation } from '@/shared/context/EventCreationContext';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
 
 export function useEventDetailsViewModel() {
-    const router = useRouter();
-    const { data, updateDetails, submitEvent } = useEventCreation();
-    const [submitting, setSubmitting] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
-
-    const formatDate = (date: Date | null) => {
-        if (!date) return 'Selecione';
-        return date.toLocaleDateString('pt-BR');
-    };
-
-    const handleDateChange = (event: any, selectedDate?: Date) => {
-        setShowDatePicker(Platform.OS === 'ios');
-        if (selectedDate) {
-            updateDetails({ date: selectedDate });
-        }
-    };
-
-    const handleDeadlineChange = (event: any, selectedDate?: Date) => {
-        setShowDeadlinePicker(Platform.OS === 'ios');
-        if (selectedDate) {
-            updateDetails({ registrationDeadline: selectedDate });
-        }
-    };
+    const { data, updateDetails } = useEventCreation();
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [16, 9],
-            quality: 1,
+            quality: 0.82,
         });
-
-        if (!result.canceled) {
-            updateDetails({ coverImage: result.assets[0].uri });
+        if (!result.canceled && result.assets[0]?.uri) {
+            const compressed = await ImageManipulator.manipulateAsync(
+                result.assets[0].uri,
+                [],
+                { compress: 0.78, format: ImageManipulator.SaveFormat.JPEG },
+            );
+            updateDetails({ coverImage: compressed.uri });
         }
     };
 
-    const handleSubmit = async () => {
-        if (!data.details.title || !data.details.pricePerGuest || !data.details.maxGuests || !data.details.date) {
-            Alert.alert('Dados incompletos', 'Preencha todos os campos obrigatórios (Título, Preço, Vagas, Data).');
-            return;
-        }
-
-        const price = parseEventPrice(data.details.pricePerGuest);
-        if (!isValidEventPrice(price)) {
-            Alert.alert('Valor invalido', INVALID_EVENT_PRICE_MESSAGE);
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            await submitEvent();
-            Alert.alert('Sucesso', 'Evento criado com sucesso!', [
-                { text: 'OK', onPress: () => router.push('/(tabs)') }
-            ]);
-        } catch (error: any) {
-            Alert.alert('Erro', `Não foi possível criar o evento: ${error.message || 'Erro desconhecido'}`);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return {
-        data,
-        submitting,
-        showDatePicker,
-        setShowDatePicker,
-        showDeadlinePicker,
-        setShowDeadlinePicker,
-        formatDate,
-        handleDateChange,
-        handleDeadlineChange,
-        pickImage,
-        handleSubmit,
-        updateDetails
-    };
+    return { data, updateDetails, pickImage };
 }

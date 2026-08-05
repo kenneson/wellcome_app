@@ -28,6 +28,9 @@ export function SelectionPill({ label, selected, onPress }: SelectionPillProps) 
             onPress={onPress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
+            accessibilityRole="checkbox"
+            accessibilityLabel={label}
+            accessibilityState={{ checked: selected }}
         >
             <Animated.View style={animatedStyle}>
                 <View

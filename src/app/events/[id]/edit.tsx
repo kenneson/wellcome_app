@@ -1,11 +1,13 @@
 import { SelectionSection } from '@/components/ui/SelectionSection';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
+import { LocationMap } from '@/components/ui/LocationMap';
 import { eventService } from '@/services/api/EventService';
 import { EventCreationProvider, useEventCreation } from '@/shared/context/EventCreationContext';
 import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,27 +47,34 @@ function EditEventForm() {
     const [saving, setSaving] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [showLocationSearch, setShowLocationSearch] = useState(false);
+    const loadEventRef = useRef(loadEvent);
+    loadEventRef.current = loadEvent;
 
-    useEffect(() => {
-        if (id) fetchEvent();
-    }, [id]);
-
-    async function fetchEvent() {
+    const fetchEvent = useCallback(async () => {
         try {
             setLoading(true);
             const eventData = await eventService.getEventById(id as string);
-            loadEvent(eventData);
-        } catch (error: any) {
+            loadEventRef.current(eventData);
+        } catch {
             Alert.alert('Erro', 'Não foi possível carregar o evento.');
             router.back();
         } finally {
             setLoading(false);
         }
-    }
+    }, [id, router]);
+
+    useEffect(() => {
+        if (id) void fetchEvent();
+    }, [id, fetchEvent]);
 
     async function handleSave() {
-        if (!data.details.title || !data.details.pricePerGuest.trim() || !data.details.date || !data.location.address) {
-            Alert.alert('Erro', 'Preencha os campos obrigatórios (Título, Data, Local).');
+        if (
+            !data.details.title || !data.details.pricePerGuest.trim() || !data.details.date ||
+            !data.location.address || !data.location.city || !data.location.state ||
+            data.location.latitude === null || data.location.longitude === null || !data.location.confirmed
+        ) {
+            Alert.alert('Revise o evento', 'Confirme titulo, data e localizacao completa antes de salvar.');
             return;
         }
 
@@ -91,12 +100,15 @@ function EditEventForm() {
         setShowDatePicker(false);
         if (selectedDate && data.details.date) {
             const currentDate = data.details.date;
+            const duration = data.details.endTime && data.details.endTime > currentDate
+                ? data.details.endTime.getTime() - currentDate.getTime()
+                : 4 * 60 * 60 * 1000;
             const newDate = new Date(selectedDate);
             newDate.setHours(currentDate.getHours());
             newDate.setMinutes(currentDate.getMinutes());
-            updateDetails({ date: newDate });
+            updateDetails({ date: newDate, endTime: new Date(newDate.getTime() + duration) });
         } else if (selectedDate) {
-            updateDetails({ date: selectedDate });
+            updateDetails({ date: selectedDate, endTime: new Date(selectedDate.getTime() + 4 * 60 * 60 * 1000) });
         }
     };
 
@@ -104,10 +116,14 @@ function EditEventForm() {
         setShowTimePicker(false);
         if (selectedDate && data.details.date) {
             const currentDate = data.details.date;
+            const duration = data.details.endTime && data.details.endTime > currentDate
+                ? data.details.endTime.getTime() - currentDate.getTime()
+                : 4 * 60 * 60 * 1000;
             const newTime = new Date(selectedDate);
-            currentDate.setHours(newTime.getHours());
-            currentDate.setMinutes(newTime.getMinutes());
-            updateDetails({ date: new Date(currentDate) }); // Force new reference
+            const nextStart = new Date(currentDate);
+            nextStart.setHours(newTime.getHours());
+            nextStart.setMinutes(newTime.getMinutes());
+            updateDetails({ date: nextStart, endTime: new Date(nextStart.getTime() + duration) });
         }
     };
 
@@ -216,13 +232,28 @@ function EditEventForm() {
                 {/* Location */}
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Localização (Endereço)</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={data.location.address}
-                        onChangeText={(text) => updateLocation({ address: text })}
-                        placeholder="Endereço completo"
-                    />
+                    <TouchableOpacity style={styles.locationButton} onPress={() => setShowLocationSearch(true)}>
+                        <Ionicons name="search" size={19} color="#C45D22" />
+                        <View style={styles.locationTextContainer}>
+                            <Text style={data.location.address ? styles.locationText : styles.locationPlaceholder} numberOfLines={2}>
+                                {data.location.address || 'Buscar endereco completo'}
+                            </Text>
+                            {!!data.location.city && <Text style={styles.locationCity}>{data.location.city} - {data.location.state}</Text>}
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#73787E" />
+                    </TouchableOpacity>
                 </View>
+
+                {data.location.latitude !== null && data.location.longitude !== null && (
+                    <View style={styles.inputGroup}>
+                        <LocationMap
+                            latitude={data.location.latitude}
+                            longitude={data.location.longitude}
+                            confirmed={data.location.confirmed}
+                            onConfirm={({ latitude, longitude }) => updateLocation({ latitude, longitude, confirmed: true })}
+                        />
+                    </View>
+                )}
 
                 {/* Guests & Price */}
                 <View style={styles.row}>
@@ -279,6 +310,24 @@ function EditEventForm() {
 
                 <View style={{ height: 40 }} />
             </KeyboardAwareScrollView>
+
+            <LocationAutocomplete
+                type="address"
+                value={data.location.address}
+                visible={showLocationSearch}
+                asModal
+                onClose={() => setShowLocationSearch(false)}
+                onSelectAddress={(result) => updateLocation({
+                    address: result.displayName,
+                    city: result.city,
+                    state: result.stateCode || result.state,
+                    neighborhood: result.neighborhood,
+                    postalCode: result.postalCode,
+                    latitude: result.lat,
+                    longitude: result.lon,
+                    confirmed: false,
+                })}
+            />
         </SafeAreaView>
     );
 }
@@ -365,6 +414,34 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 12,
         alignItems: 'center',
+    },
+    locationButton: {
+        minHeight: 56,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    locationTextContainer: {
+        flex: 1,
+    },
+    locationText: {
+        color: '#333',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    locationPlaceholder: {
+        color: '#73787E',
+        fontSize: 15,
+    },
+    locationCity: {
+        color: '#73787E',
+        fontSize: 12,
+        marginTop: 3,
     },
     divider: {
         height: 1,

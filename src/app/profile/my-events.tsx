@@ -1,4 +1,5 @@
 import { eventService } from '@/services/api/EventService';
+import { EventDraftRecord, eventDraftService } from '@/services/api/EventDraftService';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
 import { getEventStart, isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
@@ -12,11 +13,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type EventFilter = 'todos' | 'ativos' | 'concluidos';
+type EventFilter = 'todos' | 'ativos' | 'concluidos' | 'rascunhos';
 
 export default function MyEventsScreen() {
     const router = useRouter();
     const [events, setEvents] = useState<any[]>([]);
+    const [drafts, setDrafts] = useState<EventDraftRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<EventFilter>('todos');
 
@@ -29,6 +31,8 @@ export default function MyEventsScreen() {
             setLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
+
+            const draftRequest = eventDraftService.list();
 
             // Fetch events with participant count
             const { data, error } = await supabase
@@ -51,6 +55,7 @@ export default function MyEventsScreen() {
             })) || [];
 
             setEvents(formattedEvents);
+            setDrafts(await draftRequest);
         } catch (error: any) {
             Alert.alert('Erro', error.message);
         } finally {
@@ -80,22 +85,75 @@ export default function MyEventsScreen() {
         );
     }
 
+    function handleDeleteDraft(item: EventDraftRecord) {
+        Alert.alert('Excluir rascunho?', 'Esta acao nao pode ser desfeita.', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Excluir',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await eventDraftService.delete(item.id);
+                        const cover = (item.payload as any).details?.coverImage;
+                        if (cover) await eventService.deleteUploadedImage(cover);
+                        await eventDraftService.removeLocal(item.id);
+                        setDrafts((current) => current.filter((draft) => draft.id !== item.id));
+                    } catch (error: any) {
+                        Alert.alert('Nao foi possivel excluir', error.message || 'Tente novamente.');
+                    }
+                },
+            },
+        ]);
+    }
+
     const filteredEvents = useMemo(() => {
         const now = new Date();
         return events.filter(event => {
             const isPast = isEventRegistrationClosed(event, now);
 
+            if (activeFilter === 'rascunhos') return false;
             if (activeFilter === 'ativos') return !isPast;
             if (activeFilter === 'concluidos') return isPast;
             return true;
         });
     }, [events, activeFilter]);
 
+    const renderDraft = ({ item }: { item: EventDraftRecord }) => {
+        const payload = item.payload as any;
+        const title = payload.details?.title?.trim() || 'Evento em criação';
+        const cover = payload.details?.coverImage;
+        return (
+            <View style={styles.card}>
+                {cover ? <Image source={{ uri: cover }} style={styles.cardImage} contentFit="cover" /> : (
+                    <View style={[styles.cardImage, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6' }]}>
+                        <Ionicons name="restaurant-outline" size={36} color="#9CA3AF" />
+                    </View>
+                )}
+                <View style={styles.cardContent}>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#202124' }}>{title}</Text>
+                    <Text style={{ fontSize: 13, color: '#73787E', marginTop: 5 }}>Etapa {item.currentStep + 1} de 5 · salvo {new Date(item.updatedAt).toLocaleDateString('pt-BR')}</Text>
+                </View>
+                <View style={styles.cardActions}>
+                    <TouchableOpacity style={styles.actionButton} onPress={() => router.push(`/events/create?draftId=${item.id}` as any)}>
+                        <Text style={styles.actionButtonText}>Continuar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.secondaryButton]}
+                        onPress={() => handleDeleteDraft(item)}
+                    >
+                        <Ionicons name="trash-outline" size={18} color="#B33A34" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
     const renderItem = ({ item }: { item: any }) => {
         const eventDate = getEventStart(item) ?? new Date(0);
         const now = new Date();
         const isPast = isEventRegistrationClosed(item, now);
         const eventAlreadyStarted = eventDate <= now;
+        const needsLocationReview = !item.city || !item.state;
         const progress = Math.min((item.participants_count || 0) / (item.max_guests || 1), 1);
 
         if (isPast) {
@@ -136,6 +194,14 @@ export default function MyEventsScreen() {
                             </Text>
                         </View>
                     </View>
+
+                    {needsLocationReview && (
+                        <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)}>
+                            <Ionicons name="warning-outline" size={18} color="#8A4B08" />
+                            <Text style={styles.locationReviewText}>Confirme a cidade e o estado deste evento</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#8A4B08" />
+                        </TouchableOpacity>
+                    )}
 
                     <View style={styles.actionRow}>
                         <TouchableOpacity style={styles.secondaryAction} onPress={() => router.push(`/events/${item.id}`)}>
@@ -198,6 +264,14 @@ export default function MyEventsScreen() {
                         </View>
                     </View>
                 </View>
+
+                {needsLocationReview && (
+                    <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)}>
+                        <Ionicons name="warning-outline" size={18} color="#8A4B08" />
+                        <Text style={styles.locationReviewText}>Confirme a cidade e o estado deste evento</Text>
+                        <Ionicons name="chevron-forward" size={18} color="#8A4B08" />
+                    </TouchableOpacity>
+                )}
 
                 <View style={styles.cardActions}>
                     <TouchableOpacity 
@@ -263,7 +337,7 @@ export default function MyEventsScreen() {
                 </View>
 
                 <View style={styles.filterTabs}>
-                    {(['todos', 'ativos', 'concluidos'] as EventFilter[]).map((filter) => (
+                    {(['todos', 'ativos', 'concluidos', 'rascunhos'] as EventFilter[]).map((filter) => (
                         <TouchableOpacity
                             key={filter}
                             style={[styles.filterTab, activeFilter === filter && styles.activeFilterTab]}
@@ -275,6 +349,7 @@ export default function MyEventsScreen() {
                             ]}>
                                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
                                 {filter === 'ativos' && ` (${events.filter(e => !isEventRegistrationClosed(e)).length})`}
+                                {filter === 'rascunhos' && ` (${drafts.length})`}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -284,9 +359,9 @@ export default function MyEventsScreen() {
                     <ActivityIndicator size="large" color="#FF8C42" style={{ marginTop: 40 }} />
                 ) : (
                     <FlatList
-                        data={filteredEvents}
+                        data={activeFilter === 'rascunhos' ? drafts : filteredEvents}
                         keyExtractor={item => item.id}
-                        renderItem={renderItem}
+                        renderItem={activeFilter === 'rascunhos' ? renderDraft as any : renderItem}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
@@ -532,6 +607,23 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: '#FF8C42',
         borderRadius: 3,
+    },
+    locationReview: {
+        minHeight: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: '#FFF7E6',
+        borderTopWidth: 1,
+        borderTopColor: '#F6D58A',
+    },
+    locationReviewText: {
+        flex: 1,
+        color: '#8A4B08',
+        fontSize: 13,
+        fontWeight: '700',
     },
     cardActions: {
         flexDirection: 'row',

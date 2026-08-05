@@ -16,6 +16,9 @@ export function Checkbox({ label, checked, onChange, style }: CheckboxProps) {
             style={[styles.container, style]}
             onPress={() => onChange(!checked)}
             activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityLabel={label}
+            accessibilityState={{ checked }}
         >
             <RCheckbox
                 checked={checked}

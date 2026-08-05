@@ -3,7 +3,7 @@ import { EventCreationProvider } from '@/shared/context/EventCreationContext';
 
 export default function CreateEventLayout() {
     return (
-        <EventCreationProvider>
+        <EventCreationProvider enableDrafts>
             <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="menu" />

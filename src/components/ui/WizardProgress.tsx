@@ -2,20 +2,26 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-interface WizardProgressProps {
-    currentStep: number; // 0 to 3
-}
+interface WizardProgressProps { currentStep: number; }
 
 const steps = [
     { label: 'Evento', icon: 'calendar' },
     { label: 'Cardápio', icon: 'list.bullet' },
     { label: 'Local', icon: 'mappin.and.ellipse' },
-    { label: 'Detalhes', icon: 'info.circle' },
+    { label: 'Data', icon: 'info.circle' },
+    { label: 'Revisão', icon: 'checkmark.circle' },
 ];
 
+export function getWizardProgressPercentage(currentStep: number) {
+    const safeStep = Math.max(0, Math.min(currentStep, steps.length - 1));
+    return (safeStep / (steps.length - 1)) * 100;
+}
+
 export function WizardProgress({ currentStep }: WizardProgressProps) {
+    const safeStep = Math.max(0, Math.min(currentStep, steps.length - 1));
     return (
-        <View className="px-5 py-4 bg-white">
+        <View className="px-1 py-3 bg-white" accessibilityLabel={`Etapa ${safeStep + 1} de ${steps.length}`}>
+            <Text className="text-xs text-gray-500 font-semibold mb-3">Etapa {safeStep + 1} de {steps.length}</Text>
             <View className="flex-row items-center justify-between relative">
                 {/* Background Line */}
                 <View className="absolute top-3 left-0 right-0 h-[2px] bg-gray-200 z-0" />
@@ -23,15 +29,15 @@ export function WizardProgress({ currentStep }: WizardProgressProps) {
                 {/* Active Line Progress */}
                 <View
                     className="absolute top-3 left-0 h-[2px] bg-[#FF8C42] z-0"
-                    style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+                    style={{ width: `${getWizardProgressPercentage(safeStep)}%` }}
                 />
 
                 {steps.map((step, index) => {
-                    const isCompleted = index < currentStep;
-                    const isCurrent = index === currentStep;
+                    const isCompleted = index < safeStep;
+                    const isCurrent = index === safeStep;
 
                     return (
-                        <View key={index} className="items-center z-10 w-16">
+                        <View key={index} className="items-center z-10 flex-1">
                             <View
                                 className={`w-6 h-6 rounded-full items-center justify-center border-2 mb-1 bg-white ${isCompleted
                                         ? 'bg-[#FF8C42] border-[#FF8C42]'

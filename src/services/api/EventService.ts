@@ -6,6 +6,8 @@ import * as Location from 'expo-location';
 import { API_URL } from '@/shared/config/api';
 import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
 import { isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
+import * as Crypto from 'expo-crypto';
+import { EventDraftApiError } from './EventDraftService';
 
 export class EventService {
     private async getAuthHeaders(includeJsonContentType: boolean = true): Promise<Record<string, string>> {
@@ -23,11 +25,20 @@ export class EventService {
         return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
     }
 
-    async uploadImage(uri: string, userId: string): Promise<string | null> {
-        const filename = `${userId}/${Date.now()}.jpg`;
+    async getPaymentConfig(): Promise<{ platformFeePercentage: number }> {
+        const response = await fetch(`${API_URL}/payments/config`, {
+            headers: await this.getOptionalAuthHeaders(),
+        });
+        if (!response.ok) throw new Error('Falha ao carregar configuracao de pagamentos');
+        return response.json();
+    }
+
+    async uploadImage(uri: string, userId: string, draftId = 'legacy'): Promise<string> {
+        if (/^https?:\/\//i.test(uri)) return uri;
+        const filename = `${userId}/${draftId}/${Crypto.randomUUID()}.jpg`;
         const image = await fetch(uri).then((response) => response.arrayBuffer());
         const { error: uploadError } = await supabase.storage
-            .from('avatars')
+            .from('event-images')
             .upload(filename, image, {
                 contentType: 'image/jpeg',
                 upsert: false,
@@ -37,8 +48,16 @@ export class EventService {
             throw uploadError;
         }
 
-        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filename);
+        const { data: { publicUrl } } = supabase.storage.from('event-images').getPublicUrl(filename);
         return publicUrl;
+    }
+
+    async deleteUploadedImage(publicUrl: string): Promise<void> {
+        const marker = '/event-images/';
+        const markerIndex = publicUrl.indexOf(marker);
+        if (markerIndex < 0) return;
+        const path = decodeURIComponent(publicUrl.slice(markerIndex + marker.length));
+        await supabase.storage.from('event-images').remove([path]);
     }
 
     async geocodeLocation(address: string): Promise<{ latitude: number | null, longitude: number | null }> {
@@ -54,7 +73,7 @@ export class EventService {
                     longitude: geocoded[0].longitude
                 };
             }
-        } catch (e) {
+        } catch {
         }
         return { latitude: null, longitude: null };
     }
@@ -84,53 +103,62 @@ export class EventService {
             const price = parseEventPrice(data.details.pricePerGuest);
             if (!isValidEventPrice(price)) throw new Error(INVALID_EVENT_PRICE_MESSAGE);
 
-            let coverImageUrl = null;
+            let coverImageUrl: string | null = null;
+            let uploadedForRequest = false;
             if (data.details.coverImage) {
                 coverImageUrl = await this.uploadImage(data.details.coverImage, session.user.id);
+                uploadedForRequest = coverImageUrl !== data.details.coverImage;
             }
+
+            const endTime = data.details.endTime
+                ?? (data.details.date ? new Date(data.details.date.getTime() + 4 * 60 * 60 * 1000) : null);
 
             const payload = {
                 title: data.details.title,
                 description: data.details.description,
                 price,
                 maxGuests: parseInt(data.details.maxGuests || '0'),
-                eventDate: data.details.date ? data.details.date.toISOString() : new Date().toISOString(),
-                endTime: data.details.endTime ? data.details.endTime.toISOString() : null,
+                eventDate: data.details.date?.toISOString(),
+                endTime: endTime?.toISOString(),
                 reservationDeadline: data.details.registrationDeadline ? data.details.registrationDeadline.toISOString() : null,
                 location: data.location.address,
+                city: data.location.city,
+                state: data.location.state,
                 latitude: data.location.latitude,
                 longitude: data.location.longitude,
                 coverImageUrl: coverImageUrl,
                 imageGallery: [] as string[],
-                hostId: session.user.id,
                 eventType: data.eventType,
                 cuisineTypes: data.cuisineTypes,
                 vibe: data.vibe,
                 facilities: data.location.facilities,
                 rules: data.location.rules,
                 dietaryOptions: this.buildDietaryOptions(data),
+                isServedInSequence: data.isServedInSequence,
                 accessType: data.details.accessType,
                 questions: data.details.questions,
                 dishes: this.mapDishesForPayload(data.dishes)
             };
 
-            // Debug logging
-            console.log('[DEBUG] EventService.submitEvent - Payload:');
-            console.log('  - endTime:', payload.endTime);
-            console.log('  - reservationDeadline:', payload.reservationDeadline);
-            console.log('  - dishes count:', payload.dishes.length);
-            console.log('  - dishes:', JSON.stringify(payload.dishes));
-
             const apiUrl = `${API_URL}/events`;
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: await this.getAuthHeaders(),
+                headers: {
+                    ...(await this.getAuthHeaders()),
+                    'Idempotency-Key': Crypto.randomUUID(),
+                },
                 body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Falha ao criar evento');
+                const errorData = await response.json().catch(() => ({}));
+                if (uploadedForRequest && coverImageUrl) await this.deleteUploadedImage(coverImageUrl);
+                throw new EventDraftApiError(
+                    errorData.message || 'Falha ao criar evento',
+                    errorData.code || 'EVENT_CREATE_FAILED',
+                    errorData.fieldErrors || {},
+                    response.status,
+                );
             }
 
             return await response.json();
@@ -141,26 +169,13 @@ export class EventService {
     }
 
     async getEventById(id: string): Promise<Event> {
-        console.log('[DEBUG] EventService.getEventById - Fetching from:', `${API_URL}/events/${id}`);
         const response = await fetch(`${API_URL}/events/${id}`, {
             headers: await this.getOptionalAuthHeaders(),
         });
         if (!response.ok) {
             throw new Error('Failed to fetch event');
         }
-        const event = await response.json();
-        
-        // Debug logging - log the full object
-        console.log('[DEBUG] EventService.getEventById - Full response:', JSON.stringify(event, null, 2));
-        console.log('[DEBUG] EventService.getEventById - Key fields:');
-        console.log('  - endTime:', event.endTime);
-        console.log('  - reservationDeadline:', event.reservationDeadline);
-        console.log('  - dishes count:', event.dishes?.length || 0);
-        console.log('  - host:', event.host);
-        console.log('  - host fullName:', event.host?.fullName);
-        console.log('  - host avatarUrl:', event.host?.avatarUrl);
-        
-        return event;
+        return response.json();
     }
 
     async listEvents(filters?: Record<string, string | string[] | undefined>): Promise<Event[]> {
@@ -208,16 +223,18 @@ export class EventService {
             endTime: details?.endTime ? details.endTime.toISOString() : undefined,
             reservationDeadline: details?.registrationDeadline ? details.registrationDeadline.toISOString() : undefined,
             location: location?.address,
+            city: location?.city,
+            state: location?.state,
             latitude: location?.latitude,
             longitude: location?.longitude,
             coverImageUrl: details?.coverImage,
-            hostId: session.user.id,
             eventType: data.eventType,
             cuisineTypes: data.cuisineTypes,
             vibe: data.vibe,
             facilities: location?.facilities,
             rules: location?.rules,
             dietaryOptions,
+            isServedInSequence: data.isServedInSequence,
             accessType: details?.accessType,
             questions: details?.questions,
             dishes: data.dishes?.map((d, idx) => ({
@@ -246,15 +263,9 @@ export class EventService {
     }
 
     async deleteEvent(id: string): Promise<void> {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('Usuário não autenticado');
-
         const response = await fetch(`${API_URL}/events/${id}`, {
             method: 'DELETE',
             headers: await this.getAuthHeaders(),
-            body: JSON.stringify({
-                hostId: session.user.id
-            })
         });
 
         if (!response.ok) {

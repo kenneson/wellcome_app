@@ -7,8 +7,13 @@ export interface Dish {
 
 export interface LocationDetails {
     address: string;
+    city: string;
+    state: string;
+    neighborhood: string;
+    postalCode: string;
     latitude: number | null;
     longitude: number | null;
+    confirmed: boolean;
     facilities: string[];
     rules: string[];
 }
@@ -38,3 +43,5 @@ export interface EventCreationState {
     substitutions: boolean;
     menuAlterations: boolean;
 }
+
+export type EventCreationSaveStatus = 'idle' | 'saving' | 'saved' | 'offline' | 'error';

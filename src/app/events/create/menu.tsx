@@ -1,156 +1,87 @@
 import { Checkbox } from '@/components/ui/Checkbox';
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
 import { DishInputCard } from '@/components/ui/DishInputCard';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { WizardProgress } from '@/components/ui/WizardProgress';
-import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
+import { WizardProgress } from '@/components/ui/WizardProgress';
+import { validateEventStep } from '@/features/create-event/model/eventCreationValidation';
+import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { Ionicons } from '@expo/vector-icons';
+import * as Crypto from 'expo-crypto';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function EventCreateStep2() {
+export default function EventCreateMenu() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { width } = useWindowDimensions();
-    const isSmallScreen = width < 375;
-    const horizontalPadding = isSmallScreen ? 16 : width >= 414 ? 24 : 20;
-    const {
-        data,
-        setServedInSequence,
-        addDish,
-        updateDish,
-        removeDish,
-        setVeganOptions,
-        setSubstitutions,
-        setMenuAlterations
-    } = useEventCreation();
+    const horizontalPadding = width < 375 ? 16 : width >= 414 ? 24 : 20;
+    const creation = useEventCreation();
+    const { setCurrentStep } = creation;
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const firstInvalidDish = creation.data.dishes.findIndex((_, index) => !!errors[`dishes.${index}.name`]);
 
-    const handleNext = () => {
-        if (data.dishes.length === 0) {
-            Alert.alert('Atenção', 'Adicione pelo menos um prato ao cardápio.');
-            return;
-        }
-        const invalidDish = data.dishes.find(d => !d.name.trim());
-        if (invalidDish) {
-            Alert.alert('Atenção', 'Preencha o nome de todos os pratos.');
-            return;
-        }
+    useEffect(() => setCurrentStep(1), [setCurrentStep]);
+
+    const handleNext = async () => {
+        const nextErrors = validateEventStep(creation.data, 1);
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
+        await creation.flushDraft();
         router.push('/events/create/location');
     };
 
-    const handleAddDish = () => {
-        addDish({
-            id: Math.random().toString(36).substr(2, 9),
-            name: '',
-            description: '',
-            category: ''
-        });
-    };
-
-    const handleBack = () => router.back();
-
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
-            <CreateEventHeader />
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
+            <CreateEventHeader saveStatus={creation.saveStatus} />
+            <KeyboardAwareScrollView contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
+                <WizardProgress currentStep={1} />
+                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Monte o cardápio</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Apresente os pratos na ordem em que serão servidos.</Text>
 
-            <KeyboardAwareScrollView
-                enableOnAndroid={true}
-                extraScrollHeight={40}
-                extraHeight={120}
-                enableResetScrollToCoords={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
-                showsVerticalScrollIndicator={false}
-                style={{ flex: 1 }}
-            >
-                <View className="mb-6">
-                    <Text style={{ fontSize: isSmallScreen ? 24 : 28 }} className="font-extrabold text-[#1A1A1A] mb-2 leading-tight">
-                        O que será{'\n'}servido?
-                    </Text>
-                    <Text className="text-sm text-gray-400">
-                        Detalhe o cardápio da experiência.
-                    </Text>
+                <View className="bg-gray-50 border border-gray-200 p-4 mb-5" style={{ borderRadius: 8 }}>
+                    <Checkbox label="Serviço em sequência" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
+                    <Text className="text-xs text-gray-500 mt-2 ml-8">Entrada, prato principal e sobremesa servidos em etapas.</Text>
                 </View>
 
-                <View className="mb-6">
-                    <WizardProgress currentStep={1} />
-                </View>
-
-                <View className="bg-gray-50 rounded-2xl mb-6" style={{ padding: isSmallScreen ? 14 : 20 }}>
-                    <Checkbox
-                        label="Serviço em sequência (Entrada, Prato Principal...)"
-                        checked={data.isServedInSequence}
-                        onChange={setServedInSequence}
+                {creation.data.dishes.map((dish, index) => (
+                    <DishInputCard
+                        key={dish.id}
+                        index={index}
+                        total={creation.data.dishes.length}
+                        dish={dish}
+                        focusName={index === firstInvalidDish}
+                        errors={{ name: errors[`dishes.${index}.name`], category: errors[`dishes.${index}.category`] }}
+                        onUpdate={(updates) => creation.updateDish(dish.id, { ...dish, ...updates })}
+                        onRemove={() => creation.removeDish(dish.id)}
+                        onDuplicate={() => creation.duplicateDish(dish.id)}
+                        onMove={(direction) => creation.moveDish(dish.id, direction)}
                     />
-                </View>
-
-                <View className="gap-3 mb-6">
-                    {data.dishes.map((dish, index) => (
-                        <DishInputCard
-                            key={dish.id}
-                            index={index}
-                            dish={dish}
-                            onUpdate={(updates) => updateDish(dish.id, { ...dish, ...updates })}
-                            onRemove={() => removeDish(dish.id)}
-                        />
-                    ))}
-                </View>
+                ))}
+                {errors.dishes && <Text className="text-xs text-red-600 mb-3">{errors.dishes}</Text>}
 
                 <TouchableOpacity
-                    className="flex-row items-center justify-center border border-dashed border-orange-300 rounded-2xl bg-orange-50 mb-6"
-                    style={{ paddingVertical: isSmallScreen ? 12 : 16, paddingHorizontal: 16 }}
-                    onPress={handleAddDish}
+                    className="flex-row items-center justify-center border border-dashed border-orange-400 bg-orange-50 py-4 mb-6"
+                    style={{ borderRadius: 8 }}
+                    onPress={() => creation.addDish({ id: Crypto.randomUUID(), name: '', description: '', category: '' })}
+                    accessibilityRole="button"
                 >
-                    <IconSymbol name="plus" size={20} color="#FF8C42" />
-                    <Text className="text-[#FF8C42] font-bold ml-2">Adicionar prato</Text>
+                    <Ionicons name="add" size={20} color="#C45D22" />
+                    <Text className="text-[#C45D22] font-bold ml-2">Adicionar prato</Text>
                 </TouchableOpacity>
 
-                <View className="h-[1px] bg-gray-100 mb-6" />
-
-                <Text style={{ fontSize: isSmallScreen ? 18 : 20 }} className="font-bold text-[#1A1A1A] mb-4">Informações importantes</Text>
-
-                <View className="gap-4">
-                    <Checkbox
-                        label="Opções veganas e vegetarianas disponíveis"
-                        checked={data.veganOptions}
-                        onChange={setVeganOptions}
-                    />
-                    <Checkbox
-                        label="Aceito adaptações por restrições alimentares"
-                        checked={data.substitutions}
-                        onChange={setSubstitutions}
-                    />
-                    <Checkbox
-                        label="Cardápio sujeito a alterações de ingredientes"
-                        checked={data.menuAlterations}
-                        onChange={setMenuAlterations}
-                    />
+                <Text className="text-lg font-bold text-[#1A1A1A] mb-3">Informações alimentares</Text>
+                <View className="gap-4 pb-4">
+                    <Checkbox label="Opções veganas e vegetarianas disponíveis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
+                    <Checkbox label="Aceito adaptações por restrições alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
+                    <Checkbox label="Cardápio sujeito a alterações de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
                 </View>
             </KeyboardAwareScrollView>
 
-            <View
-                className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
-                style={{
-                    paddingBottom: Math.max(insets.bottom, 16),
-                    paddingHorizontal: horizontalPadding,
-                    paddingTop: 14,
-                }}
-            >
-                <TouchableOpacity
-                    className="h-[52px] bg-[#FF8C42] rounded-2xl items-center justify-center"
-                    onPress={handleNext}
-                    activeOpacity={0.8}
-                    style={{
-                        shadowColor: '#FF8C42',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 8,
-                        elevation: 4,
-                    }}
-                >
-                    <Text className="text-white text-[16px] font-bold">Salvar e prosseguir</Text>
+            <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100" style={{ paddingBottom: Math.max(insets.bottom, 16), paddingHorizontal: horizontalPadding, paddingTop: 12 }}>
+                <TouchableOpacity className="h-[52px] bg-[#FF8C42] items-center justify-center" style={{ borderRadius: 8 }} onPress={() => void handleNext()}>
+                    <Text className="text-white text-base font-bold">Continuar</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

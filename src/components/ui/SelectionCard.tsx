@@ -31,6 +31,10 @@ export function SelectionCard({ label, description, selected, onPress, style }: 
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             style={style}
+            accessibilityRole="radio"
+            accessibilityLabel={label}
+            accessibilityHint={description}
+            accessibilityState={{ selected }}
         >
             <Animated.View style={animatedStyle}>
                 <View

@@ -1,5 +1,7 @@
-import { GeocodingResult, locationService, Municipality } from '@/services/api/LocationService';
+import { GeocodingResult, GeocodingSuggestion, locationService, Municipality } from '@/services/api/LocationService';
 import { Ionicons } from '@expo/vector-icons';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import * as Crypto from 'expo-crypto';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -55,9 +57,12 @@ export function LocationAutocomplete({
     asModal = false,
 }: LocationAutocompleteProps) {
     const [query, setQuery] = useState(value);
-    const [results, setResults] = useState<(Municipality | GeocodingResult)[]>([]);
+    const [results, setResults] = useState<(Municipality | GeocodingSuggestion)[]>([]);
     const [loading, setLoading] = useState(false);
     const [loadingCoords, setLoadingCoords] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
+    const reducedMotion = useReducedMotion();
 
     const debouncedQuery = useDebounce(query, 300);
 
@@ -70,24 +75,29 @@ export function LocationAutocomplete({
             }
 
             setLoading(true);
+            setErrorMessage('');
             try {
                 if (type === 'municipality') {
                     const municipalities = await locationService.searchMunicipalities(debouncedQuery, 10);
                     setResults(municipalities);
                 } else {
-                    const addresses = await locationService.searchAddresses(debouncedQuery, 5);
+                    const addresses = await locationService.searchAddresses(debouncedQuery, sessionToken);
                     setResults(addresses);
                 }
-            } catch (error) {
-                console.error('Search error:', error);
+            } catch (error: any) {
                 setResults([]);
+                setErrorMessage(error?.message || 'Não foi possível buscar endereços');
             } finally {
                 setLoading(false);
             }
         }
 
         search();
-    }, [debouncedQuery, type]);
+    }, [debouncedQuery, type, sessionToken]);
+
+    useEffect(() => {
+        if (visible && type === 'address') setSessionToken(Crypto.randomUUID());
+    }, [visible, type]);
 
     // Preload municipalities on mount if type is municipality
     useEffect(() => {
@@ -101,7 +111,7 @@ export function LocationAutocomplete({
         try {
             const coords = await locationService.getMunicipalityCoordinates(municipality);
             onSelectMunicipality?.(municipality, coords || undefined);
-        } catch (error) {
+        } catch {
             onSelectMunicipality?.(municipality);
         } finally {
             setLoadingCoords(false);
@@ -109,12 +119,21 @@ export function LocationAutocomplete({
         }
     };
 
-    const handleSelectAddress = (result: GeocodingResult) => {
-        onSelectAddress?.(result);
-        onClose?.();
+    const handleSelectAddress = async (suggestion: GeocodingSuggestion) => {
+        setLoadingCoords(true);
+        setErrorMessage('');
+        try {
+            const result = await locationService.retrieveAddress(suggestion.id, sessionToken);
+            onSelectAddress?.(result);
+            onClose?.();
+        } catch (error: any) {
+            setErrorMessage(error?.message || 'Não foi possível confirmar o endereço');
+        } finally {
+            setLoadingCoords(false);
+        }
     };
 
-    const renderItem = ({ item }: { item: Municipality | GeocodingResult }) => {
+    const renderItem = ({ item }: { item: Municipality | GeocodingSuggestion }) => {
         if (type === 'municipality') {
             const municipality = item as Municipality;
             return (
@@ -130,16 +149,17 @@ export function LocationAutocomplete({
                 </TouchableOpacity>
             );
         } else {
-            const address = item as GeocodingResult;
+            const address = item as GeocodingSuggestion;
             return (
                 <TouchableOpacity
                     style={styles.resultItem}
                     onPress={() => handleSelectAddress(address)}
                 >
                     <Ionicons name="location-outline" size={20} color="#FF8C42" />
-                    <Text style={styles.resultText} numberOfLines={2}>
-                        {address.displayName}
-                    </Text>
+                    <View style={styles.resultTextContainer}>
+                        <Text style={styles.resultText}>{address.name}</Text>
+                        <Text style={styles.resultSubtext} numberOfLines={2}>{address.description}</Text>
+                    </View>
                 </TouchableOpacity>
             );
         }
@@ -178,6 +198,13 @@ export function LocationAutocomplete({
                 </View>
             )}
 
+            {!!errorMessage && !loading && !loadingCoords && (
+                <View style={styles.loadingContainer} accessibilityRole="alert">
+                    <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
+                    <Text style={[styles.loadingText, { color: '#B45309' }]}>{errorMessage}</Text>
+                </View>
+            )}
+
             {!loading && !loadingCoords && results.length > 0 && (
                 <FlatList
                     data={results}
@@ -205,7 +232,7 @@ export function LocationAutocomplete({
         return (
             <Modal
                 visible={visible}
-                animationType="slide"
+                animationType={reducedMotion ? 'none' : 'slide'}
                 transparent={false}
                 onRequestClose={onClose}
             >

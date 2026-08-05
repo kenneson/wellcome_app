@@ -1,14 +1,16 @@
 import { useUserProfile } from '@/context/UserProfileContext';
+import { getEventCreationReturnPath } from '@/features/create-event/model/payoutReturn';
 import { supabase } from '@/shared/lib/supabase';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Animated,
-    Dimensions,
     Image,
     StyleSheet,
     Text,
@@ -17,7 +19,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 
 const STEPS = [
@@ -35,7 +36,10 @@ type KycResult = {
 };
 
 export default function KycVerificationScreen() {
+    const router = useRouter();
+    const params = useLocalSearchParams<{ returnTo?: string | string[]; draftId?: string | string[] }>();
     const { refetchProfile, kycStatus: existingKycStatus } = useUserProfile();
+    const reducedMotion = useReducedMotion();
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [fadeAnim] = useState(new Animated.Value(1));
@@ -43,6 +47,8 @@ export default function KycVerificationScreen() {
     const [selfieImage, setSelfieImage] = useState<string | null>(null);
     const [kycResult, setKycResult] = useState<KycResult | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
+    const returnPath = getEventCreationReturnPath(params.returnTo, params.draftId);
+    const finish = () => returnPath ? router.replace(returnPath as any) : router.replace('/(tabs)');
 
     useEffect(() => {
         const init = async () => {
@@ -63,11 +69,12 @@ export default function KycVerificationScreen() {
     }, [existingKycStatus]);
 
     const animateTransition = (nextStep: number) => {
+        const duration = reducedMotion ? 0 : 150;
         Animated.sequence([
-            Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-            Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 0, duration, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration, useNativeDriver: true }),
         ]).start();
-        setTimeout(() => setStep(nextStep), 150);
+        setTimeout(() => setStep(nextStep), duration);
     };
 
     const pickDocument = async () => {
@@ -184,16 +191,12 @@ export default function KycVerificationScreen() {
             try {
                 // If the response is not valid JSON, we want to know what it is
                 result = await response.json();
-            } catch (parseError) {
-                // Read as text
-                const textResult = await response.text();
-                console.error("RAW EDGE FN ERR:", textResult);
-                throw new Error(`Servidor retornou erro inesperado: ${response.status}. Ver terminal.`);
+            } catch {
+                throw new Error(`Servidor retornou erro inesperado: ${response.status}.`);
             }
 
             if (!response.ok) {
-                console.error("EDGE FN API ERR:", result);
-                throw new Error(result.error || result.message || JSON.stringify(result));
+                throw new Error(result.error || result.message || 'Nao foi possivel concluir a verificacao');
             }
 
             setKycResult(result);
@@ -465,11 +468,18 @@ export default function KycVerificationScreen() {
         }
     };
 
-    const showFooter = step < 3 || (kycResult?.status === 'APPROVED');
+    const showFooter = step < 3 || kycResult?.status === 'APPROVED' || kycResult?.status === 'PENDING';
 
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar style="dark" />
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.headerButton} onPress={finish} accessibilityLabel="Voltar">
+                    <Ionicons name="chevron-back" size={24} color="#333" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Verificacao de identidade</Text>
+                <View style={styles.headerButton} />
+            </View>
             {step > 0 && renderProgressIndicator()}
 
             <View style={styles.scrollContent}>
@@ -513,12 +523,12 @@ export default function KycVerificationScreen() {
                         </TouchableOpacity>
                     )}
 
-                    {step === 3 && kycResult?.status === 'APPROVED' && (
+                    {step === 3 && (kycResult?.status === 'APPROVED' || kycResult?.status === 'PENDING') && (
                         <TouchableOpacity
                             style={[styles.nextButton, styles.nextButtonFull, { backgroundColor: '#10B981' }]}
-                            onPress={() => refetchProfile()}
+                            onPress={async () => { await refetchProfile(); finish(); }}
                         >
-                            <Text style={styles.nextButtonText}>Entrar no Wellcome</Text>
+                            <Text style={styles.nextButtonText}>{returnPath ? 'Voltar ao evento' : 'Concluir'}</Text>
                             <Ionicons name="arrow-forward" size={20} color="#fff" />
                         </TouchableOpacity>
                     )}
@@ -532,6 +542,28 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    header: {
+        minHeight: 56,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        paddingHorizontal: 10,
+    },
+    headerButton: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerTitle: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#1A1A1A',
     },
     scrollContent: {
         flex: 1,

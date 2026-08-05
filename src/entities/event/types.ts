@@ -74,6 +74,9 @@ export interface Event {
     maxGuests: number;
     eventDate: string;
     location: string;
+    city?: string | null;
+    state?: string | null;
+    locationNeedsReview?: boolean;
     latitude?: number | null;
     longitude?: number | null;
     distanceKm?: number;
@@ -83,6 +86,7 @@ export interface Event {
     endTime?: string | null;
     reservationDeadline?: string | null;
     dietaryOptions?: string[];
+    isServedInSequence?: boolean;
     hostId: string;
     host?: EventHost;
     accessType: EventAccessType;

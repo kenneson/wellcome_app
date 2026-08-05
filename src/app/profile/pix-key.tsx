@@ -1,8 +1,9 @@
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { userService } from '@/services/api/UserService';
+import { getEventCreationReturnPath } from '@/features/create-event/model/payoutReturn';
 import { supabase } from '@/shared/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -24,11 +25,15 @@ const PIX_KEY_TYPES = [
 
 export default function PixKeyScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams<{ returnTo?: string | string[]; draftId?: string | string[] }>();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
     const [pixKey, setPixKey] = useState('');
     const [pixKeyType, setPixKeyType] = useState('CPF');
+    const returnPath = getEventCreationReturnPath(params.returnTo, params.draftId);
+
+    const finish = () => returnPath ? router.replace(returnPath as any) : router.back();
 
     useEffect(() => {
         loadCurrentKey();
@@ -63,7 +68,7 @@ export default function PixKeyScreen() {
                 pix_key_type: pixKeyType,
             });
             Alert.alert('Sucesso!', 'Chave PIX salva com sucesso.', [
-                { text: 'OK', onPress: () => router.back() }
+                { text: 'OK', onPress: finish }
             ]);
         } catch (e: any) {
             Alert.alert('Erro', e.message || 'Não foi possível salvar a chave PIX.');
@@ -93,7 +98,7 @@ export default function PixKeyScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={finish} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Minha Chave PIX</Text>

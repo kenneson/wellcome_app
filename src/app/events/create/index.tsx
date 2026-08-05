@@ -1,175 +1,204 @@
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
+import { SelectionPill } from '@/components/ui/SelectionPill';
 import { SelectionSection } from '@/components/ui/SelectionSection';
 import { WizardProgress } from '@/components/ui/WizardProgress';
+import { validateEventStep } from '@/features/create-event/model/eventCreationValidation';
+import { useEventDetailsViewModel } from '@/features/events/create/useEventDetailsViewModel';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// ============================================================================
-// Constants
-// ============================================================================
-
-const EVENT_TYPES = [
-    'Café da manhã', 'Brunch', 'Almoço',
-    'Lanche', 'Jantar', 'Degustação',
-    'Pic-nic', 'Coquetel', 'Outro'
-] as const;
-
+const EVENT_TYPES = ['Café da manhã', 'Brunch', 'Almoço', 'Lanche', 'Jantar', 'Degustação', 'Pic-nic', 'Coquetel', 'Outro'] as const;
 const CUISINE_TYPES = [
-    'Africana', 'Alemã', 'Asiática', 'Árabe',
-    'Argentina', 'Baiana', 'Brasileira', 'Carnes',
-    'Café colonial', 'Chinesa', 'Colombiana',
-    'Contemporânea', 'Coreana', 'Crepes',
-    'Doces e bolos', 'Espanhola', 'Francesa',
-    'Frutos do mar', 'Gaúcha', 'Grega',
-    'Hamburguer', 'Indiana', 'Italiana',
-    'Japonesa', 'Lanches', 'Mexicana', 'Mineira',
-    'Mediterrânea', 'Nordestina', 'Pasteis',
-    'Peruana', 'Pizza', 'Portuguesa',
-    'Sopas e Caldos', 'Tailandesa', 'Variada',
-    'Vegana', 'Vegetariana'
+    'Africana', 'Alemã', 'Asiática', 'Árabe', 'Argentina', 'Baiana', 'Brasileira', 'Carnes',
+    'Café colonial', 'Chinesa', 'Colombiana', 'Contemporânea', 'Coreana', 'Crepes',
+    'Doces e bolos', 'Espanhola', 'Francesa', 'Frutos do mar', 'Gaúcha', 'Grega',
+    'Hambúrguer', 'Indiana', 'Italiana', 'Japonesa', 'Lanches', 'Mexicana', 'Mineira',
+    'Mediterrânea', 'Nordestina', 'Pastéis', 'Peruana', 'Pizza', 'Portuguesa',
+    'Sopas e caldos', 'Tailandesa', 'Variada', 'Vegana', 'Vegetariana',
 ] as const;
 
-// Desired design has no "Vibe" section in Step 1.
-
-// ============================================================================
-// Main Component
-// ============================================================================
-
-export default function EventCreateStep1() {
+export default function EventCreateEssentials() {
     const router = useRouter();
-    const { data, setEventType, toggleCuisineType, updateDetails } = useEventCreation();
     const insets = useSafeAreaInsets();
     const { width } = useWindowDimensions();
+    const horizontalPadding = width < 375 ? 16 : width >= 414 ? 24 : 20;
+    const creation = useEventCreation();
+    const reducedMotion = useReducedMotion();
+    const { setCurrentStep } = creation;
+    const details = useEventDetailsViewModel();
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [showCuisines, setShowCuisines] = useState(false);
+    const [cuisineSearch, setCuisineSearch] = useState('');
+    const titleRef = useRef<TextInput>(null);
+    const descriptionRef = useRef<TextInput>(null);
 
-    const isSmallScreen = width < 375;
-    const horizontalPadding = isSmallScreen ? 16 : width >= 414 ? 24 : 20;
+    useEffect(() => setCurrentStep(0), [setCurrentStep]);
 
-    const canProceed = useMemo(() => {
-        return (
-            data.eventType &&
-            data.cuisineTypes.length > 0 &&
-            data.details.title?.trim() &&
-            data.details.description?.trim()
-        );
-    }, [data.eventType, data.cuisineTypes.length, data.details.title, data.details.description]);
+    const filteredCuisines = useMemo(() => {
+        const search = cuisineSearch.trim().toLocaleLowerCase('pt-BR');
+        return search ? CUISINE_TYPES.filter((item) => item.toLocaleLowerCase('pt-BR').includes(search)) : CUISINE_TYPES;
+    }, [cuisineSearch]);
 
-    const handleNext = useCallback(() => {
-        if (!data.eventType) {
-            Alert.alert('Atenção', 'Selecione o tipo do evento para continuar.');
+    const handleNext = async () => {
+        const nextErrors = validateEventStep(creation.data, 0);
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) {
+            requestAnimationFrame(() => {
+                if (nextErrors.title) titleRef.current?.focus();
+                else if (nextErrors.description) descriptionRef.current?.focus();
+            });
             return;
         }
-        if (data.cuisineTypes.length === 0) {
-            Alert.alert('Atenção', 'Selecione pelo menos um tipo de comida.');
-            return;
-        }
-        if (!data.details.title?.trim()) {
-            Alert.alert('Atenção', 'Informe o título do evento.');
-            return;
-        }
-        if (!data.details.description?.trim()) {
-            Alert.alert('Atenção', 'Informe a descrição do evento.');
-            return;
-        }
+        await creation.flushDraft();
         router.push('/events/create/menu');
-    }, [data.eventType, data.cuisineTypes.length, data.details.title, data.details.description, router]);
+    };
+
+    const handleExit = () => Alert.alert('Sair da criação?', 'Seu rascunho está salvo e poderá ser retomado em Meus eventos.', [
+        { text: 'Continuar editando', style: 'cancel' },
+        { text: 'Sair', onPress: () => router.replace('/(tabs)') },
+        {
+            text: 'Excluir rascunho',
+            style: 'destructive',
+            onPress: () => void creation.discardDraft().then(() => router.replace('/(tabs)')),
+        },
+    ]);
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
-            <CreateEventHeader />
-
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
+            <CreateEventHeader onBack={handleExit} onDiscard={handleExit} saveStatus={creation.saveStatus} />
             <KeyboardAwareScrollView
-                enableOnAndroid={true}
-                extraScrollHeight={40}
-                extraHeight={120}
-                enableResetScrollToCoords={false}
+                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120, paddingTop: 0 }}
-                showsVerticalScrollIndicator={false}
                 style={{ flex: 1 }}
             >
-                    <WizardProgress currentStep={0} />
+                <WizardProgress currentStep={0} />
+                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Comece pela experiência</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Uma boa apresentação ajuda as pessoas a entenderem o que torna seu evento especial.</Text>
 
-                    <View className="mt-6 mb-6">
-                        <SelectionSection
-                            title="Qual o tipo de seu evento?"
-                            items={EVENT_TYPES}
-                            selectedItems={data.eventType}
-                            onSelect={setEventType}
-                            variant="grid"
-                        />
-                    </View>
-
-                    <View className="mb-6">
-                        <SelectionSection
-                            title="Que tipo de comida será servida?"
-                            subtitle="Selecione pelo menos uma"
-                            items={CUISINE_TYPES}
-                            selectedItems={data.cuisineTypes}
-                            onSelect={toggleCuisineType}
-                            isMultiSelect
-                            variant="pill"
-                        />
-                    </View>
-
-                    <View className="mb-4">
-                        <Text className="text-lg font-bold mb-4 text-[#1A1A1A]">Fale sobre o seu evento</Text>
-
-                        <View className="border border-gray-200 rounded-2xl bg-white mb-4" style={{ padding: isSmallScreen ? 12 : 16 }}>
-                            <Text className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Título do evento</Text>
-                            <TextInput
-                                className="text-base text-[#1A1A1A] font-medium"
-                                placeholder="Ex: Jantar das arábias na casa da Ju"
-                                placeholderTextColor="#D1D5DB"
-                                value={data.details.title}
-                                onChangeText={(text) => updateDetails({ title: text })}
-                            />
+                <TouchableOpacity
+                    onPress={details.pickImage}
+                    className={`w-full overflow-hidden bg-gray-50 border mb-2 ${errors.coverImageUrl ? 'border-red-400' : 'border-gray-200'}`}
+                    style={{ height: width < 375 ? 165 : 200, borderRadius: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={creation.data.details.coverImage ? 'Alterar foto de capa' : 'Adicionar foto de capa'}
+                >
+                    {creation.data.details.coverImage ? (
+                        <>
+                            <Image source={{ uri: creation.data.details.coverImage }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                            <View className="absolute bottom-3 right-3 bg-black/70 flex-row items-center px-3 py-2" style={{ borderRadius: 8 }}>
+                                <Ionicons name="camera" size={16} color="#FFF" />
+                                <Text className="text-white text-xs font-bold ml-2">Alterar</Text>
+                            </View>
+                        </>
+                    ) : (
+                        <View className="flex-1 items-center justify-center px-6">
+                            <Ionicons name="camera-outline" size={30} color="#73787E" />
+                            <Text className="text-base text-gray-700 font-bold mt-2">Adicionar foto de capa</Text>
+                            <Text className="text-xs text-gray-500 mt-1">Imagem horizontal em 16:9</Text>
                         </View>
+                    )}
+                </TouchableOpacity>
+                {errors.coverImageUrl && <Text className="text-xs text-red-600 mb-4">{errors.coverImageUrl}</Text>}
 
-                        <View className="border border-gray-200 rounded-2xl bg-white" style={{ padding: isSmallScreen ? 12 : 16, minHeight: isSmallScreen ? 100 : 120 }}>
-                            <Text className="text-xs text-gray-400 mb-1 font-medium uppercase tracking-wider">Descrição do evento</Text>
-                            <TextInput
-                                className="text-sm text-[#1A1A1A] leading-5"
-                                placeholder="Dica: Seja amigável e convidativo: conte as razões que levaram você a querer receber pessoas..."
-                                placeholderTextColor="#D1D5DB"
-                                value={data.details.description}
-                                onChangeText={(text) => updateDetails({ description: text })}
-                                multiline
-                                textAlignVertical="top"
-                            />
-                        </View>
-                    </View>
+                <Field label="Título do evento" error={errors.title} count={`${creation.data.details.title.length}/80`}>
+                    <TextInput
+                        ref={titleRef}
+                        className="text-base text-[#1A1A1A] p-4"
+                        placeholder="Ex: Jantar árabe na casa da Ju"
+                        placeholderTextColor="#9CA3AF"
+                        value={creation.data.details.title}
+                        maxLength={80}
+                        onChangeText={(title) => creation.updateDetails({ title })}
+                    />
+                </Field>
+
+                <Field label="Descrição" error={errors.description} count={`${creation.data.details.description.length}/1500`}>
+                    <TextInput
+                        ref={descriptionRef}
+                        className="text-base text-[#1A1A1A] p-4"
+                        style={{ minHeight: 125 }}
+                        placeholder="Conte o menu, a proposta da noite e o que os convidados podem esperar."
+                        placeholderTextColor="#9CA3AF"
+                        value={creation.data.details.description}
+                        maxLength={1500}
+                        onChangeText={(description) => creation.updateDetails({ description })}
+                        multiline
+                        textAlignVertical="top"
+                    />
+                </Field>
+
+                <View className="mt-2 mb-6">
+                    <SelectionSection title="Tipo de evento" items={EVENT_TYPES} selectedItems={creation.data.eventType} onSelect={creation.setEventType} variant="grid" />
+                    {errors.eventType && <Text className="text-xs text-red-600 mt-1">{errors.eventType}</Text>}
+                </View>
+
+                <Text className="text-lg font-bold text-[#1A1A1A]">Culinárias</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-3">Escolha até cinco opções.</Text>
+                <View className="flex-row flex-wrap gap-2 mb-3">
+                    {creation.data.cuisineTypes.map((item) => <SelectionPill key={item} label={item} selected onPress={() => creation.toggleCuisineType(item)} />)}
+                </View>
+                <TouchableOpacity
+                    className="flex-row items-center justify-center border border-gray-300 py-3 mb-2"
+                    style={{ borderRadius: 8 }}
+                    onPress={() => setShowCuisines(true)}
+                >
+                    <Ionicons name="search" size={18} color="#C45D22" />
+                    <Text className="text-[#C45D22] font-bold ml-2">Buscar culinárias</Text>
+                </TouchableOpacity>
+                {errors.cuisineTypes && <Text className="text-xs text-red-600">{errors.cuisineTypes}</Text>}
             </KeyboardAwareScrollView>
 
-            <View
-                className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100"
-                style={{
-                    paddingBottom: Math.max(insets.bottom, 16),
-                    paddingHorizontal: horizontalPadding,
-                    paddingTop: 14,
-                }}
-            >
-                <TouchableOpacity
-                    className={`h-[52px] rounded-2xl items-center justify-center ${!canProceed ? 'bg-orange-200' : 'bg-[#FF8C42]'}`}
-                    onPress={handleNext}
-                    activeOpacity={canProceed ? 0.8 : 1}
-                    disabled={!canProceed}
-                    style={canProceed ? {
-                        shadowColor: '#FF8C42',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 8,
-                        elevation: 4,
-                    } : undefined}
-                >
-                    <Text className="text-[16px] font-bold text-white">
-                        Salvar e prosseguir
-                    </Text>
+            <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100" style={{ paddingBottom: Math.max(insets.bottom, 16), paddingHorizontal: horizontalPadding, paddingTop: 12 }}>
+                <TouchableOpacity className="h-[52px] bg-[#FF8C42] items-center justify-center" style={{ borderRadius: 8 }} onPress={() => void handleNext()}>
+                    <Text className="text-white text-base font-bold">Continuar</Text>
                 </TouchableOpacity>
             </View>
+
+            <Modal visible={showCuisines} animationType={reducedMotion ? 'none' : 'slide'} onRequestClose={() => setShowCuisines(false)}>
+                <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }}>
+                    <View className="flex-row items-center px-4 py-3 border-b border-gray-200">
+                        <TouchableOpacity className="w-11 h-11 items-center justify-center" onPress={() => setShowCuisines(false)} accessibilityLabel="Fechar">
+                            <Ionicons name="close" size={24} color="#202124" />
+                        </TouchableOpacity>
+                        <Text className="flex-1 text-center text-lg font-bold">Escolha as culinárias</Text>
+                        <Text className="w-11 text-center text-sm font-bold text-[#C45D22]">{creation.data.cuisineTypes.length}/5</Text>
+                    </View>
+                    <View className="mx-5 mt-4 flex-row items-center bg-gray-100 px-4" style={{ borderRadius: 8 }}>
+                        <Ionicons name="search" size={20} color="#73787E" />
+                        <TextInput className="flex-1 py-3 ml-2 text-base" placeholder="Buscar" value={cuisineSearch} onChangeText={setCuisineSearch} autoFocus />
+                    </View>
+                    <KeyboardAwareScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+                        <View className="flex-row flex-wrap gap-2">
+                            {filteredCuisines.map((item) => <SelectionPill key={item} label={item} selected={creation.data.cuisineTypes.includes(item)} onPress={() => creation.toggleCuisineType(item)} />)}
+                        </View>
+                    </KeyboardAwareScrollView>
+                    <View className="p-5 border-t border-gray-100">
+                        <TouchableOpacity className="h-[50px] bg-[#1A1A1A] items-center justify-center" style={{ borderRadius: 8 }} onPress={() => setShowCuisines(false)}>
+                            <Text className="text-white font-bold">Concluir</Text>
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
+    );
+}
+
+function Field({ label, error, count, children }: { label: string; error?: string; count: string; children: React.ReactNode }) {
+    return (
+        <View className="mb-4">
+            <View className="flex-row justify-between mb-2">
+                <Text className="text-xs text-gray-600 font-bold uppercase">{label}</Text>
+                <Text className="text-xs text-gray-400">{count}</Text>
+            </View>
+            <View className={`border bg-white ${error ? 'border-red-400' : 'border-gray-200'}`} style={{ borderRadius: 8 }}>{children}</View>
+            {error && <Text className="text-xs text-red-600 mt-1" accessibilityRole="alert">{error}</Text>}
+        </View>
     );
 }

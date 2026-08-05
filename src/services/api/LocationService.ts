@@ -1,4 +1,6 @@
 import { API_URL } from '@/shared/config/api';
+import { supabase } from '@/shared/lib/supabase';
+import * as Crypto from 'expo-crypto';
 
 // Types
 export interface Municipality {
@@ -10,9 +12,22 @@ export interface Municipality {
 }
 
 export interface GeocodingResult {
+    id: string;
     displayName: string;
+    name: string;
     lat: number;
     lon: number;
+    city: string;
+    state: string;
+    stateCode: string;
+    neighborhood: string;
+    postalCode: string;
+}
+
+export interface GeocodingSuggestion {
+    id: string;
+    name: string;
+    description: string;
 }
 
 // Cache for municipalities (loaded once)
@@ -21,7 +36,13 @@ let cacheLoaded = false;
 
 class LocationService {
     private ibgeBaseUrl = 'https://servicodados.ibge.gov.br/api/v1/localidades';
-    private nominatimBaseUrl = 'https://nominatim.openstreetmap.org';
+    private apiUrl = API_URL;
+
+    private async authHeaders(): Promise<Record<string, string>> {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Sessão expirada');
+        return { Authorization: `Bearer ${session.access_token}` };
+    }
 
     /**
      * Load all Brazilian municipalities from IBGE API (cached)
@@ -80,62 +101,62 @@ class LocationService {
     }
 
     /**
-     * Geocode an address to get coordinates using Nominatim
+     * Search addresses through the authenticated Mapbox proxy.
      */
-    async geocodeAddress(address: string, countryCode = 'br'): Promise<GeocodingResult[]> {
-        try {
-            const encoded = encodeURIComponent(address);
-            const response = await fetch(
-                `${this.nominatimBaseUrl}/search?q=${encoded}&countrycodes=${countryCode}&format=json&limit=5`,
-                {
-                    headers: {
-                        'User-Agent': 'WellcomeApp/1.0'
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error('Geocoding failed');
-            }
-
-            const data = await response.json();
-
-            return data.map((item: any) => ({
-                displayName: item.display_name,
-                lat: parseFloat(item.lat),
-                lon: parseFloat(item.lon)
-            }));
-        } catch (error) {
-            console.error('Geocoding error:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Search for addresses with autocomplete (using Nominatim)
-     */
-    async searchAddresses(query: string, limit = 5): Promise<GeocodingResult[]> {
+    async searchAddresses(query: string, sessionToken: string, proximity?: { latitude: number; longitude: number }): Promise<GeocodingSuggestion[]> {
         if (!query.trim() || query.length < 3) {
             return [];
         }
+        const params = new URLSearchParams({ q: query, sessionToken });
+        if (proximity) params.set('proximity', `${proximity.longitude},${proximity.latitude}`);
+        const response = await fetch(`${this.apiUrl}/locations/suggest?${params.toString()}`, { headers: await this.authHeaders() });
+        if (!response.ok) throw new Error('Não foi possível buscar endereços');
+        return response.json();
+    }
 
-        return this.geocodeAddress(query);
+    async retrieveAddress(id: string, sessionToken: string): Promise<GeocodingResult> {
+        const params = new URLSearchParams({ sessionToken });
+        const response = await fetch(`${this.apiUrl}/locations/retrieve/${encodeURIComponent(id)}?${params.toString()}`, { headers: await this.authHeaders() });
+        if (!response.ok) throw new Error('Não foi possível confirmar o endereço');
+        const result = await response.json();
+        return this.mapResolvedAddress(result);
+    }
+
+    async reverseGeocode(latitude: number, longitude: number): Promise<GeocodingResult> {
+        const params = new URLSearchParams({ lat: String(latitude), lon: String(longitude) });
+        const response = await fetch(`${this.apiUrl}/locations/reverse?${params.toString()}`, { headers: await this.authHeaders() });
+        if (!response.ok) throw new Error('Não foi possível identificar sua localização');
+        return this.mapResolvedAddress(await response.json());
     }
 
     /**
      * Get coordinates for a municipality (center point)
      */
     async getMunicipalityCoordinates(municipality: Municipality): Promise<{ lat: number; lon: number } | null> {
-        const results = await this.geocodeAddress(`${municipality.name}, ${municipality.stateAbbr}, Brasil`);
-
-        if (results.length > 0) {
-            return {
-                lat: results[0].lat,
-                lon: results[0].lon
-            };
+        try {
+            const sessionToken = Crypto.randomUUID();
+            const suggestions = await this.searchAddresses(`${municipality.name}, ${municipality.stateAbbr}`, sessionToken);
+            if (!suggestions[0]) return null;
+            const resolved = await this.retrieveAddress(suggestions[0].id, sessionToken);
+            return { lat: resolved.lat, lon: resolved.lon };
+        } catch {
+            return null;
         }
+    }
 
-        return null;
+    private mapResolvedAddress(result: any): GeocodingResult {
+        return {
+            id: result.id,
+            name: result.fullAddress,
+            displayName: result.fullAddress,
+            lat: Number(result.latitude),
+            lon: Number(result.longitude),
+            city: result.city ?? '',
+            state: result.stateCode || result.state || '',
+            stateCode: result.stateCode ?? '',
+            neighborhood: result.neighborhood ?? '',
+            postalCode: result.postalCode ?? '',
+        };
     }
 }
 

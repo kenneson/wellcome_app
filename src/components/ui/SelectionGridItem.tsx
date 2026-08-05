@@ -29,6 +29,9 @@ export function SelectionGridItem({ label, selected, onPress }: SelectionGridIte
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             className="w-[31%] mb-3"
+            accessibilityRole="radio"
+            accessibilityLabel={label}
+            accessibilityState={{ selected }}
         >
             <Animated.View style={animatedStyle} className="w-full">
                 <View
