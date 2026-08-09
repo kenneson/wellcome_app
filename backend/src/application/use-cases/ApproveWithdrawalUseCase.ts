@@ -1,36 +1,56 @@
+import { UserRepository } from '../../domain/repositories/UserRepository';
 import { WithdrawalRequest, WithdrawalRequestRepository } from '../../domain/repositories/WithdrawalRequestRepository';
 import { PaymentGatewayError, PayoutGateway } from '../../domain/services/PaymentGateway';
+import { normalizePixKey } from '../../domain/services/PixKeyValidation';
 
 export class ApproveWithdrawalUseCase {
     constructor(
         private withdrawalRequestRepository: WithdrawalRequestRepository,
-        private payoutGateway: PayoutGateway
+        private payoutGateway: PayoutGateway,
+        private userRepository: UserRepository
     ) {}
 
-    async execute(withdrawalId: string): Promise<WithdrawalRequest> {
-        const withdrawal = await this.withdrawalRequestRepository.claimPending(withdrawalId);
+    async execute(withdrawalId: string, approvedByAdminId: string): Promise<WithdrawalRequest> {
+        const pending = await this.withdrawalRequestRepository.findById(withdrawalId);
+        if (!pending) throw new Error('Pedido de saque nao encontrado');
+        if (pending.status !== 'PENDING') throw new Error('Este saque ja foi processado');
 
-        if (!withdrawal) {
-            throw new Error('Este saque ja foi processado ou nao existe');
+        const host = await this.userRepository.findById(pending.userId);
+        if (!host || host.kycStatus !== 'APPROVED') {
+            throw new Error('O KYC do anfitriao precisa estar aprovado antes do repasse');
         }
 
-        const pixKeyType = this.getPixKeyType(withdrawal.pixKeyType);
-        if (!pixKeyType) {
-            await this.withdrawalRequestRepository.failAndRefund(withdrawal.id);
-            throw new Error('Tipo de chave Pix invalido para transferencia Asaas');
+        const withdrawal = await this.withdrawalRequestRepository.claimPending(
+            withdrawalId,
+            approvedByAdminId
+        );
+        if (!withdrawal) {
+            throw new Error('O saque mudou de estado ou o KYC deixou de estar aprovado');
+        }
+
+        let pix;
+        try {
+            pix = normalizePixKey(withdrawal.pixKey, withdrawal.pixKeyType);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Chave Pix invalida';
+            await this.withdrawalRequestRepository.failAndRefund(withdrawal.id, message);
+            throw error;
         }
 
         try {
             const transfer = await this.payoutGateway.createPixTransfer({
                 value: withdrawal.amount,
-                pixAddressKey: withdrawal.pixKey,
-                pixAddressKeyType: pixKeyType,
+                pixAddressKey: pix.key,
+                pixAddressKeyType: pix.type,
                 externalReference: withdrawal.id,
-                description: 'Saque Wellcome',
+                description: 'Repasse de anfitriao Wellcome',
             });
 
             if (transfer.status === 'FAILED' || transfer.status === 'CANCELLED') {
-                await this.withdrawalRequestRepository.failAndRefund(withdrawal.id);
+                await this.withdrawalRequestRepository.failAndRefund(
+                    withdrawal.id,
+                    transfer.failReason || 'Transferencia Pix recusada pelo Asaas'
+                );
                 throw new Error('Transferencia Pix recusada pelo Asaas');
             }
 
@@ -38,25 +58,21 @@ export class ApproveWithdrawalUseCase {
                 id: withdrawal.id,
                 providerTransferId: transfer.id,
                 providerEndToEndId: transfer.endToEndIdentifier,
+                providerStatus: transfer.status,
                 status: transfer.status === 'DONE' ? 'COMPLETED' : 'PROCESSING',
             });
-        } catch (error: any) {
-            if (error instanceof PaymentGatewayError && error.isDefinitiveClientError) {
-                await this.withdrawalRequestRepository.failAndRefund(withdrawal.id);
+        } catch (error) {
+            if (error instanceof PaymentGatewayError && !error.outcomeUncertain) {
+                await this.withdrawalRequestRepository.failAndRefund(withdrawal.id, error.message);
                 throw new Error(`Transferencia Pix rejeitada pelo Asaas: ${error.message}`);
             }
-            if (error?.message === 'Transferencia Pix recusada pelo Asaas') {
+            if (error instanceof Error && error.message === 'Transferencia Pix recusada pelo Asaas') {
                 throw error;
             }
-            console.error('[ApproveWithdrawalUseCase] Asaas response is uncertain:', error?.message);
-            throw new Error('O envio Pix ficou em processamento e precisa ser conciliado antes de nova tentativa');
-        }
-    }
 
-    private getPixKeyType(value: string | null): 'CPF' | 'CNPJ' | 'EMAIL' | 'PHONE' | 'EVP' | null {
-        if (value === 'CPF' || value === 'CNPJ' || value === 'EMAIL' || value === 'PHONE' || value === 'EVP') {
-            return value;
+            const message = error instanceof Error ? error.message : 'Resposta incerta do Asaas';
+            console.error('[ApproveWithdrawalUseCase] Asaas response is uncertain:', message);
+            return this.withdrawalRequestRepository.markSubmissionUncertain(withdrawal.id, message);
         }
-        return null;
     }
 }

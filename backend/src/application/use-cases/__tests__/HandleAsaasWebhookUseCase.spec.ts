@@ -16,6 +16,7 @@ describe('HandleAsaasWebhookUseCase', () => {
     const withdrawalRepository = {
         completeByProviderTransferId: jest.fn(),
         failAndRefundByProviderTransferId: jest.fn(),
+        recordProviderProcessing: jest.fn(),
     };
     const webhookRepository = {
         startProcessing: jest.fn(),
@@ -214,5 +215,46 @@ describe('HandleAsaasWebhookUseCase', () => {
             providerStatus: 'CREDIT_CARD_CAPTURE_REFUSED',
         });
         expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+    });
+
+    it('links an early transfer webhook using externalReference', async () => {
+        const result = await useCase.execute({
+            id: 'evt-transfer-done',
+            event: 'TRANSFER_DONE',
+            transfer: {
+                id: 'transfer-1',
+                status: 'DONE',
+                externalReference: '550e8400-e29b-41d4-a716-446655440000',
+                endToEndIdentifier: 'e2e-1',
+            },
+        });
+
+        expect(result).toEqual({ duplicate: false, action: 'transfer_completed' });
+        expect(withdrawalRepository.completeByProviderTransferId).toHaveBeenCalledWith(
+            'transfer-1',
+            'e2e-1',
+            '550e8400-e29b-41d4-a716-446655440000'
+        );
+    });
+
+    it('records transfer processing events without releasing or refunding balance', async () => {
+        const result = await useCase.execute({
+            id: 'evt-transfer-pending',
+            event: 'TRANSFER_PENDING',
+            transfer: {
+                id: 'transfer-1',
+                status: 'PENDING',
+                externalReference: '550e8400-e29b-41d4-a716-446655440000',
+            },
+        });
+
+        expect(result).toEqual({ duplicate: false, action: 'transfer_processing' });
+        expect(withdrawalRepository.recordProviderProcessing).toHaveBeenCalledWith({
+            providerTransferId: 'transfer-1',
+            externalReference: '550e8400-e29b-41d4-a716-446655440000',
+            providerStatus: 'PENDING',
+            providerEndToEndId: undefined,
+        });
+        expect(withdrawalRepository.failAndRefundByProviderTransferId).not.toHaveBeenCalled();
     });
 });

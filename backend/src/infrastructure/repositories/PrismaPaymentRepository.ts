@@ -322,6 +322,12 @@ export class PrismaPaymentRepository implements PaymentRepository {
         referenceId: string;
     }): Promise<boolean> {
         return prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`
+                select id
+                from public.payments
+                where id = cast(${data.paymentId} as uuid)
+                for update
+            `;
             const payment = await tx.payment.findUnique({
                 where: { id: data.paymentId },
             });

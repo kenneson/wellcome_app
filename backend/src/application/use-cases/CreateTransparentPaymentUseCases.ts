@@ -52,14 +52,11 @@ export class CreatePixPaymentUseCase {
             };
         }
 
-        if (
-            prepared.providerPayment.billingType === 'PIX' &&
-            prepared.providerPayment.status === 'CONFIRMED'
-        ) {
+        if (prepared.providerPayment.status === 'CONFIRMED') {
             await this.paymentRepository.updateProviderPayment({
                 paymentId: prepared.payment.id,
                 providerPaymentId: prepared.providerPayment.id,
-                paymentMethod: 'PIX',
+                paymentMethod: prepared.providerPayment.billingType,
                 providerStatus: prepared.providerPayment.status,
             });
             return {
@@ -138,6 +135,27 @@ export class PayWithSavedCardUseCase {
                 value: prepared.payment.valor.toFixed(2),
                 status: prepared.providerPayment.status,
                 paid: true,
+                awaitingSettlement: false,
+            };
+        }
+
+        if (
+            prepared.providerPayment.billingType === 'CREDIT_CARD' &&
+            prepared.providerPayment.status === 'CONFIRMED'
+        ) {
+            await this.paymentRepository.updateProviderPayment({
+                paymentId: prepared.payment.id,
+                providerPaymentId: prepared.providerPayment.id,
+                paymentMethod: 'CREDIT_CARD',
+                providerStatus: prepared.providerPayment.status,
+            });
+            return {
+                paymentId: prepared.payment.id,
+                providerPaymentId: prepared.providerPayment.id,
+                value: prepared.payment.valor.toFixed(2),
+                status: prepared.providerPayment.status,
+                paid: false,
+                awaitingSettlement: true,
             };
         }
 
@@ -180,6 +198,7 @@ export class PayWithSavedCardUseCase {
             value: prepared.payment.valor.toFixed(2),
             status: providerPayment.status,
             paid,
+            awaitingSettlement: !paid && providerPayment.status === 'CONFIRMED',
         };
     }
 

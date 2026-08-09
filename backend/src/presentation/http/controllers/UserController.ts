@@ -4,6 +4,7 @@ import { GetUserProfileUseCase } from '../../../application/use-cases/GetUserPro
 import { UpdateUserProfileUseCase } from '../../../application/use-cases/UpdateUserProfileUseCase';
 import { getAuthenticatedUserId, getOptionalAuthenticatedUserContext, UnauthorizedRequestError } from '../helpers/auth';
 import { isEventOpenForRegistration } from '../../../domain/services/EventAvailability';
+import { InvalidPixKeyError } from '../../../domain/services/PixKeyValidation';
 
 export class UserController {
     constructor(
@@ -66,7 +67,11 @@ export class UserController {
                 return reply.code(401).send({ message: error.message });
             }
 
-            return reply.code(500).send({ message: 'Internal server error', error });
+            if (error instanceof InvalidPixKeyError || (error instanceof Error && error.message.includes('chave Pix'))) {
+                return reply.code(400).send({ message: error.message });
+            }
+
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 

@@ -49,6 +49,8 @@ const webhookSchema = z.object({
         id: z.string().min(1),
         status: z.string().optional(),
         endToEndIdentifier: z.string().nullable().optional(),
+        externalReference: z.string().nullable().optional(),
+        failReason: z.string().nullable().optional(),
     }).passthrough().optional(),
 }).passthrough();
 

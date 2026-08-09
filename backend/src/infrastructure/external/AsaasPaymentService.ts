@@ -25,6 +25,7 @@ interface AsaasErrorResponse {
 
 interface AsaasListResponse<T> {
     data?: T[];
+    hasMore?: boolean;
 }
 
 export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
@@ -165,12 +166,44 @@ export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
         });
     }
 
+    async getPixTransfer(transferId: string): Promise<PixTransferResult> {
+        return this.request<PixTransferResult>(`/transfers/${encodeURIComponent(transferId)}`);
+    }
+
+    async findPixTransferByExternalReference(
+        externalReference: string,
+        requestedAt: Date
+    ): Promise<PixTransferResult | null> {
+        const start = new Date(requestedAt);
+        start.setUTCDate(start.getUTCDate() - 1);
+        const end = new Date(requestedAt);
+        end.setUTCDate(end.getUTCDate() + 1);
+
+        for (let offset = 0; offset < 1000; offset += 100) {
+            const query = new URLSearchParams({
+                'dateCreated[ge]': start.toISOString().slice(0, 10),
+                'dateCreated[le]': end.toISOString().slice(0, 10),
+                limit: '100',
+                offset: String(offset),
+            });
+            const page = await this.request<AsaasListResponse<PixTransferResult>>(
+                `/transfers?${query.toString()}`
+            );
+            const transfer = page.data?.find((item) => item.externalReference === externalReference);
+            if (transfer) return transfer;
+            if (!page.hasMore) return null;
+        }
+
+        throw new PaymentGatewayError('Limite de paginacao atingido durante a conciliacao Asaas');
+    }
+
     private async request<T>(path: string, init: RequestInit = {}, timeoutMs = 15000): Promise<T> {
         const apiKey = process.env.ASAAS_API_KEY?.trim();
         if (!apiKey) {
             throw new PaymentGatewayError('ASAAS_API_KEY nao configurada');
         }
 
+        const mutatingRequest = Boolean(init.method && init.method !== 'GET');
         let response: Response;
         try {
             response = await fetch(`${this.baseUrl}${path}`, {
@@ -186,31 +219,42 @@ export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Falha de rede desconhecida';
-            throw new PaymentGatewayError(`Falha ao conectar com o Asaas: ${message}`);
+            throw new PaymentGatewayError(
+                `Falha ao conectar com o Asaas: ${message}`,
+                undefined,
+                undefined,
+                mutatingRequest
+            );
         }
 
-        const payload = await this.readJson(response);
+        const payload = await this.readJson(response, mutatingRequest);
         if (!response.ok) {
             const errorPayload = payload as AsaasErrorResponse;
             const firstError = errorPayload.errors?.[0];
             throw new PaymentGatewayError(
                 firstError?.description || `Asaas respondeu com HTTP ${response.status}`,
                 response.status,
-                firstError?.code
+                firstError?.code,
+                mutatingRequest && response.status >= 500
             );
         }
 
         return payload as T;
     }
 
-    private async readJson(response: Response): Promise<unknown> {
+    private async readJson(response: Response, mutatingRequest: boolean): Promise<unknown> {
         const text = await response.text();
         if (!text) return {};
 
         try {
             return JSON.parse(text);
         } catch {
-            throw new PaymentGatewayError('Resposta invalida recebida do Asaas', response.status);
+            throw new PaymentGatewayError(
+                'Resposta invalida recebida do Asaas',
+                response.status,
+                undefined,
+                mutatingRequest && response.ok
+            );
         }
     }
 

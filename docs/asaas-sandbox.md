@@ -36,9 +36,15 @@ Eventos necessarios:
 CHECKOUT_PAID
 CHECKOUT_CANCELED
 CHECKOUT_EXPIRED
+PAYMENT_CONFIRMED
+PAYMENT_RECEIVED
 PAYMENT_REFUNDED
 PAYMENT_PARTIALLY_REFUNDED
 PAYMENT_CHARGEBACK_REQUESTED
+TRANSFER_CREATED
+TRANSFER_PENDING
+TRANSFER_IN_BANK_PROCESSING
+TRANSFER_BLOCKED
 TRANSFER_DONE
 TRANSFER_FAILED
 TRANSFER_CANCELLED
@@ -63,6 +69,43 @@ EXPO_PUBLIC_API_URL=https://wellcome-backend.igpqhp.easypanel.host
 7. Validar estorno total e parcial.
 8. Solicitar um saque Pix e validar sucesso e falha.
 9. Conferir a fila do webhook no Asaas.
+
+## Regra de repasse
+
+O saldo do anfitriao so e creditado quando a cobranca estiver efetivamente
+recebida no Asaas (RECEIVED ou RECEIVED_IN_CASH). CONFIRMED representa
+autorizacao do pagamento, mas ainda nao libera saque.
+
+Com APP_FEE_PERCENTAGE=10 e PAYMENT_PROCESSING_FEE_PAYER=PLATFORM, uma
+inscricao de R$ 100,00 gera:
+
+```text
+valor bruto:        R$ 100,00
+taxa do app:        R$  10,00
+repasse anfitriao:  R$  90,00
+taxa Asaas:         custo da plataforma
+```
+
+Se PAYMENT_PROCESSING_FEE_PAYER=HOST, a taxa Asaas tambem e descontada do
+repasse do anfitriao.
+
+## Operacao segura de saques
+
+- O anfitriao precisa ter KYC aprovado e chave Pix valida.
+- A solicitacao reserva o saldo de forma transacional.
+- Somente um saque pode ficar pendente ou em processamento por anfitriao.
+- A aprovacao registra o administrador e usa o ID do saque como
+  externalReference.
+- Nunca aprove novamente um saque em PROCESSING.
+- Quando providerStatus estiver como SUBMISSION_UNCERTAIN, use
+  **Conciliar** no painel admin. Essa acao apenas consulta o Asaas e nao envia
+  outro Pix.
+- Falhas definitivas devolvem o valor reservado para a carteira uma unica vez.
+- Reembolsos e chargebacks podem deixar a carteira negativa se o anfitriao ja
+  tiver sacado; novos saques ficam bloqueados enquanto nao houver saldo.
+
+Antes do deploy do codigo, aplique a migration
+20260809165533_secure_asaas_payouts.sql no ambiente correspondente.
 
 Para producao, gere novas chaves e um novo token. Nao reutilize credenciais do
 Sandbox.

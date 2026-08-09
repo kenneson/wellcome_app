@@ -112,6 +112,13 @@ describe('Transparent payment use cases', () => {
         paymentRepository.updateProviderPayment.mockResolvedValue(payment);
         paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
         paymentRepository.claimCardPaymentAttempt.mockResolvedValue(true);
+        paymentGateway.payWithCreditCard.mockReset().mockResolvedValue({
+            id: 'pay-1',
+            billingType: 'CREDIT_CARD',
+            status: 'CONFIRMED',
+            value: 100,
+            netValue: 97.5,
+        });
     });
 
     it('reuses one provider charge when generating Pix', async () => {
@@ -188,9 +195,9 @@ describe('Transparent payment use cases', () => {
             bookingId: 'booking-1', eventId: 'event-1', userId: 'user-1',
         });
 
-        expect(result.paid).toBe(true);
+        expect(result).toEqual(expect.objectContaining({ paid: false, awaitingSettlement: true }));
         expect(paymentGateway.getPixQrCode).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledTimes(1);
+        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
     });
 
     it('records a definitive card refusal and does not approve the booking', async () => {
@@ -260,9 +267,9 @@ describe('Transparent payment use cases', () => {
             bookingId: 'booking-1', eventId: 'event-1', userId: 'user-1', cardId: 'card-1',
         });
 
-        expect(result.paid).toBe(true);
+        expect(result).toEqual(expect.objectContaining({ paid: false, awaitingSettlement: true }));
         expect(paymentGateway.payWithCreditCard).not.toHaveBeenCalled();
         expect(paymentRepository.claimCardPaymentAttempt).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledTimes(1);
+        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
     });
 });

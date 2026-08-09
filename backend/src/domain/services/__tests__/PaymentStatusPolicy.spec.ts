@@ -10,9 +10,12 @@ describe('PaymentStatusPolicy', () => {
         })).toBe(true);
     });
 
-    it('accepts CONFIRMED for card settlement', () => {
+    it('does not release card funds before they are received', () => {
         expect(isProviderPaymentSettled({
             id: 'pay-card', billingType: 'CREDIT_CARD', status: 'CONFIRMED', value: 10, netValue: 9.5,
+        })).toBe(false);
+        expect(isProviderPaymentSettled({
+            id: 'pay-card', billingType: 'CREDIT_CARD', status: 'RECEIVED', value: 10, netValue: 9.5,
         })).toBe(true);
     });
 });

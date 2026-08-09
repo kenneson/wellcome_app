@@ -105,6 +105,9 @@ export interface PixTransferResult {
     id: string;
     status: string;
     endToEndIdentifier?: string | null;
+    externalReference?: string | null;
+    failReason?: string | null;
+    dateCreated?: string | null;
 }
 
 export interface PaymentGateway {
@@ -124,13 +127,19 @@ export interface PaymentGateway {
 
 export interface PayoutGateway {
     createPixTransfer(input: PixTransferInput): Promise<PixTransferResult>;
+    getPixTransfer(transferId: string): Promise<PixTransferResult>;
+    findPixTransferByExternalReference(
+        externalReference: string,
+        requestedAt: Date
+    ): Promise<PixTransferResult | null>;
 }
 
 export class PaymentGatewayError extends Error {
     constructor(
         message: string,
         public readonly statusCode?: number,
-        public readonly code?: string
+        public readonly code?: string,
+        public readonly outcomeUncertain: boolean = false
     ) {
         super(message);
         this.name = 'PaymentGatewayError';

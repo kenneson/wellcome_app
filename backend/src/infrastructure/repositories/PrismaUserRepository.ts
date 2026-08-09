@@ -170,7 +170,7 @@ export class PrismaUserRepository implements UserRepository {
 
         const blockers: string[] = [];
 
-        if (Number(user.walletBalance || 0) > 0) {
+        if (Math.abs(Number(user.walletBalance || 0)) >= 0.005) {
             blockers.push('Your available wallet balance must be zero before deleting the account.');
         }
 

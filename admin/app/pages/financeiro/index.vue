@@ -51,6 +51,9 @@
                 <span v-else-if="wd.status === 'FAILED'" class="bg-red-500/10 text-red-500 text-xs font-medium px-2.5 py-1 rounded-full border border-red-500/20">
                   Falhou
                 </span>
+                <span v-else-if="wd.status === 'PROCESSING'" class="bg-blue-500/10 text-blue-400 text-xs font-medium px-2.5 py-1 rounded-full border border-blue-500/20">
+                  Em processamento
+                </span>
                 <span v-else class="bg-slate-500/10 text-slate-400 text-xs font-medium px-2.5 py-1 rounded-full border border-slate-500/20">
                   {{ wd.status }}
                 </span>
@@ -65,8 +68,17 @@
                   <span v-if="processingId === wd.id">Processando...</span>
                   <span v-else>Aprovar PIX</span>
                 </button>
-                <div v-else-if="wd.efiEndToEndId" class="text-xs text-slate-500 uppercase tracking-wider">
-                  {{ wd.efiEndToEndId.substring(0, 8) }}...
+                <button
+                  v-else-if="wd.status === 'PROCESSING'"
+                  @click="reconcileWithdrawal(wd.id)"
+                  :disabled="processingId === wd.id"
+                  class="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
+                >
+                  <span v-if="processingId === wd.id">Consultando...</span>
+                  <span v-else>Conciliar</span>
+                </button>
+                <div v-else-if="wd.providerEndToEndId" class="text-xs text-slate-500 uppercase tracking-wider">
+                  {{ wd.providerEndToEndId.substring(0, 12) }}...
                 </div>
               </td>
             </tr>
@@ -117,7 +129,7 @@ const fetchWithdrawals = async () => {
 }
 
 const approveWithdrawal = async (id) => {
-  if (!confirm('Tem certeza? O valor sera transferido imediatamente da conta EFI para a chave PIX do cliente.')) return;
+  if (!confirm('Tem certeza? O valor sera transferido da conta Asaas para a chave PIX do anfitriao.')) return;
 
   processingId.value = id;
 
@@ -134,13 +146,42 @@ const approveWithdrawal = async (id) => {
     const result = await response.json();
     const index = withdrawals.value.findIndex((w) => w.id === id);
     if (index !== -1) {
-      withdrawals.value[index].status = 'COMPLETED';
-      withdrawals.value[index].efiEndToEndId = result.efiEndToEndId || 'Processado pela rede PIX';
+      withdrawals.value[index] = { ...withdrawals.value[index], ...result };
     }
 
-    alert('PIX enviado com sucesso!');
+    alert(
+      result.status === 'COMPLETED'
+        ? 'PIX concluido com sucesso.'
+        : 'Transferencia enviada ao Asaas e ainda em processamento. Use Conciliar antes de qualquer nova acao.'
+    );
   } catch (err) {
     alert(`Erro ao enviar PIX: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+  } finally {
+    processingId.value = null;
+  }
+}
+
+const reconcileWithdrawal = async (id) => {
+  processingId.value = id;
+  try {
+    const response = await adminFetch(`/admin/withdrawals/${id}/reconcile`, { method: 'POST' });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.message || 'Falha ao conciliar saque');
+    }
+
+    const result = await response.json();
+    const index = withdrawals.value.findIndex((w) => w.id === id);
+    if (index !== -1) withdrawals.value[index] = { ...withdrawals.value[index], ...result };
+    alert(
+      result.status === 'COMPLETED'
+        ? 'Transferencia confirmada no Asaas.'
+        : result.status === 'FAILED'
+          ? 'Transferencia falhou e o saldo foi devolvido ao anfitriao.'
+          : 'Transferencia continua em processamento.'
+    );
+  } catch (err) {
+    alert(`Erro ao conciliar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
   } finally {
     processingId.value = null;
   }

@@ -42,6 +42,7 @@ model User {
   pixKey              String?             @map("pix_key")
   pixKeyType          String?             @map("pix_key_type")
   withdrawals         WithdrawalRequest[]
+  approvedWithdrawals WithdrawalRequest[] @relation("WithdrawalApprovedBy")
   walletTransactions  WalletTransaction[]
   role                Role                @default(USER)
   kycStatus           KycStatus           @default(NOT_SUBMITTED) @map("kyc_status")
@@ -933,21 +934,32 @@ enum PaymentStatus {
 }
 
 model WithdrawalRequest {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId             String           @map("user_id") @db.Uuid
-  amount             Decimal          @db.Decimal(10, 2)
-  pixKey             String           @map("pix_key")
-  pixKeyType         String?          @map("pix_key_type")
-  status             WithdrawalStatus @default(PENDING)
-  efiEndToEndId      String?          @map("efi_end_to_end_id")
-  provider           String           @default("EFI")
-  providerTransferId String?          @unique @map("provider_transfer_id")
-  providerEndToEndId String?          @map("provider_end_to_end_id")
-  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  amount              Decimal          @db.Decimal(10, 2)
+  pixKey              String           @map("pix_key")
+  pixKeyType          String?          @map("pix_key_type")
+  status              WithdrawalStatus @default(PENDING)
+  efiEndToEndId       String?          @map("efi_end_to_end_id")
+  provider            String           @default("EFI")
+  providerTransferId  String?          @unique @map("provider_transfer_id")
+  providerEndToEndId  String?          @map("provider_end_to_end_id")
+  providerStatus      String?          @map("provider_status")
+  approvedByAdminId   String?          @map("approved_by_admin_id") @db.Uuid
+  submissionAttempts  Int              @default(0) @map("submission_attempts")
+  failureReason       String?          @map("failure_reason")
+  approvedAt          DateTime?        @map("approved_at") @db.Timestamptz(6)
+  submittedAt         DateTime?        @map("submitted_at") @db.Timestamptz(6)
+  completedAt         DateTime?        @map("completed_at") @db.Timestamptz(6)
+  failedAt            DateTime?        @map("failed_at") @db.Timestamptz(6)
+  lastReconciledAt    DateTime?        @map("last_reconciled_at") @db.Timestamptz(6)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedByAdmin     User?            @relation("WithdrawalApprovedBy", fields: [approvedByAdminId], references: [id], onDelete: SetNull)
 
   @@index([userId], map: "idx_withdrawals_user")
+  @@index([status, createdAt], map: "idx_withdrawals_status_created")
   @@map("withdrawal_requests")
   @@schema("public")
 }

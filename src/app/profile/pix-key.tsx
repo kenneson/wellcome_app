@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PIX_KEY_TYPES = [
     { label: 'CPF', value: 'CPF' },
+    { label: 'CNPJ', value: 'CNPJ' },
     { label: 'E-mail', value: 'EMAIL' },
     { label: 'Telefone', value: 'PHONE' },
     { label: 'Chave Aleatória', value: 'EVP' },
@@ -80,6 +81,7 @@ export default function PixKeyScreen() {
     const getPlaceholder = () => {
         switch (pixKeyType) {
             case 'CPF': return '000.000.000-00';
+            case 'CNPJ': return '00.000.000/0000-00';
             case 'EMAIL': return 'seuemail@exemplo.com';
             case 'PHONE': return '+55 (11) 99999-9999';
             case 'EVP': return 'Chave aleatória (UUID)';

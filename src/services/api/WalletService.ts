@@ -21,11 +21,11 @@ export class WalletService {
         };
     }
 
-    async requestWithdrawal(userId: string, amount: number): Promise<WithdrawalResponse> {
+    async requestWithdrawal(amount: number): Promise<WithdrawalResponse> {
         const response = await fetch(this.apiUrl, {
             method: 'POST',
             headers: await this.getAuthHeaders(),
-            body: JSON.stringify({ userId, amount }),
+            body: JSON.stringify({ amount }),
         });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));

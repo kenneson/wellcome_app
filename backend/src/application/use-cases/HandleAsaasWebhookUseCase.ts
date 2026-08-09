@@ -33,6 +33,8 @@ export interface AsaasWebhookPayload {
         id: string;
         status?: string;
         endToEndIdentifier?: string | null;
+        externalReference?: string | null;
+        failReason?: string | null;
     };
     [key: string]: unknown;
 }
@@ -86,8 +88,9 @@ export class HandleAsaasWebhookUseCase {
     private async process(payload: AsaasWebhookPayload): Promise<string> {
         switch (payload.event) {
             case 'CHECKOUT_PAID':
-                await this.confirmCheckout(payload);
-                return 'payment_confirmed';
+                return await this.confirmCheckout(payload)
+                    ? 'payment_confirmed'
+                    : 'payment_awaiting_settlement';
             case 'PAYMENT_CONFIRMED':
             case 'PAYMENT_RECEIVED':
                 return await this.confirmProviderPayment(payload)
@@ -121,12 +124,18 @@ export class HandleAsaasWebhookUseCase {
             case 'TRANSFER_CANCELLED':
                 await this.failTransfer(payload);
                 return 'transfer_failed';
+            case 'TRANSFER_CREATED':
+            case 'TRANSFER_PENDING':
+            case 'TRANSFER_IN_BANK_PROCESSING':
+            case 'TRANSFER_BLOCKED':
+                await this.recordTransferProcessing(payload);
+                return 'transfer_processing';
             default:
                 return 'ignored';
         }
     }
 
-    private async confirmCheckout(payload: AsaasWebhookPayload): Promise<void> {
+    private async confirmCheckout(payload: AsaasWebhookPayload): Promise<boolean> {
         const checkoutId = payload.checkout?.id;
         if (!checkoutId) throw new Error('Checkout ID ausente no webhook');
 
@@ -147,7 +156,11 @@ export class HandleAsaasWebhookUseCase {
             paymentMethod: providerPayment.billingType,
             providerStatus: providerPayment.status,
         });
+        if (!isProviderPaymentSettled(providerPayment as ProviderPayment)) {
+            return false;
+        }
         await this.confirmPaymentService.execute(payment, providerPayment as ProviderPayment);
+        return true;
     }
 
     private async confirmProviderPayment(payload: AsaasWebhookPayload): Promise<boolean> {
@@ -165,7 +178,7 @@ export class HandleAsaasWebhookUseCase {
                 paymentMethod: providerPayment.billingType,
                 providerStatus: providerPayment.status,
             });
-            if (providerPayment.billingType === 'PIX' && providerPayment.status === 'CONFIRMED') {
+            if (providerPayment.status === 'CONFIRMED') {
                 return false;
             }
             throw new Error(`Cobranca Asaas ${providerPaymentId} ainda nao esta confirmada`);
@@ -242,14 +255,30 @@ export class HandleAsaasWebhookUseCase {
         if (!transferId) throw new Error('Transfer ID ausente no webhook');
         await this.withdrawalRepository.completeByProviderTransferId(
             transferId,
-            payload.transfer?.endToEndIdentifier || undefined
+            payload.transfer?.endToEndIdentifier || undefined,
+            payload.transfer?.externalReference
         );
     }
 
     private async failTransfer(payload: AsaasWebhookPayload): Promise<void> {
         const transferId = payload.transfer?.id;
         if (!transferId) throw new Error('Transfer ID ausente no webhook');
-        await this.withdrawalRepository.failAndRefundByProviderTransferId(transferId);
+        await this.withdrawalRepository.failAndRefundByProviderTransferId(
+            transferId,
+            payload.transfer?.externalReference,
+            payload.transfer?.failReason || payload.transfer?.status || payload.event
+        );
+    }
+
+    private async recordTransferProcessing(payload: AsaasWebhookPayload): Promise<void> {
+        const transferId = payload.transfer?.id;
+        if (!transferId) throw new Error('Transfer ID ausente no webhook');
+        await this.withdrawalRepository.recordProviderProcessing({
+            providerTransferId: transferId,
+            externalReference: payload.transfer?.externalReference,
+            providerStatus: payload.transfer?.status || payload.event,
+            providerEndToEndId: payload.transfer?.endToEndIdentifier,
+        });
     }
 
     private getCompletedRefundAmount(

@@ -25,6 +25,7 @@ import { ManageEventDraftsUseCase } from './application/use-cases/ManageEventDra
 import { DeletePaymentCardUseCase, SetDefaultPaymentCardUseCase } from './application/use-cases/ManagePaymentCardUseCases';
 import { RejectRegistrationUseCase } from './application/use-cases/RejectRegistrationUseCase';
 import { RequestWithdrawalUseCase } from './application/use-cases/RequestWithdrawalUseCase';
+import { ReconcileWithdrawalUseCase } from './application/use-cases/ReconcileWithdrawalUseCase';
 import { SaveBillingProfileUseCase } from './application/use-cases/SaveBillingProfileUseCase';
 import { SendNotificationUseCase } from './application/use-cases/SendNotificationUseCase';
 import { UpdateEventUseCase } from './application/use-cases/UpdateEventUseCase';
@@ -193,7 +194,15 @@ const start = async () => {
 
         // Use Cases
         const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
-        const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(withdrawalRepository, asaasPaymentService);
+        const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(
+            withdrawalRepository,
+            asaasPaymentService,
+            userRepository
+        );
+        const reconcileWithdrawalUseCase = new ReconcileWithdrawalUseCase(
+            withdrawalRepository,
+            asaasPaymentService
+        );
         const createEventUseCase = new CreateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
         const manageEventDraftsUseCase = new ManageEventDraftsUseCase(
             eventDraftRepository,
@@ -298,6 +307,7 @@ const start = async () => {
         const withdrawalController = new WithdrawalController(
             requestWithdrawalUseCase,
             approveWithdrawalUseCase,
+            reconcileWithdrawalUseCase,
             withdrawalRepository
         );
         const adminController = new AdminController();
@@ -1067,7 +1077,8 @@ const start = async () => {
                 tags: ['Users'],
                 params: {
                     type: 'object',
-                    properties: { id: { type: 'string' } }
+                    required: ['id'],
+                    properties: { id: { type: 'string', format: 'uuid' } }
                 },
                 body: {
                     type: 'object',
@@ -1142,7 +1153,6 @@ const start = async () => {
                     type: 'object',
                     required: ['amount'],
                     properties: {
-                        userId: { type: 'string' },
                         amount: { type: 'number' }
                     }
                 },
@@ -1177,12 +1187,27 @@ const start = async () => {
                         properties: {
                             id: { type: 'string' },
                             status: { type: 'string' },
-                            efiEndToEndId: { type: 'string', nullable: true }
+                            providerTransferId: { type: 'string', nullable: true },
+                            providerEndToEndId: { type: 'string', nullable: true },
+                            providerStatus: { type: 'string', nullable: true }
                         }
                     }
                 }
             }
         }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
+
+        fastify.post('/admin/withdrawals/:id/reconcile', {
+            schema: {
+                summary: 'Reconcile withdrawal with Asaas (Admin)',
+                description: 'Checks an uncertain or processing transfer without creating another Pix',
+                tags: ['Withdrawals'],
+                params: {
+                    type: 'object',
+                    required: ['id'],
+                    properties: { id: { type: 'string', format: 'uuid' } }
+                }
+            }
+        }, (req, reply) => withdrawalController.reconcileWithdrawal(req, reply));
 
         // Get all withdrawals for Admin UI
         fastify.get('/admin/withdrawals', {
@@ -1205,7 +1230,11 @@ const start = async () => {
                                 status: { type: 'string' },
                                 pixKey: { type: 'string' },
                                 pixKeyType: { type: 'string', nullable: true },
-                                efiEndToEndId: { type: 'string', nullable: true },
+                                providerTransferId: { type: 'string', nullable: true },
+                                providerEndToEndId: { type: 'string', nullable: true },
+                                providerStatus: { type: 'string', nullable: true },
+                                failureReason: { type: 'string', nullable: true },
+                                approvedByAdminId: { type: 'string', nullable: true },
                                 createdAt: { type: 'string' }
                             }
                         }

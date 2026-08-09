@@ -11,6 +11,15 @@ export interface WithdrawalRequest {
     provider: string;
     providerTransferId?: string | null;
     providerEndToEndId?: string | null;
+    providerStatus?: string | null;
+    approvedByAdminId?: string | null;
+    submissionAttempts: number;
+    failureReason?: string | null;
+    approvedAt?: Date | null;
+    submittedAt?: Date | null;
+    completedAt?: Date | null;
+    failedAt?: Date | null;
+    lastReconciledAt?: Date | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -38,14 +47,30 @@ export interface WithdrawalRequestRepository {
         id: string;
         providerTransferId: string;
         providerEndToEndId?: string | null;
+        providerStatus?: string;
         status: 'PROCESSING' | 'COMPLETED';
     }): Promise<WithdrawalRequest>;
 
-    completeByProviderTransferId(providerTransferId: string, providerEndToEndId?: string): Promise<boolean>;
-    failAndRefundByProviderTransferId(providerTransferId: string): Promise<boolean>;
-    failAndRefund(id: string): Promise<boolean>;
+    markSubmissionUncertain(id: string, reason: string): Promise<WithdrawalRequest>;
+    recordProviderProcessing(data: {
+        providerTransferId: string;
+        externalReference?: string | null;
+        providerStatus: string;
+        providerEndToEndId?: string | null;
+    }): Promise<boolean>;
+    completeByProviderTransferId(
+        providerTransferId: string,
+        providerEndToEndId?: string,
+        externalReference?: string | null
+    ): Promise<boolean>;
+    failAndRefundByProviderTransferId(
+        providerTransferId: string,
+        externalReference?: string | null,
+        reason?: string
+    ): Promise<boolean>;
+    failAndRefund(id: string, reason?: string): Promise<boolean>;
 
-    claimPending(id: string): Promise<WithdrawalRequest | null>;
+    claimPending(id: string, approvedByAdminId: string): Promise<WithdrawalRequest | null>;
     
     findByUserId(userId: string): Promise<WithdrawalRequest[]>;
 

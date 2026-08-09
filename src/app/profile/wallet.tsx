@@ -88,7 +88,7 @@ export default function WalletScreen() {
                     onPress: async () => {
                         setRequesting(true);
                         try {
-                            await walletService.requestWithdrawal(userId, balance);
+                            await walletService.requestWithdrawal(balance);
                             Alert.alert(
                                 '✅ Solicitação enviada!',
                                 'Seu saque foi solicitado com sucesso. A equipe Wellcome irá processar em até 2 dias úteis.',
