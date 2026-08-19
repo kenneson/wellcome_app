@@ -127,7 +127,10 @@ export default function Home() {
       <footer className="site-footer shell">
         <a className="wordmark footer-wordmark" href="#inicio">wellcome<span>.</span></a>
         <p>Comida boa. Gente interessante. Uma cidade mais viva.</p>
-        <a href="mailto:oi@wellcome.app">oi@wellcome.app</a>
+        <div className="footer-links" aria-label="Links institucionais">
+          <a href="/termos-de-uso">Termos de Uso</a>
+          <a href="mailto:oi@wellcome.app">oi@wellcome.app</a>
+        </div>
       </footer>
     </main>
   );
