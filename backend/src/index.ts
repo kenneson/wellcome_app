@@ -240,7 +240,12 @@ const start = async () => {
             billingRepository,
             sendNotificationUseCase
         );
-        const checkPaymentUseCase = new CheckPaymentUseCase(paymentRepository);
+        const checkPaymentUseCase = new CheckPaymentUseCase(
+            paymentRepository,
+            asaasPaymentService,
+            eventRepository,
+            sendNotificationUseCase
+        );
         const handleAsaasWebhookUseCase = new HandleAsaasWebhookUseCase(
             asaasPaymentService,
             paymentRepository,

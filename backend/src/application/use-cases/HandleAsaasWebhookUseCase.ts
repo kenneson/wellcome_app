@@ -167,7 +167,11 @@ export class HandleAsaasWebhookUseCase {
         const providerPaymentId = payload.payment?.id;
         if (!providerPaymentId) throw new Error('Payment ID ausente no webhook');
 
-        const payment = await this.paymentRepository.findByProviderPaymentId(providerPaymentId);
+        const payment =
+            await this.paymentRepository.findByProviderPaymentId(providerPaymentId) ||
+            (payload.payment?.externalReference
+                ? await this.paymentRepository.findByBookingId(payload.payment.externalReference)
+                : null);
         if (!payment) return false;
 
         const providerPayment = await this.paymentGateway.getPayment(providerPaymentId);

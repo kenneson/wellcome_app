@@ -3,6 +3,7 @@ import { HandleAsaasWebhookUseCase } from '../HandleAsaasWebhookUseCase';
 
 describe('HandleAsaasWebhookUseCase', () => {
     const paymentRepository = {
+        findByBookingId: jest.fn(),
         findByTxid: jest.fn(),
         updateProviderPayment: jest.fn(),
         confirmAndCreditHost: jest.fn(),
@@ -38,6 +39,20 @@ describe('HandleAsaasWebhookUseCase', () => {
         process.env.PAYMENT_PROCESSING_FEE_PAYER = 'PLATFORM';
         webhookRepository.startProcessing.mockResolvedValue(true);
         webhookRepository.markProcessed.mockResolvedValue(undefined);
+        paymentRepository.findByBookingId.mockResolvedValue({
+            id: 'payment-1',
+            bookingId: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+            txid: 'checkout-1',
+            pixCopiaECola: '',
+            qrcode: '',
+            provider: 'ASAAS',
+            valor: 100,
+            status: PaymentStatus.PENDING,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
         paymentRepository.findByTxid.mockResolvedValue({
             id: 'payment-1',
             bookingId: 'booking-1',
@@ -152,6 +167,25 @@ describe('HandleAsaasWebhookUseCase', () => {
         expect(webhookRepository.markProcessed).toHaveBeenCalledWith('evt-pix-1');
     });
 
+    it('confirms a direct payment using the booking external reference when provider id is not stored yet', async () => {
+        paymentRepository.findByProviderPaymentId.mockResolvedValueOnce(null);
+
+        const result = await useCase.execute({
+            id: 'evt-pix-external-reference',
+            event: 'PAYMENT_RECEIVED',
+            payment: {
+                id: 'pay-1',
+                status: 'RECEIVED',
+                value: 100,
+                externalReference: 'booking-1',
+            },
+        });
+
+        expect(result).toEqual({ duplicate: false, action: 'payment_confirmed' });
+        expect(paymentRepository.findByBookingId).toHaveBeenCalledWith('booking-1');
+        expect(paymentGateway.getPayment).toHaveBeenCalledWith('pay-1');
+        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledTimes(1);
+    });
     it('rejects a direct payment when the provider amount diverges', async () => {
         paymentGateway.getPayment.mockResolvedValue({
             id: 'pay-1',
