@@ -3,6 +3,7 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { ProviderPayment } from '../../domain/services/PaymentGateway';
 import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { SendNotificationUseCase } from '../use-cases/SendNotificationUseCase';
 
@@ -52,6 +53,7 @@ export class ConfirmAsaasPaymentService {
             netAmount,
             paidAt: Number.isNaN(paidAt.getTime()) ? new Date() : paidAt,
             providerStatus: providerPayment.status,
+            approveBookingOnPayment: this.shouldApproveBookingOnPayment(event),
         });
 
         if (confirmed && event.host) {
@@ -65,6 +67,10 @@ export class ConfirmAsaasPaymentService {
             );
         }
         return confirmed;
+    }
+
+    private shouldApproveBookingOnPayment(event: { accessType?: EventAccessType; requiresApproval?: boolean }): boolean {
+        return event.accessType === EventAccessType.OPEN && !event.requiresApproval;
     }
 
     private getAppFeePercentage(): number {

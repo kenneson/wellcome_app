@@ -18,6 +18,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MapView, { Marker } from 'react-native-maps';
 
 // Map facilities/rules to icons/labels
 const FACILITY_ICONS: Record<string, { icon: string, label: string }> = {
@@ -51,6 +52,7 @@ export default function EventDetailsScreen() {
     const [submittingReview, setSubmittingReview] = useState(false);
     const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
     const [myBookingId, setMyBookingId] = useState<string | null>(null);
+    const [myPaymentStatus, setMyPaymentStatus] = useState<string | null>(null);
     const [reportVisible, setReportVisible] = useState(false);
 
     const isPastEvent = React.useMemo(() => {
@@ -93,10 +95,12 @@ export default function EventDetailsScreen() {
                 setIsParticipant(!!myParticipation);
                 setMyBookingStatus(myParticipation?.status || null);
                 setMyBookingId(myParticipation?.id || null);
+                setMyPaymentStatus(myParticipation?.paymentStatus || null);
             } else {
                 setIsParticipant(false);
                 setMyBookingStatus(null);
                 setMyBookingId(null);
+                setMyPaymentStatus(null);
             }
 
         } catch (error) {
@@ -118,11 +122,14 @@ export default function EventDetailsScreen() {
     }
 
     const openMaps = async () => {
-        if (!event?.latitude || !event?.longitude) return;
+        if (!event) return;
+
+        const { latitude, longitude, title } = event;
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
         const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
-        const latLng = `${event.latitude},${event.longitude}`;
-        const label = event.title;
+        const latLng = `${latitude},${longitude}`;
+        const label = title;
         const url = Platform.select({
             ios: `${scheme}${label}@${latLng}`,
             android: `${scheme}${latLng}(${label})`
@@ -239,6 +246,21 @@ export default function EventDetailsScreen() {
     const hostName = event.host?.fullName || event.host?.username || 'Anfitrião';
     const optimizedCoverImage = getOptimizedImageUrl(event.coverImageUrl, { width: 800 });
     const optimizedHostAvatar = getOptimizedImageUrl(event.host?.avatarUrl, { width: 100 });
+    const hasExactLocation = Number.isFinite(event.latitude) && Number.isFinite(event.longitude);
+    const mapCoordinate = hasExactLocation
+        ? { latitude: event.latitude as number, longitude: event.longitude as number }
+        : null;
+    const isPaidEvent = Number(event.price) > 0;
+    const paymentConfirmed = myPaymentStatus === 'CONFIRMED' || myPaymentStatus === 'PARTIALLY_REFUNDED';
+    const canContinuePayment = !isHost
+        && isParticipant
+        && isPaidEvent
+        && Boolean(myBookingId)
+        && ['PENDING', 'APPROVED'].includes(myBookingStatus || '')
+        && !paymentConfirmed;
+    const canViewTicket = isParticipant
+        && myBookingStatus === 'APPROVED'
+        && (!isPaidEvent || paymentConfirmed);
     
     // Group dishes by category
     const groupedDishes = event.dishes?.reduce((acc: any, dish) => {
@@ -544,21 +566,51 @@ export default function EventDetailsScreen() {
                     <View className="mb-8">
                         <Text className="text-[18px] font-bold text-[#1A1A1A] mb-4">Sobre o local</Text>
                         
-                        <TouchableOpacity 
-                            className="h-[180px] bg-gray-100 rounded-2xl mb-4 overflow-hidden relative border border-gray-200"
-                            activeOpacity={0.9}
-                            onPress={openMaps}
-                        >
-                            <View className="absolute inset-0 items-center justify-center bg-[#E5E7EB]">
-                                <Ionicons name="map" size={40} color="#9CA3AF" />
-                                <Text className="text-gray-500 mt-2 text-sm">Ver no mapa</Text>
-                            </View>
-                            <View className="absolute inset-0 items-center justify-center">
-                                <View className="w-10 h-10 bg-[#FF8C42] rounded-full items-center justify-center border-4 border-white shadow-lg">
-                                    <Ionicons name="location" size={20} color="white" />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
+                        <View className="h-[180px] bg-gray-100 rounded-2xl mb-4 overflow-hidden relative border border-gray-200">
+                            {mapCoordinate ? (
+                                <>
+                                    <MapView
+                                        style={{ width: '100%', height: '100%' }}
+                                        initialRegion={{
+                                            ...mapCoordinate,
+                                            latitudeDelta: 0.008,
+                                            longitudeDelta: 0.008
+                                        }}
+                                        scrollEnabled={false}
+                                        zoomEnabled={false}
+                                        rotateEnabled={false}
+                                        pitchEnabled={false}
+                                        toolbarEnabled={false}
+                                        liteMode={Platform.OS === 'android'}
+                                        onPress={openMaps}
+                                        accessibilityLabel="Mapa do local do evento"
+                                    >
+                                        <Marker coordinate={mapCoordinate} />
+                                    </MapView>
+
+                                    <TouchableOpacity
+                                        className="absolute right-3 bottom-3 flex-row items-center bg-white px-3 py-2 shadow-sm"
+                                        style={{ borderRadius: 999 }}
+                                        activeOpacity={0.9}
+                                        onPress={openMaps}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Abrir local no aplicativo de mapas"
+                                    >
+                                        <Ionicons name="navigate-circle-outline" size={18} color="#FF8C42" />
+                                        <Text className="text-[#1A1A1A] text-xs font-bold ml-1.5">Abrir mapa</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <TouchableOpacity
+                                    className="flex-1 items-center justify-center bg-[#E5E7EB]"
+                                    activeOpacity={0.9}
+                                    onPress={openMaps}
+                                >
+                                    <Ionicons name="map" size={40} color="#9CA3AF" />
+                                    <Text className="text-gray-500 mt-2 text-sm">Local exato disponivel apos confirmacao</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                         
                         <TouchableOpacity onPress={openMaps} className="flex-row items-center mb-6">
                             <Text className="text-sm text-gray-500 italic flex-1">
@@ -594,7 +646,7 @@ export default function EventDetailsScreen() {
             </KeyboardAwareScrollView>
 
             {/* Action Bar - Participant: Resume pending payment */}
-            {!isHost && isParticipant && myBookingStatus === 'PENDING' && Number(event.price) > 0 && myBookingId && (
+            {canContinuePayment && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
                     <TouchableOpacity
                         className="bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"
@@ -607,7 +659,7 @@ export default function EventDetailsScreen() {
             )}
 
             {/* Action Bar - Participant: View Ticket (approved) */}
-            {isParticipant && myBookingStatus === 'APPROVED' && (
+            {canViewTicket && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
                     <TouchableOpacity
                         className="bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"

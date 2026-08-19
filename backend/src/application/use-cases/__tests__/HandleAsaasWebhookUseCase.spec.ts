@@ -90,6 +90,8 @@ describe('HandleAsaasWebhookUseCase', () => {
             title: 'Jantar de teste',
             hostId: 'host-1',
             host: { id: 'host-1', expoPushToken: null },
+            accessType: 'OPEN',
+            requiresApproval: false,
         });
 
         useCase = new HandleAsaasWebhookUseCase(
@@ -117,6 +119,7 @@ describe('HandleAsaasWebhookUseCase', () => {
             platformFee: 10,
             processorFee: 1.99,
             netAmount: 90,
+            approveBookingOnPayment: true,
         }));
         expect(notifications.execute).toHaveBeenCalledTimes(1);
         expect(webhookRepository.markProcessed).toHaveBeenCalledWith('evt-1');

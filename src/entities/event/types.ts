@@ -113,4 +113,5 @@ export interface EventRegistration {
     reviewedBy?: string | null;
     reviewedAt?: string | null;
     rejectionReason?: string | null;
+    paymentStatus?: 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'CHARGEBACK' | null;
 }

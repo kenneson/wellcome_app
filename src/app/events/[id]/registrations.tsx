@@ -86,41 +86,44 @@ export default function EventRegistrationsScreen() {
         }
     }
 
-    const filteredRegistrations = useMemo(() => {
-        let filtered = registrations;
-
-        // Filter by tab
-        if (activeTab === 'confirmed') {
-            filtered = filtered.filter(r => r.status === RegistrationStatus.APPROVED);
-        } else {
-            filtered = filtered.filter(r => r.status === RegistrationStatus.PENDING);
-        }
-
-        // Filter by search
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(r => 
-                r.user?.fullName?.toLowerCase().includes(query) ||
-                r.user?.username?.toLowerCase().includes(query)
-            );
-        }
-
-        return filtered;
-    }, [registrations, activeTab, searchQuery]);
-
-    const stats = useMemo(() => {
-        const confirmedCount = registrations.filter(r => r.status === RegistrationStatus.APPROVED).length;
-        const pendingCount = registrations.filter(r => r.status === RegistrationStatus.PENDING).length;
-        const revenue = event ? confirmedCount * (event.price || 0) : 0;
-        const occupancy = event ? `${confirmedCount} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0';
-
-        return { confirmedCount, pendingCount, revenue, occupancy };
-    }, [registrations, event]);
-
     const isEventPast = useMemo(() => {
         if (!event || !event.event_date) return false;
         return new Date(event.event_date) < new Date();
     }, [event]);
+
+    const isPaidEvent = Number(event?.price || 0) > 0;
+    const isPaymentConfirmed = (registration: any) =>
+        registration.paymentStatus === 'CONFIRMED' || registration.paymentStatus === 'PARTIALLY_REFUNDED';
+    const isFinalConfirmed = (registration: any) =>
+        registration.status === RegistrationStatus.APPROVED && (!isPaidEvent || isPaymentConfirmed(registration));
+    const isAwaitingPayment = (registration: any) =>
+        registration.status === RegistrationStatus.APPROVED && isPaidEvent && !isPaymentConfirmed(registration);
+    const getStatusLabel = (registration: any) => {
+        if (isFinalConfirmed(registration)) return 'CONFIRMADO';
+        if (isAwaitingPayment(registration)) return 'PGTO PENDENTE';
+        return 'PENDENTE';
+    };
+
+    let filteredRegistrations = activeTab === 'confirmed'
+        ? registrations.filter(r => isFinalConfirmed(r))
+        : registrations.filter(r => r.status === RegistrationStatus.PENDING || isAwaitingPayment(r));
+
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredRegistrations = filteredRegistrations.filter(r =>
+            r.user?.fullName?.toLowerCase().includes(query) ||
+            r.user?.username?.toLowerCase().includes(query)
+        );
+    }
+
+    const confirmedCount = registrations.filter(r => isFinalConfirmed(r)).length;
+    const pendingCount = registrations.filter(r => r.status === RegistrationStatus.PENDING || isAwaitingPayment(r)).length;
+    const stats = {
+        confirmedCount,
+        pendingCount,
+        revenue: event ? confirmedCount * (event.price || 0) : 0,
+        occupancy: event ? `${confirmedCount} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0',
+    };
 
     const renderItem = ({ item }: { item: any }) => (
         <View style={styles.card}>
@@ -145,13 +148,13 @@ export default function EventRegistrationsScreen() {
                         <Text style={styles.userName}>{item.user?.fullName}</Text>
                         <View style={[
                             styles.statusBadge, 
-                            item.status === RegistrationStatus.APPROVED ? styles.statusConfirmed : styles.statusPending
+                            isFinalConfirmed(item) ? styles.statusConfirmed : styles.statusPending
                         ]}>
                             <Text style={[
                                 styles.statusText,
-                                item.status === RegistrationStatus.APPROVED ? styles.textConfirmed : styles.textPending
+                                isFinalConfirmed(item) ? styles.textConfirmed : styles.textPending
                             ]}>
-                                {item.status === RegistrationStatus.APPROVED ? 'CONFIRMADO' : 'PENDENTE'}
+                                {getStatusLabel(item)}
                             </Text>
                         </View>
                     </View>

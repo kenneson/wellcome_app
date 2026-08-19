@@ -265,9 +265,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
         netAmount: number;
         paidAt: Date;
         providerStatus?: string;
+        approveBookingOnPayment?: boolean;
     }): Promise<boolean> {
         return prisma.$transaction(async (tx) => {
-            // Only the request that moves PENDING -> CONFIRMED may create a credit.
             const updated = await tx.payment.updateMany({
                 where: {
                     id: data.paymentId,
@@ -287,30 +287,87 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 return false;
             }
 
-            await tx.walletTransaction.create({
-                data: {
-                    userId: data.hostId,
-                    amount: data.netAmount,
-                    type: 'CREDIT_EVENT_TICKET',
-                    description: 'Pagamento de inscricao',
-                    referenceId: data.paymentId,
-                },
-            });
+            if (data.approveBookingOnPayment) {
+                await tx.booking.updateMany({
+                    where: {
+                        id: data.bookingId,
+                        status: 'PENDING',
+                    },
+                    data: { status: 'APPROVED' },
+                });
+            }
 
-            await tx.user.update({
-                where: { id: data.hostId },
-                data: {
-                    walletBalance: { increment: data.netAmount },
-                },
-            });
-
-            await tx.booking.update({
+            const booking = await tx.booking.findUnique({
                 where: { id: data.bookingId },
-                data: { status: 'APPROVED' },
+                select: { status: true },
             });
+
+            if (booking?.status === 'APPROVED') {
+                await this.releaseHostCreditInTransaction(tx, data.paymentId, data.hostId);
+            }
 
             return true;
         });
+    }
+
+    async releaseHostCredit(data: { paymentId: string; hostId: string }): Promise<boolean> {
+        return prisma.$transaction(async (tx) => {
+            return this.releaseHostCreditInTransaction(tx, data.paymentId, data.hostId);
+        });
+    }
+
+    private async releaseHostCreditInTransaction(tx: any, paymentId: string, hostId: string): Promise<boolean> {
+        await tx.$queryRaw`
+            select id
+            from public.payments
+            where id = cast(${paymentId} as uuid)
+            for update
+        `;
+
+        const payment = await tx.payment.findUnique({
+            where: { id: paymentId },
+            select: { id: true, status: true, netAmount: true },
+        });
+
+        if (!payment || payment.status !== PaymentStatus.CONFIRMED || !payment.netAmount) {
+            return false;
+        }
+
+        const existingCredit = await tx.walletTransaction.findFirst({
+            where: {
+                referenceId: paymentId,
+                type: 'CREDIT_EVENT_TICKET',
+            },
+            select: { id: true },
+        });
+
+        if (existingCredit) {
+            return false;
+        }
+
+        const netAmount = Number(payment.netAmount);
+        if (netAmount <= 0) {
+            return false;
+        }
+
+        await tx.walletTransaction.create({
+            data: {
+                userId: hostId,
+                amount: netAmount,
+                type: 'CREDIT_EVENT_TICKET',
+                description: 'Pagamento de inscricao',
+                referenceId: paymentId,
+            },
+        });
+
+        await tx.user.update({
+            where: { id: hostId },
+            data: {
+                walletBalance: { increment: netAmount },
+            },
+        });
+
+        return true;
     }
 
     async applyRefund(data: {
@@ -335,6 +392,14 @@ export class PrismaPaymentRepository implements PaymentRepository {
             if (!payment || !payment.netAmount || Number(payment.valor) <= 0) {
                 return false;
             }
+
+            const existingCredit = await tx.walletTransaction.findFirst({
+                where: {
+                    referenceId: payment.id,
+                    type: 'CREDIT_EVENT_TICKET',
+                },
+                select: { id: true },
+            });
 
             const grossValue = Number(payment.valor);
             const previousRefundedAmount = Number(payment.refundedAmount);
@@ -370,7 +435,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 },
             });
 
-            if (refundedNetDelta > 0) {
+            if (refundedNetDelta > 0 && existingCredit) {
                 await tx.walletTransaction.create({
                     data: {
                         userId: data.hostId,

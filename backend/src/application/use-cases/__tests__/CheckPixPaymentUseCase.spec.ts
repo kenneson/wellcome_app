@@ -43,6 +43,7 @@ describe('CheckPixPaymentUseCase', () => {
             expirePendingByTxid: jest.fn(),
             updateStatus: jest.fn(),
             confirmAndCreditHost: jest.fn(),
+            releaseHostCredit: jest.fn(),
             applyRefund: jest.fn(),
         };
         eventRepository = {
@@ -80,6 +81,8 @@ describe('CheckPixPaymentUseCase', () => {
             title: 'Jantar de teste',
             hostId: 'host-1',
             host: { id: 'host-1', expoPushToken: null },
+            accessType: 'OPEN',
+            requiresApproval: false,
         } as any);
         paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
 
@@ -97,6 +100,7 @@ describe('CheckPixPaymentUseCase', () => {
             hostId: 'host-1',
             platformFee: 10,
             netAmount: 90,
+            approveBookingOnPayment: true,
         }));
         expect(sendNotificationUseCase.execute).toHaveBeenCalledTimes(1);
     });
@@ -109,6 +113,8 @@ describe('CheckPixPaymentUseCase', () => {
             title: 'Jantar de teste',
             hostId: 'host-1',
             host: { id: 'host-1', expoPushToken: null },
+            accessType: 'OPEN',
+            requiresApproval: false,
         } as any);
         paymentRepository.confirmAndCreditHost.mockResolvedValue(false);
 

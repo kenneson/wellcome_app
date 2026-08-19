@@ -121,6 +121,7 @@ export interface PaymentGateway {
     createPayment(input: CreateProviderPaymentInput): Promise<ProviderPayment>;
     getPayment(paymentId: string): Promise<ProviderPayment>;
     deletePayment(paymentId: string): Promise<void>;
+    refundPayment(paymentId: string, value: number, description: string): Promise<ProviderPayment>;
     getPixQrCode(paymentId: string): Promise<PixQrCodeResult>;
     payWithCreditCard(paymentId: string, creditCardToken: string): Promise<ProviderPayment>;
 }

@@ -1,6 +1,7 @@
 import { Payment } from '../../domain/entities/Payment';
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
+import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { EfiPixService } from '../../infrastructure/external/EfiPixService';
@@ -73,6 +74,7 @@ export class CheckPixPaymentUseCase {
                 platformFee,
                 netAmount,
                 paidAt: new Date(),
+                approveBookingOnPayment: event.accessType === EventAccessType.OPEN && !event.requiresApproval,
             });
 
             newStatus = PaymentStatus.CONFIRMED;

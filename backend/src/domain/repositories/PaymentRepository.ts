@@ -55,6 +55,11 @@ export interface PaymentRepository {
         netAmount: number;
         paidAt: Date;
         providerStatus?: string;
+        approveBookingOnPayment?: boolean;
+    }): Promise<boolean>;
+    releaseHostCredit(data: {
+        paymentId: string;
+        hostId: string;
     }): Promise<boolean>;
     applyRefund(data: {
         paymentId: string;

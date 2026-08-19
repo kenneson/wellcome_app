@@ -37,6 +37,7 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             where: { eventId },
             include: {
                 guest: true,
+                payment: true,
                 answers: {
                     include: {
                         question: true
@@ -83,7 +84,8 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             data,
             include: {
                 guest: true,
-                event: true
+                event: true,
+                payment: true
             }
         });
 
@@ -95,7 +97,8 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             where: { id },
             include: {
                 guest: true, // Include guest for push token if needed later
-                event: true
+                event: true,
+                payment: true
             }
         });
 
@@ -136,8 +139,10 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 title: prismaBooking.event.title,
                 eventDate: prismaBooking.event.eventDate,
                 location: prismaBooking.event.location,
-                updatedAt: prismaBooking.event.updatedAt
+                updatedAt: prismaBooking.event.updatedAt,
+                price: prismaBooking.event.price
             } as any : undefined,
+            paymentStatus: prismaBooking.payment?.status,
             answers: prismaBooking.answers ? prismaBooking.answers.map((a: any) => ({
                 questionId: a.questionId,
                 question: a.question?.question || '',

@@ -58,9 +58,10 @@ describe('JoinEventUseCase', () => {
     });
 
     it.each([
-        [EventAccessType.OPEN, RegistrationStatus.APPROVED],
-        [EventAccessType.OPEN_WITH_APPROVAL, RegistrationStatus.PENDING],
-    ])('creates the correct initial status for %s access', async (accessType, expectedStatus) => {
+        [EventAccessType.OPEN, 0, RegistrationStatus.APPROVED],
+        [EventAccessType.OPEN, 20, RegistrationStatus.PENDING],
+        [EventAccessType.OPEN_WITH_APPROVAL, 20, RegistrationStatus.PENDING],
+    ])('creates the correct initial status for %s access with price %s', async (accessType, price, expectedStatus) => {
         const registrationRepository: jest.Mocked<EventRegistrationRepository> = {
             create: jest.fn().mockImplementation(async (input) => ({ id: 'booking-1', ...input } as any)),
             findByEventId: jest.fn(),
@@ -82,7 +83,7 @@ describe('JoinEventUseCase', () => {
                 maxGuests: 8,
                 allowWaitlist: false,
                 accessType,
-                price: 20,
+                price,
                 bookings: [],
             } as any),
             update: jest.fn(),

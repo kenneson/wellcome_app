@@ -215,8 +215,8 @@ const start = async () => {
         
         const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
         const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
-        const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
-        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase);
+        const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository);
+        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository, asaasPaymentService);
 
         const createPaymentCheckoutUseCase = new CreatePaymentCheckoutUseCase(
             asaasPaymentService,

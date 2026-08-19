@@ -137,6 +137,16 @@ export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
         await this.request(`/payments/${encodeURIComponent(paymentId)}`, { method: 'DELETE' });
     }
 
+    async refundPayment(paymentId: string, value: number, description: string): Promise<ProviderPayment> {
+        return this.request<ProviderPayment>(`/payments/${encodeURIComponent(paymentId)}/refund`, {
+            method: 'POST',
+            body: JSON.stringify({
+                value,
+                description: description.substring(0, 255),
+            }),
+        });
+    }
+
     async getPixQrCode(paymentId: string): Promise<PixQrCodeResult> {
         return this.request<PixQrCodeResult>(`/payments/${encodeURIComponent(paymentId)}/pixQrCode`);
     }

@@ -46,6 +46,10 @@ export class CreatePaymentCheckoutUseCase {
             throw new Error('Booking does not belong to this event');
         }
 
+        if (['REJECTED', 'CANCELLED', 'WAITLIST'].includes(registration.status)) {
+            throw new Error('Booking is not eligible for payment');
+        }
+
         let payment = await this.paymentRepository.findByBookingId(data.bookingId);
         if (payment?.status === PaymentStatus.CONFIRMED) {
             throw new Error('Payment already confirmed');

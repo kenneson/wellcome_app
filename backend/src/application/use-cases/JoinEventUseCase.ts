@@ -64,6 +64,8 @@ export class JoinEventUseCase {
 
         if (isFull && event.allowWaitlist) {
             initialStatus = RegistrationStatus.WAITLIST;
+        } else if (Number(event.price) > 0) {
+            initialStatus = RegistrationStatus.PENDING;
         } else if (event.accessType === EventAccessType.OPEN) {
             initialStatus = RegistrationStatus.APPROVED;
         } else if (event.accessType === EventAccessType.OPEN_WITH_APPROVAL) {
@@ -78,9 +80,8 @@ export class JoinEventUseCase {
             answers: data.answers,
         });
 
-        // Notify Host (skip if event requires payment — notification will be sent after payment confirmation)
-        const requiresPayment = Number(event.price) > 0;
-        if (event.host && !requiresPayment) {
+        // Notify host about the candidate. Paid events still require host approval before final confirmation.
+        if (event.host) {
             const isPending = initialStatus === RegistrationStatus.PENDING;
             const notificationTitle = isPending ? 'Solicitação de inscrição!' : 'Nova inscrição confirmada!';
             const notificationBody = isPending
