@@ -202,6 +202,7 @@ export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
         if (!apiKey) {
             throw new PaymentGatewayError('ASAAS_API_KEY nao configurada');
         }
+        this.validateEnvironment(apiKey);
 
         const mutatingRequest = Boolean(init.method && init.method !== 'GET');
         let response: Response;
@@ -240,6 +241,20 @@ export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
         }
 
         return payload as T;
+    }
+
+    private validateEnvironment(apiKey: string): void {
+        const isSandboxUrl = this.baseUrl.includes('api-sandbox.asaas.com');
+        const isProductionUrl = this.baseUrl.includes('api.asaas.com') && !isSandboxUrl;
+        const isProductionKey = apiKey.startsWith('$aact_prod_') || apiKey.startsWith('aact_prod_');
+        const isSandboxKey = apiKey.startsWith('$aact_sandbox_') || apiKey.startsWith('aact_sandbox_');
+
+        if (isProductionKey && isSandboxUrl) {
+            throw new PaymentGatewayError('ASAAS_API_KEY de producao configurada com ASAAS_BASE_URL sandbox');
+        }
+        if (isSandboxKey && isProductionUrl) {
+            throw new PaymentGatewayError('ASAAS_API_KEY sandbox configurada com ASAAS_BASE_URL de producao');
+        }
     }
 
     private async readJson(response: Response, mutatingRequest: boolean): Promise<unknown> {
