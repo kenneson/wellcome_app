@@ -54,7 +54,7 @@ export class PrepareProviderPaymentService {
 
         const billingProfile = await this.billingRepository.findProfileByUserId(input.userId);
         if (!billingProfile) throw new Error('Complete seus dados de cobranca');
-        const synchronizedProfile = await this.ensureCustomerService.execute(billingProfile);
+        const synchronizedProfile = await this.ensureCustomerService.execute(billingProfile, true);
         if (!synchronizedProfile.asaasCustomerId) throw new Error('Cliente Asaas indisponivel');
 
         let payment = await this.paymentRepository.findByBookingId(input.bookingId);

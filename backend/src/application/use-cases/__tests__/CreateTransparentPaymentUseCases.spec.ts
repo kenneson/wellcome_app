@@ -108,6 +108,7 @@ describe('Transparent payment use cases', () => {
             payload: '00020101021226890014br.gov.bcb.pix',
             expirationDate: '2026-08-05T12:00:00.000Z',
         });
+        paymentGateway.updateCustomer.mockResolvedValue({ id: 'cus-1' });
         paymentRepository.savePixData.mockResolvedValue(payment);
         paymentRepository.updateProviderPayment.mockResolvedValue(payment);
         paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
@@ -136,6 +137,10 @@ describe('Transparent payment use cases', () => {
         });
 
         expect(paymentGateway.createPayment).not.toHaveBeenCalled();
+        expect(paymentGateway.updateCustomer).toHaveBeenCalledWith(
+            'cus-1',
+            expect.objectContaining({ externalReference: 'user-1' })
+        );
         expect(paymentGateway.getPixQrCode).toHaveBeenCalledWith('pay-1');
         expect(paymentRepository.savePixData).toHaveBeenCalledWith(expect.objectContaining({
             paymentId: 'payment-1',

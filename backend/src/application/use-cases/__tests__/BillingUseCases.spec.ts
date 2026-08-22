@@ -1,6 +1,7 @@
 import { AddPaymentCardUseCase } from '../AddPaymentCardUseCase';
 import { GetBillingWalletUseCase } from '../GetBillingWalletUseCase';
 import { SaveBillingProfileUseCase } from '../SaveBillingProfileUseCase';
+import { PaymentGatewayError } from '../../../domain/services/PaymentGateway';
 
 describe('Billing use cases', () => {
     const now = new Date('2026-08-04T12:00:00.000Z');
@@ -78,6 +79,42 @@ describe('Billing use cases', () => {
             expect.objectContaining({ externalReference: 'user-1' })
         );
         expect(result).toEqual(expect.objectContaining({ pixReady: true, cardReady: true }));
+    });
+
+    it('replaces a stale Asaas customer id with one from the current environment', async () => {
+        const staleProfile = {
+            ...profile,
+            asaasCustomerId: 'cus-stale',
+        };
+        billingRepository.saveProfile.mockResolvedValue(staleProfile);
+        paymentGateway.updateCustomer.mockRejectedValueOnce(
+            new PaymentGatewayError('Customer inválido ou não informado', 400, 'invalid_customer')
+        );
+        paymentGateway.findCustomerByExternalReference.mockResolvedValue(null);
+        paymentGateway.createCustomer.mockResolvedValue({ id: 'cus-current' });
+        billingRepository.setAsaasCustomerId.mockResolvedValue({
+            ...staleProfile,
+            asaasCustomerId: 'cus-current',
+        });
+
+        const useCase = new SaveBillingProfileUseCase(billingRepository as any, paymentGateway as any);
+        await useCase.execute('user-1', {
+            fullName: 'Maria da Silva',
+            cpfCnpj: '52998224725',
+            email: 'maria@example.com',
+            mobilePhone: '11999999999',
+            postalCode: '01310100',
+            addressNumber: '100',
+        });
+
+        expect(paymentGateway.findCustomerByExternalReference).toHaveBeenCalledWith('user-1');
+        expect(paymentGateway.createCustomer).toHaveBeenCalledWith(
+            expect.objectContaining({ externalReference: 'user-1' })
+        );
+        expect(billingRepository.setAsaasCustomerId).toHaveBeenCalledWith(
+            'profile-billing-1',
+            'cus-current'
+        );
     });
 
     it('stores only provider token and safe card metadata', async () => {

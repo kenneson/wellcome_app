@@ -43,7 +43,7 @@ export class AddPaymentCardUseCase {
         }
         if (ccv.length < 3 || ccv.length > 4) throw new Error('Codigo de seguranca invalido');
 
-        const synchronizedProfile = await this.ensureCustomerService.execute(profile);
+        const synchronizedProfile = await this.ensureCustomerService.execute(profile, true);
         if (!synchronizedProfile.asaasCustomerId) throw new Error('Cliente Asaas indisponivel');
         if (!synchronizedProfile.postalCode || !synchronizedProfile.addressNumber) {
             throw new Error('Complete o endereco de cobranca');
