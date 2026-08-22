@@ -183,7 +183,8 @@ export class EventController {
     }
 
     serializeEvent(event: any, viewerId?: string) {
-        const canSeeExactLocation = viewerId === event.hostId || event.bookings?.some(
+        const isHost = viewerId === event.hostId;
+        const canSeeExactLocation = isHost || event.bookings?.some(
             (booking: any) => booking.userId === viewerId
                 && booking.status === 'APPROVED'
                 && (Number(event.price) <= 0 || booking.paymentStatus === 'CONFIRMED')
@@ -191,6 +192,17 @@ export class EventController {
         const viewerBookings = viewerId
             ? event.bookings?.filter((booking: any) => booking.userId === viewerId) ?? []
             : [];
+        const hostBookings = isHost ? event.bookings ?? [] : [];
+        const isPaidEvent = Number(event.price) > 0;
+        const isPaymentConfirmed = (booking: any) =>
+            booking.paymentStatus === 'CONFIRMED' || booking.paymentStatus === 'PARTIALLY_REFUNDED';
+        const pendingRegistrationCount = hostBookings.filter((booking: any) =>
+            booking.status === 'PENDING'
+            || (booking.status === 'APPROVED' && isPaidEvent && !isPaymentConfirmed(booking))
+        ).length;
+        const confirmedRegistrationCount = hostBookings.filter((booking: any) =>
+            booking.status === 'APPROVED' && (!isPaidEvent || isPaymentConfirmed(booking))
+        ).length;
 
         return {
             id: event.id,
@@ -251,6 +263,8 @@ export class EventController {
             participantCount: event.bookings?.filter(
                 (booking: any) => booking.status === 'PENDING' || booking.status === 'APPROVED'
             ).length || 0,
+            pendingRegistrationCount: isHost ? pendingRegistrationCount : undefined,
+            confirmedRegistrationCount: isHost ? confirmedRegistrationCount : undefined,
         };
     }
 

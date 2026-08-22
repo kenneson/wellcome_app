@@ -12,9 +12,9 @@ import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,11 +71,7 @@ export default function EventDetailsScreen() {
         return event.reviews.some(r => r.userId === currentUserId);
     }, [event, currentUserId]);
 
-    useEffect(() => {
-        if (id) fetchEventDetails();
-    }, [id]);
-
-    async function fetchEventDetails() {
+    const fetchEventDetails = React.useCallback(async () => {
         try {
             setLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
@@ -110,7 +106,11 @@ export default function EventDetailsScreen() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [id, router]);
+
+    useFocusEffect(React.useCallback(() => {
+        if (id) void fetchEventDetails();
+    }, [fetchEventDetails, id]));
 
     async function handleJoin() {
         if (!event) return;
@@ -261,6 +261,9 @@ export default function EventDetailsScreen() {
     const canViewTicket = isParticipant
         && myBookingStatus === 'APPROVED'
         && (!isPaidEvent || paymentConfirmed);
+    const pendingRegistrationCount = event.pendingRegistrationCount ?? 0;
+    const confirmedRegistrationCount = event.confirmedRegistrationCount ?? 0;
+    const registrationsTargetTab = pendingRegistrationCount > 0 ? 'pending' : 'confirmed';
     
     // Group dishes by category
     const groupedDishes = event.dishes?.reduce((acc: any, dish) => {
@@ -341,6 +344,53 @@ export default function EventDetailsScreen() {
                     <Text className="text-[24px] font-bold text-[#1A1A1A] leading-tight mb-4">
                         {event.title}
                     </Text>
+
+                    {isHost && (
+                        <TouchableOpacity
+                            className={pendingRegistrationCount > 0
+                                ? 'min-h-[72px] flex-row items-center border border-orange-200 bg-orange-50 rounded-2xl px-4 py-3 mb-6'
+                                : 'min-h-[72px] flex-row items-center border border-gray-200 bg-gray-50 rounded-2xl px-4 py-3 mb-6'
+                            }
+                            onPress={() => router.push(('/events/' + id + '/registrations?tab=' + registrationsTargetTab) as any)}
+                            accessibilityRole="button"
+                            accessibilityLabel={pendingRegistrationCount > 0
+                                ? pendingRegistrationCount + ' inscrições aguardando análise'
+                                : 'Gerenciar inscrições do evento'
+                            }
+                            accessibilityHint="Abre a lista de participantes"
+                        >
+                            <View className={pendingRegistrationCount > 0
+                                ? 'w-11 h-11 rounded-full bg-orange-100 items-center justify-center mr-3'
+                                : 'w-11 h-11 rounded-full bg-gray-200 items-center justify-center mr-3'
+                            }>
+                                <Ionicons
+                                    name={pendingRegistrationCount > 0 ? 'person-add-outline' : 'people-outline'}
+                                    size={23}
+                                    color={pendingRegistrationCount > 0 ? '#C45D22' : '#4B5563'}
+                                />
+                            </View>
+                            <View className="flex-1">
+                                <Text className={pendingRegistrationCount > 0
+                                    ? 'text-sm font-extrabold text-[#9A4819]'
+                                    : 'text-sm font-extrabold text-[#374151]'
+                                }>
+                                    {pendingRegistrationCount > 0
+                                        ? pendingRegistrationCount + (pendingRegistrationCount === 1 ? ' inscrição pendente' : ' inscrições pendentes')
+                                        : 'Gerenciar inscrições'
+                                    }
+                                </Text>
+                                <Text className="text-xs text-gray-600 mt-1">
+                                    {confirmedRegistrationCount} {confirmedRegistrationCount === 1 ? 'participante confirmado' : 'participantes confirmados'}
+                                </Text>
+                            </View>
+                            {pendingRegistrationCount > 0 && (
+                                <View className="bg-[#C45D22] rounded-full px-2.5 py-1 mr-2">
+                                    <Text className="text-[10px] font-extrabold text-white">REVISAR</Text>
+                                </View>
+                            )}
+                            <Ionicons name="chevron-forward" size={20} color={pendingRegistrationCount > 0 ? '#C45D22' : '#6B7280'} />
+                        </TouchableOpacity>
+                    )}
 
                     {/* Host Mini Profile */}
                     <View className="flex-row items-center mb-8">
@@ -687,7 +737,9 @@ export default function EventDetailsScreen() {
                             onPress={() => router.push(`/events/${id}/registrations`)}
                         >
                             <Ionicons name="people-outline" size={20} color="#333" style={{ marginRight: 8 }} />
-                            <Text className="text-gray-700 font-bold text-[16px]">Inscrições</Text>
+                            <Text className="text-gray-700 font-bold text-[14px]">
+                                {pendingRegistrationCount > 0 ? 'Pendentes (' + pendingRegistrationCount + ')' : 'Inscrições'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>

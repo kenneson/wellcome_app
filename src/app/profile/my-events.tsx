@@ -8,12 +8,12 @@ import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type EventFilter = 'todos' | 'ativos' | 'concluidos' | 'rascunhos';
+type EventFilter = 'todos' | 'pendentes' | 'ativos' | 'concluidos' | 'rascunhos';
 
 const DRAFT_STEP_ROUTES = [
     '/events/create',
@@ -30,11 +30,7 @@ export default function MyEventsScreen() {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<EventFilter>('todos');
 
-    useEffect(() => {
-        fetchMyEvents();
-    }, []);
-
-    async function fetchMyEvents() {
+    const fetchMyEvents = React.useCallback(async () => {
         try {
             setLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
@@ -54,13 +50,22 @@ export default function MyEventsScreen() {
 
             if (error) throw error;
             
-            // Map the data to include participant count directly
-            const formattedEvents = data?.map(event => ({
-                ...event,
-                participants_count: event.event_participants?.filter(
+            // Map the data to include registration summaries directly.
+            const formattedEvents = data?.map(event => {
+                const registrations = event.event_participants || [];
+                return {
+                    ...event,
+                    participants_count: registrations.filter(
                     (p: any) => p.status !== 'REJECTED' && p.status !== 'CANCELLED'
-                ).length || 0
-            })) || [];
+                    ).length,
+                    pending_registrations_count: registrations.filter(
+                        (p: any) => p.status === 'PENDING'
+                    ).length,
+                    approved_registrations_count: registrations.filter(
+                        (p: any) => p.status === 'APPROVED'
+                    ).length,
+                };
+            }) || [];
 
             setEvents(formattedEvents);
             setDrafts(await draftRequest);
@@ -69,7 +74,11 @@ export default function MyEventsScreen() {
         } finally {
             setLoading(false);
         }
-    }
+    }, []);
+
+    useFocusEffect(React.useCallback(() => {
+        void fetchMyEvents();
+    }, [fetchMyEvents]));
 
     async function handleDelete(id: string) {
         Alert.alert(
@@ -120,6 +129,7 @@ export default function MyEventsScreen() {
             const isPast = isEventRegistrationClosed(event, now);
 
             if (activeFilter === 'rascunhos') return false;
+            if (activeFilter === 'pendentes') return (event.pending_registrations_count || 0) > 0;
             if (activeFilter === 'ativos') return !isPast;
             if (activeFilter === 'concluidos') return isPast;
             return true;
@@ -156,6 +166,55 @@ export default function MyEventsScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+        );
+    };
+
+    const renderRegistrationsShortcut = (item: any) => {
+        const pendingCount = Number(item.pending_registrations_count || 0);
+        const approvedCount = Number(item.approved_registrations_count || 0);
+        const targetTab = pendingCount > 0 ? 'pending' : 'confirmed';
+        const title = pendingCount > 0
+            ? pendingCount + ' ' + (pendingCount === 1 ? 'inscrição pendente' : 'inscrições pendentes')
+            : 'Gerenciar inscrições';
+        const subtitle = approvedCount + ' ' + (approvedCount === 1 ? 'aprovada' : 'aprovadas');
+
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.registrationsShortcut,
+                    pendingCount > 0 && styles.registrationsShortcutPending,
+                ]}
+                onPress={() => router.push(('/events/' + item.id + '/registrations?tab=' + targetTab) as any)}
+                accessibilityRole="button"
+                accessibilityLabel={title + '. ' + subtitle + '.'}
+                accessibilityHint="Abre a lista de participantes deste evento"
+            >
+                <View style={[
+                    styles.registrationsShortcutIcon,
+                    pendingCount > 0 && styles.registrationsShortcutIconPending,
+                ]}>
+                    <Ionicons
+                        name={pendingCount > 0 ? 'person-add-outline' : 'people-outline'}
+                        size={22}
+                        color={pendingCount > 0 ? '#C45D22' : '#4B5563'}
+                    />
+                </View>
+                <View style={styles.registrationsShortcutContent}>
+                    <Text style={[
+                        styles.registrationsShortcutTitle,
+                        pendingCount > 0 && styles.registrationsShortcutTitlePending,
+                    ]}>
+                        {title}
+                    </Text>
+                    <Text style={styles.registrationsShortcutSubtitle}>{subtitle}</Text>
+                </View>
+                {pendingCount > 0 && (
+                    <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>REVISAR</Text>
+                    </View>
+                )}
+                <Ionicons name="chevron-forward" size={20} color={pendingCount > 0 ? '#C45D22' : '#6B7280'} />
+            </TouchableOpacity>
         );
     };
 
@@ -205,6 +264,8 @@ export default function MyEventsScreen() {
                             </Text>
                         </View>
                     </View>
+
+                    {renderRegistrationsShortcut(item)}
 
                     {needsLocationReview && (
                         <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)}>
@@ -275,6 +336,8 @@ export default function MyEventsScreen() {
                         </View>
                     </View>
                 </View>
+
+                {renderRegistrationsShortcut(item)}
 
                 {needsLocationReview && (
                     <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)}>
@@ -353,17 +416,20 @@ export default function MyEventsScreen() {
                     style={styles.filterTabsScroll}
                     contentContainerStyle={styles.filterTabs}
                 >
-                    {(['todos', 'ativos', 'concluidos', 'rascunhos'] as EventFilter[]).map((filter) => (
+                    {(['todos', 'pendentes', 'ativos', 'concluidos', 'rascunhos'] as EventFilter[]).map((filter) => (
                         <TouchableOpacity
                             key={filter}
                             style={[styles.filterTab, activeFilter === filter && styles.activeFilterTab]}
                             onPress={() => setActiveFilter(filter)}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: activeFilter === filter }}
                         >
                             <Text style={[
                                 styles.filterText, 
                                 activeFilter === filter && styles.activeFilterText
                             ]} numberOfLines={1}>
                                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                                {filter === 'pendentes' && ' (' + events.reduce((total, event) => total + Number(event.pending_registrations_count || 0), 0) + ')'}
                                 {filter === 'ativos' && ` (${events.filter(e => !isEventRegistrationClosed(e)).length})`}
                                 {filter === 'rascunhos' && ` (${drafts.length})`}
                             </Text>
@@ -507,10 +573,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     filterTab: {
+        minHeight: 44,
         paddingVertical: 6,
         paddingHorizontal: 16,
         minWidth: 76,
         flexShrink: 0,
+        justifyContent: 'center',
         borderRadius: 20,
         backgroundColor: '#fff',
         borderWidth: 1,
@@ -684,6 +752,61 @@ const styles = StyleSheet.create({
         color: '#8A4B08',
         fontSize: 13,
         fontWeight: '700',
+    },
+    registrationsShortcut: {
+        minHeight: 64,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: '#F9FAFB',
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+    },
+    registrationsShortcutPending: {
+        backgroundColor: '#FFF7ED',
+        borderTopColor: '#FED7AA',
+    },
+    registrationsShortcutIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F3F4F6',
+    },
+    registrationsShortcutIconPending: {
+        backgroundColor: '#FFEDD5',
+    },
+    registrationsShortcutContent: {
+        flex: 1,
+    },
+    registrationsShortcutTitle: {
+        color: '#374151',
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    registrationsShortcutTitlePending: {
+        color: '#9A4819',
+    },
+    registrationsShortcutSubtitle: {
+        color: '#6B7280',
+        fontSize: 12,
+        marginTop: 2,
+    },
+    pendingBadge: {
+        minHeight: 24,
+        justifyContent: 'center',
+        paddingHorizontal: 8,
+        borderRadius: 12,
+        backgroundColor: '#C45D22',
+    },
+    pendingBadgeText: {
+        color: '#FFF',
+        fontSize: 9,
+        fontWeight: '800',
+        letterSpacing: 0.4,
     },
     cardActions: {
         flexDirection: 'row',

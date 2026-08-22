@@ -167,6 +167,7 @@ export default function EventCreateLocation() {
 
             <LocationAutocomplete
                 visible={showSearchModal}
+                value={data.location.address}
                 onClose={() => setShowSearchModal(false)}
                 onSelectAddress={applyAddress}
                 type="address"

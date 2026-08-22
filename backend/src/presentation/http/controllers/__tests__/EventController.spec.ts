@@ -39,4 +39,24 @@ describe('EventController location privacy', () => {
             longitude: -49.2,
         }));
     });
+
+    it('shows registration summaries only to the event host', () => {
+        const eventWithRegistrations = {
+            ...event,
+            bookings: [
+                { userId: 'guest-1', status: 'PENDING' },
+                { userId: 'guest-2', status: 'APPROVED', paymentStatus: 'PENDING' },
+                { userId: 'guest-3', status: 'APPROVED', paymentStatus: 'CONFIRMED' },
+            ],
+        };
+
+        expect(controller.serializeEvent(eventWithRegistrations, 'host-1')).toEqual(expect.objectContaining({
+            pendingRegistrationCount: 2,
+            confirmedRegistrationCount: 1,
+        }));
+
+        const guestView = controller.serializeEvent(eventWithRegistrations, 'guest-1');
+        expect(guestView.pendingRegistrationCount).toBeUndefined();
+        expect(guestView.confirmedRegistrationCount).toBeUndefined();
+    });
 });

@@ -178,16 +178,50 @@ export default function EventCreateDateAndPrice() {
             </View>
 
             {Platform.OS === 'ios' && activePicker && (
-                <Modal transparent animationType={reducedMotion ? 'none' : 'slide'}>
+                <Modal
+                    transparent
+                    animationType={reducedMotion ? 'none' : 'slide'}
+                    onRequestClose={() => setActivePicker(null)}
+                >
                     <View className="flex-1 justify-end bg-black/40">
-                        <View className="bg-white rounded-t-2xl pb-8">
+                        <SafeAreaView
+                            edges={['bottom']}
+                            style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
+                        >
+                        <View className="bg-white rounded-t-2xl pb-2">
                             <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-                                <TouchableOpacity onPress={() => setActivePicker(null)}><Text className="text-gray-600">Cancelar</Text></TouchableOpacity>
-                                <Text className="font-bold">{pickerTitle(activePicker)}</Text>
-                                <TouchableOpacity onPress={() => applyPicker(activePicker, pickerValue)}><Text className="text-[#C45D22] font-bold">Confirmar</Text></TouchableOpacity>
+                                <TouchableOpacity
+                                    className="min-h-[44px] min-w-[80px] justify-center"
+                                    onPress={() => setActivePicker(null)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Cancelar seleção"
+                                >
+                                    <Text className="text-gray-600">Cancelar</Text>
+                                </TouchableOpacity>
+                                <Text className="flex-1 text-center font-bold text-[#1A1A1A]" numberOfLines={1}>{pickerTitle(activePicker)}</Text>
+                                <TouchableOpacity
+                                    className="min-h-[44px] min-w-[80px] items-end justify-center"
+                                    onPress={() => applyPicker(activePicker, pickerValue)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Confirmar seleção"
+                                >
+                                    <Text className="text-[#C45D22] font-bold">Confirmar</Text>
+                                </TouchableOpacity>
                             </View>
-                            <DateTimePicker value={pickerValue} mode={pickerMode(activePicker)} display="spinner" locale="pt-BR" is24Hour minimumDate={activePicker === 'date' || activePicker === 'deadlineDate' ? new Date() : undefined} onChange={(_, value) => value && setPickerValue(value)} />
+                            <DateTimePicker
+                                value={pickerValue}
+                                mode={pickerMode(activePicker)}
+                                display="spinner"
+                                locale="pt-BR"
+                                is24Hour
+                                themeVariant="light"
+                                textColor="#1A1A1A"
+                                minimumDate={activePicker === 'date' || activePicker === 'deadlineDate' ? new Date() : undefined}
+                                onChange={(_, value) => value && setPickerValue(value)}
+                                style={{ height: 216, width: '100%' }}
+                            />
                         </View>
+                        </SafeAreaView>
                     </View>
                 </Modal>
             )}

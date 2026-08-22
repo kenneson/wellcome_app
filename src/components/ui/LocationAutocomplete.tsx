@@ -1,8 +1,9 @@
 import { GeocodingResult, GeocodingSuggestion, locationService, Municipality } from '@/services/api/LocationService';
 import { Ionicons } from '@expo/vector-icons';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { isCompleteGeocodingResult } from './locationAutocompleteUtils';
 import * as Crypto from 'expo-crypto';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -16,6 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -63,15 +65,20 @@ export function LocationAutocomplete({
     const [loadingCoords, setLoadingCoords] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
+    const wasVisible = useRef(false);
     const reducedMotion = useReducedMotion();
 
     const debouncedQuery = useDebounce(query, 300);
 
     // Search when debounced query changes
     useEffect(() => {
+        let cancelled = false;
+
         async function search() {
-            if (!debouncedQuery.trim()) {
+            if ((asModal && !visible) || !debouncedQuery.trim()) {
                 setResults([]);
+                setErrorMessage('');
+                setLoading(false);
                 return;
             }
 
@@ -80,25 +87,37 @@ export function LocationAutocomplete({
             try {
                 if (type === 'municipality') {
                     const municipalities = await locationService.searchMunicipalities(debouncedQuery, 10);
-                    setResults(municipalities);
+                    if (!cancelled) setResults(municipalities);
                 } else {
                     const addresses = await locationService.searchAddresses(debouncedQuery, sessionToken);
-                    setResults(addresses);
+                    if (!cancelled) setResults(addresses);
                 }
             } catch (error: any) {
-                setResults([]);
-                setErrorMessage(error?.message || 'Não foi possível buscar endereços');
+                if (!cancelled) {
+                    setResults([]);
+                    setErrorMessage(error?.message || 'Não foi possível buscar endereços');
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         }
 
-        search();
-    }, [debouncedQuery, type, sessionToken]);
+        void search();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [asModal, debouncedQuery, sessionToken, type, visible]);
 
     useEffect(() => {
-        if (visible && type === 'address') setSessionToken(Crypto.randomUUID());
-    }, [visible, type]);
+        if (visible && !wasVisible.current) {
+            setQuery(value);
+            setResults([]);
+            setErrorMessage('');
+            if (type === 'address') setSessionToken(Crypto.randomUUID());
+        }
+        wasVisible.current = visible;
+    }, [visible, value, type]);
 
     // Preload municipalities on mount if type is municipality
     useEffect(() => {
@@ -125,6 +144,11 @@ export function LocationAutocomplete({
         setErrorMessage('');
         try {
             const result = await locationService.retrieveAddress(suggestion.id, sessionToken);
+            if (!isCompleteGeocodingResult(result)) {
+                setErrorMessage('Este resultado não possui cidade, estado ou localização exata. Escolha outro endereço.');
+                return;
+            }
+
             onSelectAddress?.(result);
             onClose?.();
         } catch (error: any) {
@@ -177,9 +201,15 @@ export function LocationAutocomplete({
                     value={query}
                     onChangeText={setQuery}
                     autoFocus={asModal}
+                    returnKeyType="search"
                 />
                 {query.length > 0 && (
-                    <TouchableOpacity onPress={() => setQuery('')}>
+                    <TouchableOpacity
+                        onPress={() => setQuery('')}
+                        style={styles.clearButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Limpar busca"
+                    >
                         <Ionicons name="close-circle" size={20} color="#999" />
                     </TouchableOpacity>
                 )}
@@ -216,7 +246,7 @@ export function LocationAutocomplete({
                     }
                     renderItem={renderItem}
                     style={styles.resultsList}
-                    keyboardShouldPersistTaps="handled"
+                    keyboardShouldPersistTaps="always"
                 />
             )}
 
@@ -247,21 +277,29 @@ export function LocationAutocomplete({
                 transparent={false}
                 onRequestClose={onClose}
             >
-                <KeyboardAvoidingView
-                    style={styles.modalContainer}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                >
-                    <View style={styles.modalHeader}>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <Ionicons name="close" size={24} color="#333" />
-                        </TouchableOpacity>
-                        <Text style={styles.modalTitle}>
-                            {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
-                        </Text>
-                        <View style={{ width: 40 }} />
-                    </View>
-                    {content}
-                </KeyboardAvoidingView>
+                <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+                    <KeyboardAvoidingView
+                        style={styles.modalContainer}
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    >
+                        <View style={styles.modalHeader}>
+                            <TouchableOpacity
+                                onPress={onClose}
+                                style={styles.closeButton}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Fechar busca de endereço"
+                            >
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                            <Text style={styles.modalTitle} numberOfLines={1}>
+                                {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
+                            </Text>
+                            <View style={styles.headerSpacer} />
+                        </View>
+                        {content}
+                    </KeyboardAvoidingView>
+                </SafeAreaView>
             </Modal>
         );
     }
@@ -287,18 +325,26 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
     closeButton: {
-        padding: 8,
+        width: 48,
+        height: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     modalTitle: {
+        flex: 1,
         fontSize: 18,
         fontWeight: 'bold',
         color: '#333',
+        textAlign: 'center',
+    },
+    headerSpacer: {
+        width: 48,
     },
     searchContainer: {
         flexDirection: 'row',
@@ -317,6 +363,13 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         fontSize: 16,
         color: '#333',
+    },
+    clearButton: {
+        width: 44,
+        height: 44,
+        marginRight: -12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     loadingContainer: {
         flexDirection: 'row',

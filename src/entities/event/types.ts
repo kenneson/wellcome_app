@@ -98,6 +98,8 @@ export interface Event {
     facilities?: string[];
     rules?: string[];
     participantCount?: number;
+    pendingRegistrationCount?: number;
+    confirmedRegistrationCount?: number;
     createdAt: string;
     updatedAt: string;
 }

@@ -6,19 +6,22 @@ import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Linking, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EventRegistrationsScreen() {
-    const { id } = useLocalSearchParams();
+    const { id, tab } = useLocalSearchParams();
     const router = useRouter();
+    const requestedTab = Array.isArray(tab) ? tab[0] : tab;
     const [registrations, setRegistrations] = useState<any[]>([]);
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'confirmed' | 'pending'>('confirmed');
+    const [activeTab, setActiveTab] = useState<'confirmed' | 'pending'>(
+        requestedTab === 'pending' ? 'pending' : 'confirmed'
+    );
     const [searchQuery, setSearchQuery] = useState('');
 
     // Helper to open links
@@ -32,13 +35,7 @@ export default function EventRegistrationsScreen() {
         });
     };
 
-    useEffect(() => {
-        if (id) {
-            fetchData();
-        }
-    }, [id]);
-
-    async function fetchData() {
+    const fetchData = React.useCallback(async () => {
         try {
             setLoading(true);
             const [registrationsData, eventData] = await Promise.all([
@@ -48,13 +45,31 @@ export default function EventRegistrationsScreen() {
 
             setRegistrations(registrationsData || []);
             setEvent(eventData);
+
+            const isPaid = Number(eventData?.price || 0) > 0;
+            const hasPendingRegistrations = (registrationsData || []).some((registration: any) => {
+                const paymentConfirmed = registration.paymentStatus === 'CONFIRMED'
+                    || registration.paymentStatus === 'PARTIALLY_REFUNDED';
+                return registration.status === RegistrationStatus.PENDING
+                    || (registration.status === RegistrationStatus.APPROVED && isPaid && !paymentConfirmed);
+            });
+
+            if (requestedTab === 'pending' || requestedTab === 'confirmed') {
+                setActiveTab(requestedTab);
+            } else {
+                setActiveTab(hasPendingRegistrations ? 'pending' : 'confirmed');
+            }
         } catch (error) {
             console.error('❌ Error fetching data:', error);
             Alert.alert('Erro', 'Não foi possível carregar os dados.');
         } finally {
             setLoading(false);
         }
-    }
+    }, [id, requestedTab]);
+
+    useFocusEffect(React.useCallback(() => {
+        if (id) void fetchData();
+    }, [fetchData, id]));
 
     async function handleApprove(registrationId: string) {
         setProcessingId(registrationId);
@@ -326,16 +341,28 @@ export default function EventRegistrationsScreen() {
                     <TouchableOpacity 
                         style={[styles.tab, activeTab === 'confirmed' && styles.activeTab]}
                         onPress={() => setActiveTab('confirmed')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: activeTab === 'confirmed' }}
                     >
                         <Text style={[styles.tabText, activeTab === 'confirmed' && styles.activeTabText]}>
                             Confirmados ({stats.confirmedCount})
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+                        style={[
+                            styles.tab,
+                            stats.pendingCount > 0 && activeTab !== 'pending' && styles.pendingTabAttention,
+                            activeTab === 'pending' && styles.activeTab,
+                        ]}
                         onPress={() => setActiveTab('pending')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: activeTab === 'pending' }}
                     >
-                        <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>
+                        <Text style={[
+                            styles.tabText,
+                            stats.pendingCount > 0 && activeTab !== 'pending' && styles.pendingTabText,
+                            activeTab === 'pending' && styles.activeTabText,
+                        ]}>
                             Pendentes ({stats.pendingCount})
                         </Text>
                     </TouchableOpacity>
@@ -481,9 +508,16 @@ const styles = StyleSheet.create({
     },
     tab: {
         flex: 1,
+        minHeight: 44,
         paddingVertical: 10,
+        justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 10,
+    },
+    pendingTabAttention: {
+        backgroundColor: '#FFF7ED',
+        borderWidth: 1,
+        borderColor: '#FDBA74',
     },
     activeTab: {
         backgroundColor: '#fff',
@@ -500,6 +534,10 @@ const styles = StyleSheet.create({
     },
     activeTabText: {
         color: '#FF8C42',
+        fontWeight: '700',
+    },
+    pendingTabText: {
+        color: '#9A4819',
         fontWeight: '700',
     },
     searchContainer: {
