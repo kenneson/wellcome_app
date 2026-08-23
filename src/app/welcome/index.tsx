@@ -1,6 +1,6 @@
 import { useUserProfile } from '@/context/UserProfileContext';
 import { supabase } from '@/shared/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';

@@ -2,7 +2,7 @@ import { useUserProfile } from '@/context/UserProfileContext';
 import { getEventCreationReturnPath } from '@/features/create-event/model/payoutReturn';
 import { supabase } from '@/shared/lib/supabase';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';

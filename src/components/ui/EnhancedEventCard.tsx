@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Colors, Spacing, BorderRadius, Dimensions } from '@/shared/constants/theme';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { formatPrice, formatEventDate, formatSpotsAvailable } from '@/utils/formatters';

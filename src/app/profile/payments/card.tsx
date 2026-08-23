@@ -1,6 +1,6 @@
 import { paymentService } from '@/services/api/PaymentService';
 import { detectCardBrand, formatCardNumber, onlyDigits } from '@/shared/lib/paymentValidation';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {

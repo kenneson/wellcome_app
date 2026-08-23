@@ -1,6 +1,6 @@
 import { API_URL } from '@/shared/config/api';
 import { supabase } from '@/shared/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {

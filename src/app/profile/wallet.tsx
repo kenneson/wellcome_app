@@ -1,7 +1,7 @@
 import { userService } from '@/services/api/UserService';
 import { walletService } from '@/services/api/WalletService';
 import { supabase } from '@/shared/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {

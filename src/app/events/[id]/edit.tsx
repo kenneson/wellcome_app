@@ -4,7 +4,7 @@ import { LocationMap } from '@/components/ui/LocationMap';
 import { eventService } from '@/services/api/EventService';
 import { EventCreationProvider, useEventCreation } from '@/shared/context/EventCreationContext';
 import { INVALID_EVENT_PRICE_MESSAGE, isValidEventPrice, parseEventPrice } from '@/shared/config/payments';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

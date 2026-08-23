@@ -1,20 +1,20 @@
 import { Checkbox } from '@/components/ui/Checkbox';
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { WellcomeBottomBar, WellcomeButton } from '@/components/ui/wellcome';
 import { DishInputCard } from '@/components/ui/DishInputCard';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { validateEventStep } from '@/features/create-event/model/eventCreationValidation';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EventCreateMenu() {
     const router = useRouter();
-    const insets = useSafeAreaInsets();
     const { width } = useWindowDimensions();
     const horizontalPadding = width < 375 ? 16 : width >= 414 ? 24 : 20;
     const creation = useEventCreation();
@@ -37,11 +37,11 @@ export default function EventCreateMenu() {
             <CreateEventHeader saveStatus={creation.saveStatus} />
             <KeyboardAwareScrollView contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
                 <WizardProgress currentStep={1} />
-                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Monte o cardápio</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">Apresente os pratos na ordem em que serão servidos.</Text>
+                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Monte o cardÃ¡pio</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Apresente os pratos na ordem em que serÃ£o servidos.</Text>
 
                 <View className="bg-gray-50 border border-gray-200 p-4 mb-5" style={{ borderRadius: 8 }}>
-                    <Checkbox label="Serviço em sequência" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
+                    <Checkbox label="ServiÃ§o em sequÃªncia" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
                     <Text className="text-xs text-gray-500 mt-2 ml-8">Entrada, prato principal e sobremesa servidos em etapas.</Text>
                 </View>
 
@@ -71,19 +71,17 @@ export default function EventCreateMenu() {
                     <Text className="text-[#C45D22] font-bold ml-2">Adicionar prato</Text>
                 </TouchableOpacity>
 
-                <Text className="text-lg font-bold text-[#1A1A1A] mb-3">Informações alimentares</Text>
+                <Text className="text-lg font-bold text-[#1A1A1A] mb-3">InformaÃ§Ãµes alimentares</Text>
                 <View className="gap-4 pb-4">
-                    <Checkbox label="Opções veganas e vegetarianas disponíveis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
-                    <Checkbox label="Aceito adaptações por restrições alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
-                    <Checkbox label="Cardápio sujeito a alterações de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
+                    <Checkbox label="OpÃ§Ãµes veganas e vegetarianas disponÃ­veis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
+                    <Checkbox label="Aceito adaptaÃ§Ãµes por restriÃ§Ãµes alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
+                    <Checkbox label="CardÃ¡pio sujeito a alteraÃ§Ãµes de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
                 </View>
             </KeyboardAwareScrollView>
 
-            <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100" style={{ paddingBottom: Math.max(insets.bottom, 16), paddingHorizontal: horizontalPadding, paddingTop: 12 }}>
-                <TouchableOpacity className="h-[52px] bg-[#FF8C42] items-center justify-center" style={{ borderRadius: 8 }} onPress={() => void handleNext()}>
-                    <Text className="text-white text-base font-bold">Continuar</Text>
-                </TouchableOpacity>
-            </View>
+            <WellcomeBottomBar>
+                <WellcomeButton label="Continuar" onPress={() => void handleNext()} />
+            </WellcomeBottomBar>
         </SafeAreaView>
     );
 }

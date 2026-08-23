@@ -1,7 +1,7 @@
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { ChatConversation, chatService } from '@/services/api/ChatService';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';

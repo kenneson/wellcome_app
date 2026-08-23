@@ -1,6 +1,6 @@
 import { authService } from '@/services/api/AuthService';
 import { supabase } from '@/shared/lib/supabase';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { AppIcon as FontAwesome, AppIcon as Ionicons } from '@/components/ui/icon';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Link, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';

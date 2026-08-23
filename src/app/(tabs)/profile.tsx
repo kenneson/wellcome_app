@@ -5,7 +5,7 @@ import { userService } from '@/services/api/UserService';
 import { Colors, Dimensions } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { formatFirstName, formatShortDate } from '@/utils/formatters';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';

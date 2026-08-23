@@ -1,5 +1,5 @@
 import { LEGAL_DOCUMENTS, isLegalDocumentKey } from '@/shared/content/legal';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

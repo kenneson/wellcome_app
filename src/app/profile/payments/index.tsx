@@ -1,7 +1,7 @@
 import { BillingWallet, paymentService } from '@/services/api/PaymentService';
 import { supabase } from '@/shared/lib/supabase';
 import { displayCardBrand, formatCpf, formatPhone, formatPostalCode, onlyDigits } from '@/shared/lib/paymentValidation';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {

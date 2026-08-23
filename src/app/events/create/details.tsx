@@ -1,4 +1,5 @@
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { WellcomeBottomBar, WellcomeButton, WellcomeDatePickerSheet, WellcomeField } from '@/components/ui/wellcome';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { validateEventStep } from '@/features/create-event/model/eventCreationValidation';
@@ -6,18 +7,17 @@ import { eventService } from '@/services/api/EventService';
 import { formatEventPriceInput, parseEventPrice } from '@/shared/config/payments';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Platform, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type PickerKind = 'date' | 'start' | 'end' | 'deadlineDate' | 'deadlineTime' | null;
 
 export default function EventCreateDateAndPrice() {
     const router = useRouter();
-    const insets = useSafeAreaInsets();
     const { width } = useWindowDimensions();
     const horizontalPadding = width < 375 ? 16 : width >= 414 ? 24 : 20;
     const creation = useEventCreation();
@@ -105,7 +105,7 @@ export default function EventCreateDateAndPrice() {
             <KeyboardAwareScrollView contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
                 <WizardProgress currentStep={3} />
                 <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Data, vagas e valor</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">Defina horários claros para que ninguém fique com dúvidas.</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Defina horÃ¡rios claros para que ninguÃ©m fique com dÃºvidas.</Text>
 
                 <View className="flex-row gap-3 mb-2">
                     <InputField label="VALOR POR PESSOA" error={errors.price}>
@@ -135,9 +135,9 @@ export default function EventCreateDateAndPrice() {
 
                 {Number.isFinite(price) && price > 0 && (
                     <View className="bg-emerald-50 border border-emerald-200 p-4 mb-5" style={{ borderRadius: 8 }}>
-                        <Text className="text-sm font-bold text-emerald-900">Estimativa por inscrição</Text>
+                        <Text className="text-sm font-bold text-emerald-900">Estimativa por inscriÃ§Ã£o</Text>
                         <View className="flex-row justify-between mt-2"><Text className="text-sm text-emerald-800">Taxa Wellcome ({platformFeePercentage}%)</Text><Text className="text-sm text-emerald-900">R$ {(price * feeRate).toFixed(2).replace('.', ',')}</Text></View>
-                        <View className="flex-row justify-between mt-1"><Text className="text-sm font-bold text-emerald-900">Você recebe</Text><Text className="text-sm font-bold text-emerald-900">R$ {estimatedNet.toFixed(2).replace('.', ',')}</Text></View>
+                        <View className="flex-row justify-between mt-1"><Text className="text-sm font-bold text-emerald-900">VocÃª recebe</Text><Text className="text-sm font-bold text-emerald-900">R$ {estimatedNet.toFixed(2).replace('.', ',')}</Text></View>
                         <Text className="text-xs text-emerald-700 mt-2">A taxa do processador pode variar conforme o meio de pagamento.</Text>
                     </View>
                 )}
@@ -147,21 +147,21 @@ export default function EventCreateDateAndPrice() {
                 {errors.eventDate && <ErrorText>{errors.eventDate}</ErrorText>}
 
                 <View className="flex-row gap-3 mt-3">
-                    <InputField label="INÍCIO" error={errors.eventDate}>
+                    <InputField label="INÃCIO" error={errors.eventDate}>
                         <TouchableOpacity className="px-4 py-4" onPress={() => openPicker('start')} disabled={!date}>
                             <Text className={`text-lg font-bold ${date ? 'text-[#1A1A1A]' : 'text-gray-300'}`}>{date ? formatTime(date) : '--:--'}</Text>
                         </TouchableOpacity>
                     </InputField>
-                    <InputField label="TÉRMINO" error={errors.endTime}>
+                    <InputField label="TÃ‰RMINO" error={errors.endTime}>
                         <TouchableOpacity className="px-4 py-4" onPress={() => openPicker('end')} disabled={!date}>
                             <Text className={`text-lg font-bold ${endTime ? 'text-[#1A1A1A]' : 'text-gray-300'}`}>{endTime ? formatTime(endTime) : '--:--'}</Text>
                         </TouchableOpacity>
                     </InputField>
                 </View>
-                {!!duration && <Text className="text-xs text-gray-500 text-center mb-5">Duração estimada: {duration}</Text>}
+                {!!duration && <Text className="text-xs text-gray-500 text-center mb-5">DuraÃ§Ã£o estimada: {duration}</Text>}
 
                 <View className="flex-row items-center justify-between mt-2 mb-2">
-                    <Text className="text-xs text-gray-600 font-bold">PRAZO PARA INSCRIÇÕES</Text>
+                    <Text className="text-xs text-gray-600 font-bold">PRAZO PARA INSCRIÃ‡Ã•ES</Text>
                     {registrationDeadline && <TouchableOpacity onPress={() => creation.updateDetails({ registrationDeadline: null })}><Text className="text-xs text-red-600 font-bold">Remover</Text></TouchableOpacity>}
                 </View>
                 <View className="flex-row gap-3">
@@ -171,59 +171,22 @@ export default function EventCreateDateAndPrice() {
                 {errors.reservationDeadline && <ErrorText>{errors.reservationDeadline}</ErrorText>}
             </KeyboardAwareScrollView>
 
-            <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100" style={{ paddingBottom: Math.max(insets.bottom, 16), paddingHorizontal: horizontalPadding, paddingTop: 12 }}>
-                <TouchableOpacity className="h-[52px] bg-[#FF8C42] items-center justify-center" style={{ borderRadius: 8 }} onPress={() => void handleNext()}>
-                    <Text className="text-white text-base font-bold">Continuar</Text>
-                </TouchableOpacity>
-            </View>
+            <WellcomeBottomBar>
+                <WellcomeButton label="Continuar" onPress={() => void handleNext()} />
+            </WellcomeBottomBar>
 
             {Platform.OS === 'ios' && activePicker && (
-                <Modal
-                    transparent
-                    animationType={reducedMotion ? 'none' : 'slide'}
-                    onRequestClose={() => setActivePicker(null)}
-                >
-                    <View className="flex-1 justify-end bg-black/40">
-                        <SafeAreaView
-                            edges={['bottom']}
-                            style={{ backgroundColor: '#FFF', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
-                        >
-                        <View className="bg-white rounded-t-2xl pb-2">
-                            <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-                                <TouchableOpacity
-                                    className="min-h-[44px] min-w-[80px] justify-center"
-                                    onPress={() => setActivePicker(null)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Cancelar seleção"
-                                >
-                                    <Text className="text-gray-600">Cancelar</Text>
-                                </TouchableOpacity>
-                                <Text className="flex-1 text-center font-bold text-[#1A1A1A]" numberOfLines={1}>{pickerTitle(activePicker)}</Text>
-                                <TouchableOpacity
-                                    className="min-h-[44px] min-w-[80px] items-end justify-center"
-                                    onPress={() => applyPicker(activePicker, pickerValue)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Confirmar seleção"
-                                >
-                                    <Text className="text-[#C45D22] font-bold">Confirmar</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <DateTimePicker
-                                value={pickerValue}
-                                mode={pickerMode(activePicker)}
-                                display="spinner"
-                                locale="pt-BR"
-                                is24Hour
-                                themeVariant="light"
-                                textColor="#1A1A1A"
-                                minimumDate={activePicker === 'date' || activePicker === 'deadlineDate' ? new Date() : undefined}
-                                onChange={(_, value) => value && setPickerValue(value)}
-                                style={{ height: 216, width: '100%' }}
-                            />
-                        </View>
-                        </SafeAreaView>
-                    </View>
-                </Modal>
+                <WellcomeDatePickerSheet
+                    visible
+                    title={pickerTitle(activePicker)}
+                    value={pickerValue}
+                    mode={pickerMode(activePicker)}
+                    minimumDate={activePicker === 'date' || activePicker === 'deadlineDate' ? new Date() : undefined}
+                    reducedMotion={reducedMotion}
+                    onChange={setPickerValue}
+                    onCancel={() => setActivePicker(null)}
+                    onConfirm={() => applyPicker(activePicker, pickerValue)}
+                />
             )}
             {Platform.OS === 'android' && activePicker && (
                 <DateTimePicker
@@ -243,7 +206,7 @@ export default function EventCreateDateAndPrice() {
 }
 
 function InputField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-    return <View className="flex-1 mb-3"><Text className="text-xs text-gray-600 font-bold mb-2">{label}</Text><View className={`border bg-white ${error ? 'border-red-400' : 'border-gray-200'}`} style={{ borderRadius: 8 }}>{children}</View>{error && <Text className="text-[11px] text-red-600 mt-1">{error}</Text>}</View>;
+    return <WellcomeField label={label} error={error} className="flex-1">{children}</WellcomeField>;
 }
 function PickerButton({ icon, label, active, onPress }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; active: boolean; onPress: () => void }) {
     return <TouchableOpacity className={`flex-row items-center border px-4 py-4 ${active ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-white'}`} style={{ borderRadius: 8 }} onPress={onPress}><Ionicons name={icon} size={18} color={active ? '#C45D22' : '#73787E'} /><Text className={`flex-1 ml-2 font-semibold ${active ? 'text-[#1A1A1A]' : 'text-gray-500'}`} numberOfLines={1}>{label}</Text></TouchableOpacity>;
@@ -252,4 +215,4 @@ function ErrorText({ children }: { children: React.ReactNode }) { return <Text c
 function formatDate(date: Date) { return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function formatTime(date: Date) { return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 function pickerMode(kind: Exclude<PickerKind, null>): 'date' | 'time' { return kind === 'date' || kind === 'deadlineDate' ? 'date' : 'time'; }
-function pickerTitle(kind: Exclude<PickerKind, null>) { return ({ date: 'Data do evento', start: 'Horário de início', end: 'Horário de término', deadlineDate: 'Data limite', deadlineTime: 'Horário limite' })[kind]; }
+function pickerTitle(kind: Exclude<PickerKind, null>) { return ({ date: 'Data do evento', start: 'HorÃ¡rio de inÃ­cio', end: 'HorÃ¡rio de tÃ©rmino', deadlineDate: 'Data limite', deadlineTime: 'HorÃ¡rio limite' })[kind]; }

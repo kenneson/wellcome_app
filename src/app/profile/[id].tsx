@@ -5,7 +5,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { queryClient } from '@/shared/lib/react-query';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';

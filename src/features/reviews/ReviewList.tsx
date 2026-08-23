@@ -1,7 +1,7 @@
 import { ReportSheet } from '@/components/ui/ReportSheet';
 import { EventReview } from '@/entities/event/types';
 import { useBlockedIds } from '@/hooks/useBlockedIds';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import React, { useState } from 'react';

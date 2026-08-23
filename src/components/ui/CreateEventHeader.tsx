@@ -1,67 +1,60 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { WellcomeIconButton } from '@/components/ui/wellcome';
 import { EventCreationSaveStatus } from '@/entities/event/model/types';
+import { Box } from '@/shared/ui/box';
+import { Text } from '@/shared/ui/text';
+import { useRouter } from 'expo-router';
+import React from 'react';
 
 interface CreateEventHeaderProps {
-    title?: string;
-    onBack?: () => void;
-    saveStatus?: EventCreationSaveStatus;
-    onDiscard?: () => void;
+  title?: string;
+  onBack?: () => void;
+  saveStatus?: EventCreationSaveStatus;
+  onDiscard?: () => void;
 }
 
 const SAVE_LABELS: Partial<Record<EventCreationSaveStatus, string>> = {
-    saving: 'Salvando...',
-    saved: 'Salvo',
-    offline: 'Sem conexão',
-    error: 'Sem conexão',
+  saving: 'Salvando...',
+  saved: 'Salvo',
+  offline: 'Sem conexão',
+  error: 'Sem conexão',
 };
 
-export function CreateEventHeader({ title = 'Crie seu evento', onBack, saveStatus, onDiscard }: CreateEventHeaderProps) {
-    const router = useRouter();
+export function CreateEventHeader({
+  title = 'Crie seu evento',
+  onBack,
+  saveStatus,
+  onDiscard,
+}: CreateEventHeaderProps) {
+  const router = useRouter();
 
-    const handleBack = () => {
-        if (onBack) {
-            onBack();
-        } else if (router.canGoBack()) {
-            router.back();
-        } else {
-            router.replace('/(tabs)');
-        }
-    };
+  const handleBack = () => {
+    if (onBack) onBack();
+    else if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
+  };
 
-    return (
-        <View className="min-h-[60px] flex-row items-center justify-between px-4 bg-white border-b border-gray-100">
-            <TouchableOpacity
-                onPress={handleBack}
-                className="w-11 h-11 -ml-2 items-center justify-center"
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Voltar"
-            >
-                <IconSymbol name="chevron.left" size={24} color="#1A1A1A" />
-            </TouchableOpacity>
+  const hasConnectionError = saveStatus === 'error' || saveStatus === 'offline';
 
-            <View className="flex-1 items-center px-2">
-                <Text className="text-[17px] font-bold text-[#1A1A1A] text-center" numberOfLines={1}>{title}</Text>
-                {saveStatus && SAVE_LABELS[saveStatus] ? (
-                    <Text className={`text-[11px] mt-0.5 ${saveStatus === 'error' || saveStatus === 'offline' ? 'text-amber-600' : 'text-gray-400'}`}>
-                        {SAVE_LABELS[saveStatus]}
-                    </Text>
-                ) : null}
-            </View>
+  return (
+    <Box className="min-h-[64px] flex-row items-center border-b border-outline-100 bg-white px-2">
+      <WellcomeIconButton icon="chevron-back" onPress={handleBack} accessibilityLabel="Voltar" />
 
-            {onDiscard ? (
-                <TouchableOpacity
-                    onPress={onDiscard}
-                    className="w-11 h-11 items-center justify-center"
-                    accessibilityRole="button"
-                    accessibilityLabel="Excluir rascunho"
-                >
-                    <IconSymbol name="trash" size={20} color="#B33A34" />
-                </TouchableOpacity>
-            ) : <View className="w-11" />}
-        </View>
-    );
+      <Box className="flex-1 items-center px-2">
+        <Text className="text-center text-[17px] font-bold text-typography-900" numberOfLines={1}>
+          {title}
+        </Text>
+        {saveStatus && SAVE_LABELS[saveStatus] ? (
+          <Text className={`mt-0.5 text-[11px] ${hasConnectionError ? 'text-warning-700' : 'text-typography-400'}`}>
+            {SAVE_LABELS[saveStatus]}
+          </Text>
+        ) : null}
+      </Box>
+
+      {onDiscard ? (
+        <WellcomeIconButton icon="trash-outline" onPress={onDiscard} accessibilityLabel="Excluir rascunho" danger />
+      ) : (
+        <Box className="h-12 w-12" />
+      )}
+    </Box>
+  );
 }

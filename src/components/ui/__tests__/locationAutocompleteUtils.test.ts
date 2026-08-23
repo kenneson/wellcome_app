@@ -1,5 +1,5 @@
 import type { GeocodingResult } from '@/services/api/LocationService';
-import { isCompleteGeocodingResult } from '../locationAutocompleteUtils';
+import { hasUsableGeocodingResult, isCompleteGeocodingResult } from '../locationAutocompleteUtils';
 
 const completeAddress: GeocodingResult = {
     id: 'address-1',
@@ -26,5 +26,18 @@ describe('isCompleteGeocodingResult', () => {
         ['coordinate range', { lon: 200 }],
     ])('rejects a result without a valid %s', (_field, updates) => {
         expect(isCompleteGeocodingResult({ ...completeAddress, ...updates })).toBe(false);
+    });
+
+    it('allows a geocoded place to be selected before city and state are completed manually', () => {
+        expect(hasUsableGeocodingResult({
+            ...completeAddress,
+            city: '',
+            state: '',
+            stateCode: '',
+        })).toBe(true);
+    });
+
+    it('does not allow a result without coordinates to be selected', () => {
+        expect(hasUsableGeocodingResult({ ...completeAddress, lat: Number.NaN })).toBe(false);
     });
 });

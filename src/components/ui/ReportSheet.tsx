@@ -1,5 +1,5 @@
 import { moderationService, ReportReason, ReportTargetType } from '@/services/api/ModerationService';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 

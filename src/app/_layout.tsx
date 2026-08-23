@@ -18,6 +18,7 @@ export const unstable_settings = {
 import { KycStatus, UserProfileContext } from '@/context/UserProfileContext';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 import { queryClient } from '@/shared/lib/react-query';
+import { GluestackUIProvider } from '@/shared/ui/gluestack-ui-provider';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 export default function RootLayout() {
@@ -172,10 +173,11 @@ export default function RootLayout() {
   const isEventDetails = currentSegment === 'events' && segments[1] === '[id]';
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <UserProfileContext.Provider value={{ isProfileComplete, kycStatus, refetchProfile }}>
-        <ThemeProvider value={DefaultTheme}>
-          <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
+    <GluestackUIProvider mode="light">
+      <QueryClientProvider client={queryClient}>
+        <UserProfileContext.Provider value={{ isProfileComplete, kycStatus, refetchProfile }}>
+          <ThemeProvider value={DefaultTheme}>
+            <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
             {!isEventDetails && (
               <>
                 <StatusBar style="light" backgroundColor="#FF8C42" />
@@ -214,9 +216,10 @@ export default function RootLayout() {
                 <Stack.Screen name="legal/[document]" options={{ headerShown: false }} />
               </Stack>
             </View>
-          </View>
-        </ThemeProvider>
-      </UserProfileContext.Provider>
-    </QueryClientProvider>
+            </View>
+          </ThemeProvider>
+        </UserProfileContext.Provider>
+      </QueryClientProvider>
+    </GluestackUIProvider>
   );
 }

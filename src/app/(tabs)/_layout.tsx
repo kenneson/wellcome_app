@@ -1,5 +1,5 @@
 import { Colors, Dimensions, Spacing } from '@/shared/constants/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';

@@ -1,7 +1,8 @@
 import { GeocodingResult, GeocodingSuggestion, locationService, Municipality } from '@/services/api/LocationService';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { WellcomeIconButton } from '@/components/ui/wellcome';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
-import { isCompleteGeocodingResult } from './locationAutocompleteUtils';
+import { hasUsableGeocodingResult, isCompleteGeocodingResult } from './locationAutocompleteUtils';
 import * as Crypto from 'expo-crypto';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -17,7 +18,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -43,7 +44,8 @@ interface LocationAutocompleteProps {
     placeholder?: string;
     value?: string;
     onSelectMunicipality?: (municipality: Municipality, coords?: { lat: number; lon: number }) => void;
-    onSelectAddress?: (result: GeocodingResult) => void;
+    onSelectAddress?: (result: GeocodingResult, complete: boolean) => void;
+    allowIncompleteAddress?: boolean;
     visible?: boolean;
     onClose?: () => void;
     asModal?: boolean;
@@ -55,6 +57,7 @@ export function LocationAutocomplete({
     value = '',
     onSelectMunicipality,
     onSelectAddress,
+    allowIncompleteAddress = false,
     visible = true,
     onClose,
     asModal = false,
@@ -67,14 +70,6 @@ export function LocationAutocomplete({
     const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
     const wasVisible = useRef(false);
     const reducedMotion = useReducedMotion();
-    const insets = useSafeAreaInsets();
-    const modalTopInset = Math.max(
-        insets.top,
-        initialWindowMetrics?.insets.top ?? 0,
-        Platform.OS === 'ios' ? 44 : 0,
-    );
-    const modalBottomInset = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
-
     const debouncedQuery = useDebounce(query, 300);
 
     // Search when debounced query changes
@@ -102,7 +97,7 @@ export function LocationAutocomplete({
             } catch (error: any) {
                 if (!cancelled) {
                     setResults([]);
-                    setErrorMessage(error?.message || 'Não foi possível buscar endereços');
+                    setErrorMessage(error?.message || 'NÃƒÂ£o foi possÃƒÂ­vel buscar endereÃƒÂ§os');
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -151,15 +146,21 @@ export function LocationAutocomplete({
         setErrorMessage('');
         try {
             const result = await locationService.retrieveAddress(suggestion.id, sessionToken);
-            if (!isCompleteGeocodingResult(result)) {
-                setErrorMessage('Este resultado não possui cidade, estado ou localização exata. Escolha outro endereço.');
+            if (!hasUsableGeocodingResult(result)) {
+                setErrorMessage('Este resultado nÃ£o possui uma localizaÃ§Ã£o exata. Escolha outra opÃ§Ã£o abaixo ou ajuste a busca.');
                 return;
             }
 
-            onSelectAddress?.(result);
+            const complete = isCompleteGeocodingResult(result);
+            if (!complete && !allowIncompleteAddress) {
+                setErrorMessage('Este resultado não possui cidade e estado completos. Escolha outra opção abaixo.');
+                return;
+            }
+
+            onSelectAddress?.(result, complete);
             onClose?.();
         } catch (error: any) {
-            setErrorMessage(error?.message || 'Não foi possível confirmar o endereço');
+            setErrorMessage(error?.message || 'NÃ£o foi possÃ­vel confirmar o endereÃ§o. VocÃª pode tentar outra opÃ§Ã£o.');
         } finally {
             setLoadingCoords(false);
         }
@@ -211,6 +212,8 @@ export function LocationAutocomplete({
                         setErrorMessage('');
                     }}
                     autoFocus={asModal}
+                    autoCorrect={false}
+                    clearButtonMode="never"
                     returnKeyType="search"
                 />
                 {query.length > 0 && (
@@ -257,6 +260,8 @@ export function LocationAutocomplete({
                     renderItem={renderItem}
                     style={styles.resultsList}
                     keyboardShouldPersistTaps="always"
+                    keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                    contentContainerStyle={styles.resultsContent}
                 />
             )}
 
@@ -286,37 +291,30 @@ export function LocationAutocomplete({
                 animationType={reducedMotion ? 'none' : 'slide'}
                 transparent={false}
                 presentationStyle="fullScreen"
+                statusBarTranslucent={false}
+                navigationBarTranslucent={false}
                 onRequestClose={onClose}
             >
-                <View
-                    style={[
-                        styles.modalContainer,
-                        { paddingTop: modalTopInset, paddingBottom: modalBottomInset },
-                    ]}
-                >
+                <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
                     <View style={styles.modalHeader}>
-                        <TouchableOpacity
+                        <WellcomeIconButton
+                            icon="close"
                             onPress={onClose}
-                            style={styles.closeButton}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel="Fechar busca de endereço"
-                            accessibilityHint="Volta para a criação do evento"
-                        >
-                            <Ionicons name="close" size={24} color="#333" />
-                        </TouchableOpacity>
+                            accessibilityLabel="Fechar busca de endereÃ§o"
+                        />
                         <Text style={styles.modalTitle} numberOfLines={1}>
-                            {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
+                            {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereÃ§o'}
                         </Text>
                         <View style={styles.headerSpacer} />
                     </View>
                     <KeyboardAvoidingView
                         style={styles.modalBody}
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        keyboardVerticalOffset={0}
                     >
                         {content}
                     </KeyboardAvoidingView>
-                </View>
+                </SafeAreaView>
             </Modal>
         );
     }
@@ -346,8 +344,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 8,
-        paddingVertical: 4,
-        minHeight: 56,
+        paddingVertical: 6,
+        minHeight: 64,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
@@ -375,6 +373,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         marginHorizontal: 16,
         marginVertical: 12,
+        minHeight: 52,
     },
     searchIcon: {
         marginRight: 8,
@@ -406,10 +405,14 @@ const styles = StyleSheet.create({
     resultsList: {
         flex: 1,
     },
+    resultsContent: {
+        paddingBottom: 16,
+    },
     resultItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
+        minHeight: 64,
+        paddingVertical: 12,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',

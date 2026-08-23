@@ -2,7 +2,7 @@ import { eventService } from '@/services/api/EventService';
 import { BillingWallet, PixPaymentResult, paymentService } from '@/services/api/PaymentService';
 import { registrationService } from '@/services/api/RegistrationService';
 import { displayCardBrand } from '@/shared/lib/paymentValidation';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

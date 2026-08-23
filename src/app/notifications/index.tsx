@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Colors, Spacing, BorderRadius } from '@/shared/constants/theme';
 import { notificationService, Notification } from '@/services/api/NotificationService';
 import { format } from 'date-fns';
@@ -150,7 +150,7 @@ export default function NotificationsScreen() {
     );
 }
 
-function getIconName(type: string): keyof typeof Ionicons.glyphMap {
+function getIconName(type: string): string {
     switch (type) {
         case 'REGISTRATION_APPROVED': return 'checkmark-circle-outline';
         case 'REGISTRATION_REJECTED': return 'close-circle-outline';
