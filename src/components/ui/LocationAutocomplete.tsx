@@ -17,7 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -67,6 +67,13 @@ export function LocationAutocomplete({
     const [sessionToken, setSessionToken] = useState(() => Crypto.randomUUID());
     const wasVisible = useRef(false);
     const reducedMotion = useReducedMotion();
+    const insets = useSafeAreaInsets();
+    const modalTopInset = Math.max(
+        insets.top,
+        initialWindowMetrics?.insets.top ?? 0,
+        Platform.OS === 'ios' ? 44 : 0,
+    );
+    const modalBottomInset = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
 
     const debouncedQuery = useDebounce(query, 300);
 
@@ -199,7 +206,10 @@ export function LocationAutocomplete({
                     placeholder={placeholder}
                     placeholderTextColor="#999"
                     value={query}
-                    onChangeText={setQuery}
+                    onChangeText={(nextQuery) => {
+                        setQuery(nextQuery);
+                        setErrorMessage('');
+                    }}
                     autoFocus={asModal}
                     returnKeyType="search"
                 />
@@ -275,31 +285,38 @@ export function LocationAutocomplete({
                 visible={visible}
                 animationType={reducedMotion ? 'none' : 'slide'}
                 transparent={false}
+                presentationStyle="fullScreen"
                 onRequestClose={onClose}
             >
-                <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+                <View
+                    style={[
+                        styles.modalContainer,
+                        { paddingTop: modalTopInset, paddingBottom: modalBottomInset },
+                    ]}
+                >
+                    <View style={styles.modalHeader}>
+                        <TouchableOpacity
+                            onPress={onClose}
+                            style={styles.closeButton}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Fechar busca de endereço"
+                            accessibilityHint="Volta para a criação do evento"
+                        >
+                            <Ionicons name="close" size={24} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.modalTitle} numberOfLines={1}>
+                            {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
+                        </Text>
+                        <View style={styles.headerSpacer} />
+                    </View>
                     <KeyboardAvoidingView
-                        style={styles.modalContainer}
+                        style={styles.modalBody}
                         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     >
-                        <View style={styles.modalHeader}>
-                            <TouchableOpacity
-                                onPress={onClose}
-                                style={styles.closeButton}
-                                hitSlop={8}
-                                accessibilityRole="button"
-                                accessibilityLabel="Fechar busca de endereço"
-                            >
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                            <Text style={styles.modalTitle} numberOfLines={1}>
-                                {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
-                            </Text>
-                            <View style={styles.headerSpacer} />
-                        </View>
                         {content}
                     </KeyboardAvoidingView>
-                </SafeAreaView>
+                </View>
             </Modal>
         );
     }
@@ -321,12 +338,16 @@ const styles = StyleSheet.create({
     modalContent: {
         flex: 1,
     },
+    modalBody: {
+        flex: 1,
+    },
     modalHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 8,
         paddingVertical: 4,
+        minHeight: 56,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },

@@ -26,12 +26,19 @@ interface GeoapifyAddress {
     lon?: number | string;
     city?: string;
     municipality?: string;
+    town?: string;
+    village?: string;
+    locality?: string;
     county?: string;
     state?: string;
     state_code?: string;
     suburb?: string;
+    city_district?: string;
+    state_district?: string;
     district?: string;
     postcode?: string;
+    street?: string;
+    housenumber?: string;
     feature_type?: string;
 }
 
@@ -66,7 +73,26 @@ export class GeoapifyLocationService {
         const feature = data.features?.find((item: any) => item.properties?.feature_type === 'details')
             ?? data.features?.[0];
         if (!feature) throw new Error('ADDRESS_NOT_FOUND');
-        return this.mapAddress(feature.properties ?? {}, feature.geometry?.coordinates);
+        const resolved = this.mapAddress(feature.properties ?? {}, feature.geometry?.coordinates);
+
+        if (resolved.city && (resolved.stateCode || resolved.state)) {
+            return resolved;
+        }
+
+        try {
+            const fallback = await this.reverse(resolved.latitude, resolved.longitude);
+            return {
+                ...resolved,
+                fullAddress: resolved.fullAddress || fallback.fullAddress,
+                city: resolved.city || fallback.city,
+                state: resolved.state || fallback.state,
+                stateCode: resolved.stateCode || fallback.stateCode,
+                neighborhood: resolved.neighborhood || fallback.neighborhood,
+                postalCode: resolved.postalCode || fallback.postalCode,
+            };
+        } catch {
+            return resolved;
+        }
     }
 
     async reverse(latitude: number, longitude: number): Promise<ResolvedAddress> {
@@ -108,15 +134,26 @@ export class GeoapifyLocationService {
             throw new Error('ADDRESS_WITHOUT_COORDINATES');
         }
 
+        const streetAddress = [address.street, address.housenumber].filter(Boolean).join(', ');
+        const fullAddress = address.formatted
+            || [address.address_line1 || streetAddress, address.address_line2].filter(Boolean).join(', ');
+
         return {
             id: address.place_id ?? `${latitude},${longitude}`,
-            fullAddress: address.formatted || [address.address_line1, address.address_line2].filter(Boolean).join(', '),
+            fullAddress,
             latitude,
             longitude,
-            city: address.city ?? address.municipality ?? address.county ?? null,
+            city: address.city
+                ?? address.municipality
+                ?? address.town
+                ?? address.village
+                ?? address.locality
+                ?? address.county
+                ?? address.state_district
+                ?? null,
             state: address.state ?? null,
-            stateCode: address.state_code?.replace(/^BR-/i, '') ?? null,
-            neighborhood: address.suburb ?? address.district ?? null,
+            stateCode: address.state_code?.replace(/^BR-/i, '').toUpperCase() ?? null,
+            neighborhood: address.suburb ?? address.city_district ?? address.district ?? null,
             postalCode: address.postcode ?? null,
         };
     }
