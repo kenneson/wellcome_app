@@ -56,7 +56,7 @@ export default function MyEventsScreen() {
                 return {
                     ...event,
                     participants_count: registrations.filter(
-                    (p: any) => p.status !== 'REJECTED' && p.status !== 'CANCELLED'
+                    (p: any) => !['REJECTED', 'CANCELLED', 'EXPIRED'].includes(p.status)
                     ).length,
                     pending_registrations_count: registrations.filter(
                         (p: any) => p.status === 'PENDING'

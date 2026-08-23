@@ -11,6 +11,8 @@ export interface EventRegistration {
     reviewedAt?: Date;
     reviewedBy?: string;
     rejectionReason?: string;
+    paymentDueAt?: Date;
+    capacityHeldAt?: Date;
 
     // Decision data
     attendedBefore: boolean;
@@ -31,5 +33,6 @@ export interface CreateRegistrationDTO {
     eventId: string;
     userId: string;
     status?: RegistrationStatus;
+    paymentDueAt?: Date | null;
     answers?: { questionId: string; answer: string }[];
 }

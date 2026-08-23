@@ -6,6 +6,11 @@ import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
 import { isEventOpenForRegistration } from '../../domain/services/EventAvailability';
+import {
+    calculateRegistrationPaymentDueAt,
+    eventRequiresHostApproval,
+    registrationHoldsCapacity,
+} from '../../domain/services/RegistrationPaymentPolicy';
 
 export interface JoinEventDTO {
     eventId: string;
@@ -35,13 +40,16 @@ export class JoinEventUseCase {
             throw new Error('Host cannot join their own event');
         }
 
+        await this.eventRegistrationRepository.reconcileEventCapacity?.(data.eventId);
+
         const existingRegistrations = await this.eventRegistrationRepository.findByUserId(data.userId);
         const existingForEvent = existingRegistrations.find(r => r.eventId === data.eventId);
 
         if (existingForEvent) {
             if (
                 existingForEvent.status === RegistrationStatus.REJECTED ||
-                existingForEvent.status === RegistrationStatus.CANCELLED
+                existingForEvent.status === RegistrationStatus.CANCELLED ||
+                existingForEvent.status === RegistrationStatus.EXPIRED
             ) {
                 await this.eventRegistrationRepository.deleteByEventAndUser(data.eventId, data.userId);
             } else {
@@ -49,36 +57,42 @@ export class JoinEventUseCase {
             }
         }
 
-        // Check if event is full (only count active registrations)
-        const activeBookings = event.bookings?.filter(
-            b => b.status !== RegistrationStatus.REJECTED && b.status !== RegistrationStatus.CANCELLED
-        ) || [];
-        const isFull = event.maxGuests && activeBookings.length >= event.maxGuests;
+        let registration: EventRegistration;
+        if (this.eventRegistrationRepository.createWithCapacityGuard) {
+            registration = await this.eventRegistrationRepository.createWithCapacityGuard({
+                eventId: data.eventId,
+                userId: data.userId,
+                answers: data.answers,
+            });
+        } else {
+            const reservedBookings = event.bookings?.filter((booking) =>
+                registrationHoldsCapacity(event, booking)
+            ) || [];
+            const isFull = Boolean(event.maxGuests && reservedBookings.length >= event.maxGuests);
 
-        if (isFull && !event.allowWaitlist) {
-            throw new Error('Event is full');
+            if (isFull && !event.allowWaitlist) throw new Error('Event is full');
+
+            let initialStatus = RegistrationStatus.PENDING;
+            if (isFull && event.allowWaitlist) initialStatus = RegistrationStatus.WAITLIST;
+            else if (Number(event.price) <= 0 && event.accessType === EventAccessType.OPEN) {
+                initialStatus = RegistrationStatus.APPROVED;
+            }
+
+            registration = await this.eventRegistrationRepository.create({
+                eventId: data.eventId,
+                userId: data.userId,
+                status: initialStatus,
+                paymentDueAt:
+                    Number(event.price) > 0
+                    && initialStatus === RegistrationStatus.PENDING
+                    && !eventRequiresHostApproval(event)
+                        ? calculateRegistrationPaymentDueAt(event)
+                        : null,
+                answers: data.answers,
+            });
         }
 
-        // Determine initial status
-        let initialStatus = RegistrationStatus.PENDING;
-
-        if (isFull && event.allowWaitlist) {
-            initialStatus = RegistrationStatus.WAITLIST;
-        } else if (Number(event.price) > 0) {
-            initialStatus = RegistrationStatus.PENDING;
-        } else if (event.accessType === EventAccessType.OPEN) {
-            initialStatus = RegistrationStatus.APPROVED;
-        } else if (event.accessType === EventAccessType.OPEN_WITH_APPROVAL) {
-            initialStatus = RegistrationStatus.PENDING;
-        }
-
-        // Create registration
-        const registration = await this.eventRegistrationRepository.create({
-            eventId: data.eventId,
-            userId: data.userId,
-            status: initialStatus,
-            answers: data.answers,
-        });
+        const initialStatus = registration.status;
 
         // Notify host about the candidate. Paid events still require host approval before final confirmation.
         if (event.host) {

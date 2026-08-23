@@ -123,7 +123,6 @@ export default function RootLayout() {
   // 3. Handle Navigation Protection
   const currentSegment = segments[0] as string;
   const inAuthGroup = currentSegment === 'auth';
-  const inKycGroup = currentSegment === 'kyc';
 
   useEffect(() => {
     if (!initialized) return;
@@ -148,33 +147,13 @@ export default function RootLayout() {
       router.replace('/welcome');
       return;
     }
-    // Profile complete — now check KYC
+    // KYC is required only for financial host actions, not general app access.
     else if (session && isProfileComplete === true) {
-      // KYC not yet approved
-      if (kycStatus === 'NOT_SUBMITTED' || kycStatus === 'REJECTED') {
-        if (!inKycGroup) {
-          router.replace('/kyc' as any);
-        }
-        return;
-      }
-
-      // KYC pending — redirect to KYC screen (will show pending state)
-      if (kycStatus === 'PENDING') {
-        if (!inKycGroup) {
-          router.replace('/kyc' as any);
-        }
-        return;
-      }
-
-      // KYC approved — allow access to app
-      if (kycStatus === 'APPROVED') {
-        // Redirect away from welcome/kyc if profile is complete and KYC approved
-        if (currentSegment === 'welcome' || inKycGroup) {
-          router.replace('/(tabs)');
-        }
+      if (currentSegment === 'welcome') {
+        router.replace('/(tabs)');
       }
     }
-  }, [initialized, session, segments, isProfileComplete, kycStatus, inAuthGroup, inKycGroup]);
+  }, [currentSegment, initialized, session, segments, isProfileComplete, inAuthGroup, router]);
 
   if (
     !initialized ||
@@ -231,6 +210,7 @@ export default function RootLayout() {
                 <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                 <Stack.Screen name="events/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="events/create" options={{ headerShown: false }} />
+                <Stack.Screen name="legal/[document]" options={{ headerShown: false }} />
               </Stack>
             </View>
           </View>

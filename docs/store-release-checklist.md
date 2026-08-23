@@ -11,6 +11,10 @@
 - The QR scanner hook flow was refactored so lint no longer fails on conditional hooks.
 - The reusable button and checkbox components now expose display names, fixing the previous lint errors.
 - Backend account deletion was added with authenticated deletion, blockers, and profile anonymization.
+- Paid moderated events now require host approval before payment.
+- Host funds stay retained until 24 hours after the event and refunds preserve financial history.
+- KYC no longer blocks participants; paid hosting and withdrawals still require manual approval.
+- Profile column grants prevent clients from changing wallet, role, payout, or KYC decision fields.
 
 ## Still required before submission
 
@@ -39,14 +43,9 @@
 
 ## Security and backend hardening still recommended
 
-- Several backend routes still trust client-sent `userId` or `hostId`.
-- Before public launch, extend authenticated ownership checks to:
-  - event creation and update
-  - bookings create/cancel/approve/reject
-  - ticket validation
-  - withdrawals
-  - reviews delete
+- Revalidar em ambiente implantado as politicas RLS, grants de coluna e migrations financeiras.
 - Add rate limiting and structured audit logs for KYC, withdrawals, and ticket validation.
+- Add a scheduled balance-release/reconciliation job and alerts for invariant failures.
 
 ## Validation status
 

@@ -30,14 +30,17 @@ export class RejectRegistrationUseCase {
         }
 
         const payment = await this.paymentRepository.findByBookingId(registrationId);
-        if (payment?.status === PaymentStatus.CONFIRMED) {
+        if (
+            payment
+            && [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status)
+        ) {
             if (!payment.providerPaymentId) {
                 throw new Error('Cannot reject a paid registration without provider payment reference');
             }
 
             await this.paymentGateway.refundPayment(
                 payment.providerPaymentId,
-                payment.valor,
+                Number(Math.max(0, payment.valor - Number(payment.refundedAmount || 0)).toFixed(2)),
                 reason || 'Inscricao recusada pelo anfitriao'
             );
         } else if (payment?.status === PaymentStatus.PENDING) {
@@ -45,10 +48,11 @@ export class RejectRegistrationUseCase {
         }
 
         const updatedRegistration = await this.eventRegistrationRepository.updateStatus(registrationId, 'REJECTED', reason, hostId);
+        await this.eventRegistrationRepository.reconcileEventCapacity?.(registration.eventId);
 
         if (updatedRegistration.user) {
             const eventTitle = updatedRegistration.event?.title || 'Evento';
-            const refundMessage = payment?.status === PaymentStatus.CONFIRMED
+            const refundMessage = payment && [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status)
                 ? ' O estorno do pagamento foi solicitado.'
                 : '';
 

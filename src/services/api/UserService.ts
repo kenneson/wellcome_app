@@ -17,6 +17,7 @@ export interface UserProfile {
     bookings: any[];
     averageRating?: number;
     walletBalance?: number;
+    pendingWalletBalance?: number;
     pixKey?: string | null;
     pixKeyType?: string | null;
 }

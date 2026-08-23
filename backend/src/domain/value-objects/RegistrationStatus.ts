@@ -3,5 +3,6 @@ export enum RegistrationStatus {
     APPROVED = 'APPROVED',
     REJECTED = 'REJECTED',
     WAITLIST = 'WAITLIST',
-    CANCELLED = 'CANCELLED'
+    CANCELLED = 'CANCELLED',
+    EXPIRED = 'EXPIRED'
 }

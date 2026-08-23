@@ -21,7 +21,9 @@ describe('CheckPaymentUseCase', () => {
     const paymentRepository = {
         findByBookingId: jest.fn(),
         updateProviderPayment: jest.fn(),
-        confirmAndCreditHost: jest.fn(),
+        confirmAndHoldHostFunds: jest.fn(),
+        holdHostFunds: jest.fn(),
+        releaseMaturedHostFunds: jest.fn(),
     };
     const paymentGateway = {
         listCheckoutPayments: jest.fn(),
@@ -45,7 +47,7 @@ describe('CheckPaymentUseCase', () => {
             providerStatus: 'RECEIVED',
             paymentMethod: 'PIX',
         });
-        paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
+        paymentRepository.confirmAndHoldHostFunds.mockResolvedValue(true);
         paymentGateway.listCheckoutPayments.mockResolvedValue([{
             id: 'pay-1',
             billingType: 'PIX',
@@ -59,6 +61,8 @@ describe('CheckPaymentUseCase', () => {
             id: 'event-1',
             title: 'Jantar de teste',
             hostId: 'host-1',
+            eventDate: new Date('2026-08-24T18:00:00.000Z'),
+            endTime: new Date('2026-08-24T22:00:00.000Z'),
             host: { id: 'host-1', expoPushToken: null },
             accessType: 'OPEN',
             requiresApproval: false,
@@ -81,7 +85,7 @@ describe('CheckPaymentUseCase', () => {
             paymentMethod: 'PIX',
             providerStatus: 'RECEIVED',
         });
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledWith(expect.objectContaining({
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledWith(expect.objectContaining({
             paymentId: 'payment-1',
             bookingId: 'booking-1',
             hostId: 'host-1',
@@ -115,7 +119,7 @@ describe('CheckPaymentUseCase', () => {
 
         const result = await useCase.execute('booking-1', 'user-1');
 
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
         expect(result).toEqual(expect.objectContaining({
             status: PaymentStatus.PENDING,
             providerStatus: 'CONFIRMED',

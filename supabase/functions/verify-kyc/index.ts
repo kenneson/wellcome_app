@@ -12,7 +12,6 @@ const corsHeaders = {
 };
 
 // Thresholds
-const AUTO_APPROVE_THRESHOLD = 90;
 const REVIEW_THRESHOLD = 80;
 
 Deno.serve(async (req) => {
@@ -59,12 +58,39 @@ Deno.serve(async (req) => {
       );
     }
 
-    const expectedDocumentPath = `${user.id}/document.jpg`;
-    const expectedSelfiePath = `${user.id}/selfie.jpg`;
-    if (documentPath !== expectedDocumentPath || selfiePath !== expectedSelfiePath) {
+    const escapedUserId = user.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const documentMatch = documentPath.match(
+      new RegExp(`^${escapedUserId}/([0-9a-f-]{36})/document\\.jpg$`, "i")
+    );
+    const selfieMatch = selfiePath.match(
+      new RegExp(`^${escapedUserId}/([0-9a-f-]{36})/selfie\\.jpg$`, "i")
+    );
+    if (!documentMatch || !selfieMatch || documentMatch[1] !== selfieMatch[1]) {
       return new Response(
         JSON.stringify({ error: "Invalid KYC document paths" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: currentProfile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("kyc_status")
+      .eq("id", user.id)
+      .single();
+    if (profileError) {
+      return new Response(
+        JSON.stringify({ error: "Failed to load KYC status" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (currentProfile.kyc_status === "APPROVED" || currentProfile.kyc_status === "PENDING") {
+      return new Response(
+        JSON.stringify({
+          error: currentProfile.kyc_status === "APPROVED"
+            ? "Identity already verified"
+            : "KYC submission already under review",
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -189,10 +215,10 @@ Deno.serve(async (req) => {
     if (compareError) {
       kycStatus = "REJECTED";
       rejectionReason = compareError;
-    } else if (similarityScore >= AUTO_APPROVE_THRESHOLD) {
-      kycStatus = "APPROVED";
     } else if (similarityScore >= REVIEW_THRESHOLD) {
-      kycStatus = "PENDING"; // Needs manual review
+      // Face matching is a triage signal, not a complete identity decision.
+      // A human reviewer must validate the immutable document submission.
+      kycStatus = "PENDING";
     } else {
       kycStatus = "REJECTED";
       rejectionReason = `Similaridade insuficiente (${similarityScore.toFixed(1)}%). O rosto no documento não corresponde à selfie.`;

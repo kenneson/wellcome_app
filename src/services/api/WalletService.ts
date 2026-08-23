@@ -8,6 +8,12 @@ export interface WithdrawalResponse {
     status: string;
 }
 
+export interface WithdrawalConfig {
+    minimumWithdrawalAmount: number;
+    platformFeePercentage: number;
+    processorFeePayer: 'PLATFORM' | 'HOST';
+}
+
 export class WalletService {
     private apiUrl = `${API_URL}/withdrawals`;
 
@@ -31,6 +37,12 @@ export class WalletService {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.message || 'Erro ao solicitar saque');
         }
+        return response.json();
+    }
+
+    async getWithdrawalConfig(): Promise<WithdrawalConfig> {
+        const response = await fetch(`${API_URL}/payments/config`);
+        if (!response.ok) throw new Error('Erro ao carregar regras de saque');
         return response.json();
     }
 }

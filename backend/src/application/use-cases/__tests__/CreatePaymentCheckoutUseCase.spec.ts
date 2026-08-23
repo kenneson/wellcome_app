@@ -148,4 +148,54 @@ describe('CreatePaymentCheckoutUseCase', () => {
         expect(registrationRepository.findById).not.toHaveBeenCalled();
         expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
     });
+
+    it('does not create a checkout before host approval in a moderated event', async () => {
+        eventRepository.findById.mockResolvedValue({
+            id: 'event-1',
+            title: 'Jantar moderado',
+            price: 120,
+            accessType: 'OPEN_WITH_APPROVAL',
+            requiresApproval: true,
+        });
+        registrationRepository.findById.mockResolvedValue({
+            id: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+            status: 'PENDING',
+        });
+
+        await expect(useCase.execute({
+            bookingId: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+        })).rejects.toThrow('Registration must be approved before payment');
+
+        expect(paymentRepository.findByBookingId).not.toHaveBeenCalled();
+        expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
+    });
+
+    it('does not create a checkout after the approval payment window expires', async () => {
+        eventRepository.findById.mockResolvedValue({
+            id: 'event-1',
+            title: 'Jantar moderado',
+            price: 120,
+            accessType: 'OPEN_WITH_APPROVAL',
+            requiresApproval: true,
+        });
+        registrationRepository.findById.mockResolvedValue({
+            id: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+            status: 'APPROVED',
+            paymentDueAt: new Date(Date.now() - 1000),
+        });
+
+        await expect(useCase.execute({
+            bookingId: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+        })).rejects.toThrow('Registration payment window expired');
+
+        expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
+    });
 });

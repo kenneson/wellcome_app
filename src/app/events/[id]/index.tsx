@@ -3,6 +3,7 @@ import { Event } from '@/entities/event/types';
 import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { ReviewList } from '@/features/reviews/ReviewList';
 import { eventService } from '@/services/api/EventService';
+import { registrationService } from '@/services/api/RegistrationService';
 import { reviewService } from '@/services/api/ReviewService';
 import { DEFAULT_AVATAR_PLACEHOLDER, DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
@@ -53,6 +54,7 @@ export default function EventDetailsScreen() {
     const [myBookingStatus, setMyBookingStatus] = useState<string | null>(null);
     const [myBookingId, setMyBookingId] = useState<string | null>(null);
     const [myPaymentStatus, setMyPaymentStatus] = useState<string | null>(null);
+    const [myPaymentDueAt, setMyPaymentDueAt] = useState<string | null>(null);
     const [reportVisible, setReportVisible] = useState(false);
 
     const isPastEvent = React.useMemo(() => {
@@ -92,11 +94,13 @@ export default function EventDetailsScreen() {
                 setMyBookingStatus(myParticipation?.status || null);
                 setMyBookingId(myParticipation?.id || null);
                 setMyPaymentStatus(myParticipation?.paymentStatus || null);
+                setMyPaymentDueAt(myParticipation?.paymentDueAt || null);
             } else {
                 setIsParticipant(false);
                 setMyBookingStatus(null);
                 setMyBookingId(null);
                 setMyPaymentStatus(null);
+                setMyPaymentDueAt(null);
             }
 
         } catch (error) {
@@ -119,6 +123,20 @@ export default function EventDetailsScreen() {
             return;
         }
         router.push(`/events/${id}/join`);
+    }
+
+    async function handleResetExpiredApproval() {
+        if (!event || !currentUserId || joining) return;
+        setJoining(true);
+        try {
+            await registrationService.cancelBooking(event.id, currentUserId);
+            await fetchEventDetails();
+            router.push(`/events/${id}/join`);
+        } catch (error: any) {
+            Alert.alert('Erro', error?.message || 'Não foi possível liberar a vaga vencida.');
+        } finally {
+            setJoining(false);
+        }
     }
 
     const openMaps = async () => {
@@ -251,16 +269,114 @@ export default function EventDetailsScreen() {
         ? { latitude: event.latitude as number, longitude: event.longitude as number }
         : null;
     const isPaidEvent = Number(event.price) > 0;
+    const requiresHostApproval =
+        event.requiresApproval === true || event.accessType === 'OPEN_WITH_APPROVAL';
     const paymentConfirmed = myPaymentStatus === 'CONFIRMED' || myPaymentStatus === 'PARTIALLY_REFUNDED';
+    const paymentWindowExpired = Boolean(
+        myBookingStatus === 'EXPIRED'
+        || (myPaymentDueAt && new Date(myPaymentDueAt).getTime() <= Date.now() && !paymentConfirmed)
+    );
+    const canPayForCurrentStatus = myBookingStatus === 'APPROVED'
+        || (myBookingStatus === 'PENDING' && !requiresHostApproval);
     const canContinuePayment = !isHost
         && isParticipant
         && isPaidEvent
         && Boolean(myBookingId)
-        && ['PENDING', 'APPROVED'].includes(myBookingStatus || '')
-        && !paymentConfirmed;
+        && canPayForCurrentStatus
+        && !paymentConfirmed
+        && !paymentWindowExpired;
     const canViewTicket = isParticipant
         && myBookingStatus === 'APPROVED'
         && (!isPaidEvent || paymentConfirmed);
+    const participantFlowStatus = !isHost && isParticipant ? (() => {
+        if (myBookingStatus === 'REJECTED') {
+            return {
+                icon: 'close-circle-outline',
+                title: 'Solicitação não aprovada',
+                description: paymentConfirmed
+                    ? 'O reembolso do pagamento foi solicitado.'
+                    : 'O anfitrião não aceitou esta solicitação.',
+                containerClass: 'border-red-200 bg-red-50',
+                iconColor: '#B91C1C',
+                titleClass: 'text-red-800',
+            };
+        }
+        if (myBookingStatus === 'APPROVED' && (!isPaidEvent || paymentConfirmed)) {
+            return {
+                icon: 'checkmark-circle-outline',
+                title: 'Participação confirmada',
+                description: 'Aprovação e pagamento concluídos. Seu ingresso está disponível.',
+                containerClass: 'border-green-200 bg-green-50',
+                iconColor: '#15803D',
+                titleClass: 'text-green-800',
+            };
+        }
+        if (paymentWindowExpired) {
+            return {
+                icon: 'alert-circle-outline',
+                title: 'Prazo de pagamento encerrado',
+                description: 'O prazo desta aprovação terminou. Solicite uma nova vaga para participar.',
+                containerClass: 'border-red-200 bg-red-50',
+                iconColor: '#B91C1C',
+                titleClass: 'text-red-800',
+            };
+        }
+        if (myBookingStatus === 'WAITLIST') {
+            return {
+                icon: 'people-outline',
+                title: 'Na lista de espera',
+                description: 'Sua posiÃ§Ã£o estÃ¡ registrada. Avisaremos quando uma vaga for liberada; vocÃª nÃ£o precisa pagar agora.',
+                containerClass: 'border-blue-200 bg-blue-50',
+                iconColor: '#1D4ED8',
+                titleClass: 'text-blue-800',
+            };
+        }
+        if (myBookingStatus === 'APPROVED' && isPaidEvent && !paymentConfirmed) {
+            return {
+                icon: 'card-outline',
+                title: 'Aprovado pelo anfitrião',
+                description: myPaymentDueAt
+                    ? `Conclua o pagamento até ${new Date(myPaymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} para liberar seu ingresso.`
+                    : 'Falta apenas concluir o pagamento para liberar seu ingresso.',
+                containerClass: 'border-blue-200 bg-blue-50',
+                iconColor: '#1D4ED8',
+                titleClass: 'text-blue-800',
+            };
+        }
+        if (myBookingStatus === 'PENDING' && paymentConfirmed && requiresHostApproval) {
+            return {
+                icon: 'time-outline',
+                title: 'Pagamento confirmado · aprovação pendente',
+                description: 'O anfitrião ainda precisa aceitar sua solicitação. Se ela for recusada, o valor será reembolsado.',
+                containerClass: 'border-orange-200 bg-orange-50',
+                iconColor: '#C45D22',
+                titleClass: 'text-[#9A4819]',
+            };
+        }
+        if (myBookingStatus === 'PENDING' && requiresHostApproval) {
+            return {
+                icon: 'hourglass-outline',
+                title: 'Aprovação pendente',
+                description: isPaidEvent
+                    ? 'O anfitrião analisa sua solicitação primeiro. Se aprovada, você terá até 24 horas para pagar.'
+                    : 'O anfitrião ainda precisa aceitar sua solicitação.',
+                containerClass: 'border-orange-200 bg-orange-50',
+                iconColor: '#C45D22',
+                titleClass: 'text-[#9A4819]',
+            };
+        }
+        if (myBookingStatus === 'PENDING' && isPaidEvent) {
+            return {
+                icon: 'card-outline',
+                title: 'Pagamento pendente',
+                description: 'Conclua o pagamento para confirmar sua participação.',
+                containerClass: 'border-blue-200 bg-blue-50',
+                iconColor: '#1D4ED8',
+                titleClass: 'text-blue-800',
+            };
+        }
+        return null;
+    })() : null;
     const pendingRegistrationCount = event.pendingRegistrationCount ?? 0;
     const confirmedRegistrationCount = event.confirmedRegistrationCount ?? 0;
     const registrationsTargetTab = pendingRegistrationCount > 0 ? 'pending' : 'confirmed';
@@ -344,6 +460,25 @@ export default function EventDetailsScreen() {
                     <Text className="text-[24px] font-bold text-[#1A1A1A] leading-tight mb-4">
                         {event.title}
                     </Text>
+
+                    {participantFlowStatus && (
+                        <View className={`flex-row items-start border rounded-2xl px-4 py-3 mb-5 ${participantFlowStatus.containerClass}`}>
+                            <Ionicons
+                                name={participantFlowStatus.icon as any}
+                                size={23}
+                                color={participantFlowStatus.iconColor}
+                                style={{ marginTop: 1, marginRight: 11 }}
+                            />
+                            <View className="flex-1">
+                                <Text className={`text-sm font-extrabold ${participantFlowStatus.titleClass}`}>
+                                    {participantFlowStatus.title}
+                                </Text>
+                                <Text className="text-xs text-gray-700 leading-5 mt-1">
+                                    {participantFlowStatus.description}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
 
                     {isHost && (
                         <TouchableOpacity
@@ -708,6 +843,23 @@ export default function EventDetailsScreen() {
                 </View>
             )}
 
+            {paymentWindowExpired && isParticipant && !isHost && (
+                <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
+                    <TouchableOpacity
+                        className="bg-[#FF8C42] py-3.5 rounded-2xl shadow-sm flex-row items-center justify-center"
+                        onPress={handleResetExpiredApproval}
+                        disabled={joining}
+                    >
+                        {joining
+                            ? <ActivityIndicator color="#fff" />
+                            : <>
+                                <Ionicons name="refresh-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                                <Text className="text-white font-bold text-[16px]">Solicitar vaga novamente</Text>
+                            </>}
+                    </TouchableOpacity>
+                </View>
+            )}
+
             {/* Action Bar - Participant: View Ticket (approved) */}
             {canViewTicket && (
                 <View className="absolute bottom-0 left-0 right-0 bg-white px-4 py-4 border-t border-gray-100 pb-8">
@@ -755,15 +907,22 @@ export default function EventDetailsScreen() {
                                 <Text className="text-[24px] font-bold text-[#1A1A1A]">R$ {event.price}</Text>
                                 <Text className="text-[14px] text-gray-500 ml-1">/ pessoa</Text>
                             </View>
+                            {requiresHostApproval && (
+                                <Text className="text-[11px] font-semibold text-[#9A4819] mt-0.5">
+                                    Exige aprovação do anfitrião
+                                </Text>
+                            )}
                         </View>
 
                         <TouchableOpacity 
-                            className={`px-8 py-3.5 rounded-2xl shadow-sm ${participantCount >= event.maxGuests ? 'bg-gray-400' : 'bg-[#FF8C42]'}`}
+                            className={`px-8 py-3.5 rounded-2xl shadow-sm ${isFull && !event.allowWaitlist ? 'bg-gray-400' : 'bg-[#FF8C42]'}`}
                             onPress={handleJoin}
-                            disabled={participantCount >= event.maxGuests}
+                            disabled={isFull && !event.allowWaitlist}
                         >
                             <Text className="text-white font-bold text-[16px]">
-                                {participantCount >= event.maxGuests ? 'Esgotado' : 'Participar'}
+                                {isFull
+                                    ? event.allowWaitlist ? 'Entrar na lista de espera' : 'Esgotado'
+                                    : requiresHostApproval ? 'Solicitar vaga' : 'Participar'}
                             </Text>
                         </TouchableOpacity>
                     </View>

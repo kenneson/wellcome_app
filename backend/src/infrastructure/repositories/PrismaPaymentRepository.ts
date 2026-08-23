@@ -256,16 +256,19 @@ export class PrismaPaymentRepository implements PaymentRepository {
         return this.toDomain(payment);
     }
 
-    async confirmAndCreditHost(data: {
+    async confirmAndHoldHostFunds(data: {
         paymentId: string;
         bookingId: string;
         hostId: string;
         platformFee: number;
         processorFee?: number;
+        processorFeePayer?: 'PLATFORM' | 'HOST';
+        platformMargin?: number;
         netAmount: number;
         paidAt: Date;
         providerStatus?: string;
         approveBookingOnPayment?: boolean;
+        fundsAvailableAt: Date;
     }): Promise<boolean> {
         return prisma.$transaction(async (tx) => {
             const updated = await tx.payment.updateMany({
@@ -278,6 +281,8 @@ export class PrismaPaymentRepository implements PaymentRepository {
                     paidAt: data.paidAt,
                     platformFee: data.platformFee,
                     processorFee: data.processorFee ?? 0,
+                    processorFeePayer: data.processorFeePayer ?? 'PLATFORM',
+                    platformMargin: data.platformMargin ?? data.platformFee - (data.processorFee ?? 0),
                     netAmount: data.netAmount,
                     ...(data.providerStatus && { providerStatus: data.providerStatus }),
                 },
@@ -303,20 +308,39 @@ export class PrismaPaymentRepository implements PaymentRepository {
             });
 
             if (booking?.status === 'APPROVED') {
-                await this.releaseHostCreditInTransaction(tx, data.paymentId, data.hostId);
+                await this.holdHostFundsInTransaction(
+                    tx,
+                    data.paymentId,
+                    data.hostId,
+                    data.fundsAvailableAt
+                );
             }
 
             return true;
         });
     }
 
-    async releaseHostCredit(data: { paymentId: string; hostId: string }): Promise<boolean> {
+    async holdHostFunds(data: {
+        paymentId: string;
+        hostId: string;
+        fundsAvailableAt: Date;
+    }): Promise<boolean> {
         return prisma.$transaction(async (tx) => {
-            return this.releaseHostCreditInTransaction(tx, data.paymentId, data.hostId);
+            return this.holdHostFundsInTransaction(
+                tx,
+                data.paymentId,
+                data.hostId,
+                data.fundsAvailableAt
+            );
         });
     }
 
-    private async releaseHostCreditInTransaction(tx: any, paymentId: string, hostId: string): Promise<boolean> {
+    private async holdHostFundsInTransaction(
+        tx: any,
+        paymentId: string,
+        hostId: string,
+        fundsAvailableAt: Date
+    ): Promise<boolean> {
         await tx.$queryRaw`
             select id
             from public.payments
@@ -326,10 +350,23 @@ export class PrismaPaymentRepository implements PaymentRepository {
 
         const payment = await tx.payment.findUnique({
             where: { id: paymentId },
-            select: { id: true, status: true, netAmount: true },
+            select: {
+                id: true,
+                status: true,
+                netAmount: true,
+                refundedNetAmount: true,
+                fundsHeldAt: true,
+                booking: { select: { event: { select: { hostId: true } } } },
+            },
         });
 
-        if (!payment || payment.status !== PaymentStatus.CONFIRMED || !payment.netAmount) {
+        if (
+            !payment ||
+            ![PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status) ||
+            !payment.netAmount ||
+            payment.fundsHeldAt ||
+            payment.booking.event.hostId !== hostId
+        ) {
             return false;
         }
 
@@ -345,29 +382,143 @@ export class PrismaPaymentRepository implements PaymentRepository {
             return false;
         }
 
-        const netAmount = Number(payment.netAmount);
-        if (netAmount <= 0) {
+        const heldAmount = Number(
+            (Number(payment.netAmount) - Number(payment.refundedNetAmount)).toFixed(2)
+        );
+        if (heldAmount <= 0) {
             return false;
+        }
+
+        await tx.user.update({
+            where: { id: hostId },
+            data: {
+                pendingWalletBalance: { increment: heldAmount },
+            },
+        });
+
+        await tx.payment.update({
+            where: { id: paymentId },
+            data: {
+                fundsHeldAt: new Date(),
+                fundsAvailableAt,
+            },
+        });
+
+        return true;
+    }
+
+    async releaseMaturedHostFunds(hostId: string, now = new Date()): Promise<number> {
+        const candidates = await prisma.payment.findMany({
+            where: {
+                status: { in: [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED] },
+                fundsHeldAt: { not: null },
+                fundsAvailableAt: { lte: now },
+                fundsReleasedAt: null,
+                booking: {
+                    status: 'APPROVED',
+                    event: { hostId },
+                },
+            },
+            select: { id: true },
+            orderBy: { id: 'asc' },
+            take: 100,
+        });
+
+        let releasedTotal = 0;
+        for (const candidate of candidates) {
+            releasedTotal += await prisma.$transaction((tx) =>
+                this.releaseMaturedHostFundsInTransaction(tx, candidate.id, hostId, now)
+            );
+        }
+        return Number(releasedTotal.toFixed(2));
+    }
+
+    private async releaseMaturedHostFundsInTransaction(
+        tx: any,
+        paymentId: string,
+        hostId: string,
+        now: Date
+    ): Promise<number> {
+        await tx.$queryRaw`
+            select id
+            from public.payments
+            where id = cast(${paymentId} as uuid)
+            for update
+        `;
+
+        const payment = await tx.payment.findUnique({
+            where: { id: paymentId },
+            select: {
+                status: true,
+                netAmount: true,
+                refundedNetAmount: true,
+                fundsHeldAt: true,
+                fundsAvailableAt: true,
+                fundsReleasedAt: true,
+                booking: {
+                    select: {
+                        status: true,
+                        event: { select: { hostId: true } },
+                    },
+                },
+            },
+        });
+
+        if (
+            !payment ||
+            ![PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status) ||
+            !payment.fundsHeldAt ||
+            !payment.fundsAvailableAt ||
+            payment.fundsAvailableAt > now ||
+            payment.fundsReleasedAt ||
+            payment.booking.status !== 'APPROVED' ||
+            payment.booking.event.hostId !== hostId
+        ) {
+            return 0;
+        }
+
+        const amount = Number(
+            (Number(payment.netAmount) - Number(payment.refundedNetAmount)).toFixed(2)
+        );
+
+        if (amount <= 0) {
+            await tx.payment.update({
+                where: { id: paymentId },
+                data: { fundsReleasedAt: now },
+            });
+            return 0;
+        }
+
+        const balanceUpdated = await tx.user.updateMany({
+            where: {
+                id: hostId,
+                pendingWalletBalance: { gte: amount },
+            },
+            data: {
+                pendingWalletBalance: { decrement: amount },
+                walletBalance: { increment: amount },
+            },
+        });
+        if (balanceUpdated.count !== 1) {
+            throw new Error(`Pending wallet balance invariant failed for payment ${paymentId}`);
         }
 
         await tx.walletTransaction.create({
             data: {
                 userId: hostId,
-                amount: netAmount,
+                amount,
                 type: 'CREDIT_EVENT_TICKET',
-                description: 'Pagamento de inscricao',
+                description: 'Pagamento de inscricao liberado apos o evento',
                 referenceId: paymentId,
             },
         });
 
-        await tx.user.update({
-            where: { id: hostId },
-            data: {
-                walletBalance: { increment: netAmount },
-            },
+        await tx.payment.update({
+            where: { id: paymentId },
+            data: { fundsReleasedAt: now },
         });
 
-        return true;
+        return amount;
     }
 
     async applyRefund(data: {
@@ -421,6 +572,13 @@ export class PrismaPaymentRepository implements PaymentRepository {
             const nextRefundedNetAmount = Number(
                 ((creditedNetAmount * nextRefundedAmount) / grossValue).toFixed(2)
             );
+            const nextRefundedPlatformFee = Number(
+                ((Number(payment.platformFee || 0) * nextRefundedAmount) / grossValue).toFixed(2)
+            );
+            const processorFeeReturned = isFullRefund
+                && payment.paymentMethod === 'CREDIT_CARD'
+                ? Number(payment.processorFee || 0)
+                : Number(payment.refundedProcessorFee || 0);
             const refundedNetDelta = Number(
                 (nextRefundedNetAmount - Number(payment.refundedNetAmount)).toFixed(2)
             );
@@ -432,10 +590,28 @@ export class PrismaPaymentRepository implements PaymentRepository {
                     providerStatus: data.providerStatus,
                     refundedAmount: nextRefundedAmount,
                     refundedNetAmount: nextRefundedNetAmount,
+                    refundedPlatformFee: nextRefundedPlatformFee,
+                    refundedProcessorFee: processorFeeReturned,
+                    ...(isFullRefund && payment.fundsHeldAt && !payment.fundsReleasedAt
+                        ? { fundsReleasedAt: new Date() }
+                        : {}),
                 },
             });
 
-            if (refundedNetDelta > 0 && existingCredit) {
+            if (refundedNetDelta > 0 && payment.fundsHeldAt && !payment.fundsReleasedAt) {
+                const balanceUpdated = await tx.user.updateMany({
+                    where: {
+                        id: data.hostId,
+                        pendingWalletBalance: { gte: refundedNetDelta },
+                    },
+                    data: {
+                        pendingWalletBalance: { decrement: refundedNetDelta },
+                    },
+                });
+                if (balanceUpdated.count !== 1) {
+                    throw new Error(`Pending wallet balance invariant failed for payment ${payment.id}`);
+                }
+            } else if (refundedNetDelta > 0 && existingCredit) {
                 await tx.walletTransaction.create({
                     data: {
                         userId: data.hostId,
@@ -485,11 +661,36 @@ export class PrismaPaymentRepository implements PaymentRepository {
             paidAt: raw.paidAt ?? undefined,
             platformFee: raw.platformFee ? Number(raw.platformFee) : undefined,
             processorFee: raw.processorFee !== null ? Number(raw.processorFee) : undefined,
+            processorFeePayer: raw.processorFeePayer === 'HOST' ? 'HOST' : 'PLATFORM',
+            platformMargin: raw.platformMargin !== null ? Number(raw.platformMargin) : undefined,
+            refundedPlatformFee: raw.refundedPlatformFee !== null ? Number(raw.refundedPlatformFee) : undefined,
+            refundedProcessorFee: raw.refundedProcessorFee !== null ? Number(raw.refundedProcessorFee) : undefined,
             netAmount: raw.netAmount ? Number(raw.netAmount) : undefined,
             refundedAmount: raw.refundedAmount !== null ? Number(raw.refundedAmount) : undefined,
             refundedNetAmount: raw.refundedNetAmount !== null ? Number(raw.refundedNetAmount) : undefined,
+            fundsHeldAt: raw.fundsHeldAt ?? undefined,
+            fundsAvailableAt: raw.fundsAvailableAt ?? undefined,
+            fundsReleasedAt: raw.fundsReleasedAt ?? undefined,
             createdAt: raw.createdAt,
             updatedAt: raw.updatedAt,
         };
+    }
+
+    async listSettledForEconomics(limit = 100): Promise<Payment[]> {
+        const payments = await prisma.payment.findMany({
+            where: {
+                status: {
+                    in: [
+                        PaymentStatus.CONFIRMED,
+                        PaymentStatus.PARTIALLY_REFUNDED,
+                        PaymentStatus.REFUNDED,
+                        PaymentStatus.CHARGEBACK,
+                    ],
+                },
+            },
+            orderBy: [{ paidAt: 'desc' }, { id: 'desc' }],
+            take: Math.min(500, Math.max(1, limit)),
+        });
+        return payments.map((payment) => this.toDomain(payment));
     }
 }

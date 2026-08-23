@@ -19,9 +19,16 @@ export interface Payment {
     paidAt?: Date;
     platformFee?: number;
     processorFee?: number;
+    processorFeePayer?: 'PLATFORM' | 'HOST';
+    platformMargin?: number;
+    refundedPlatformFee?: number;
+    refundedProcessorFee?: number;
     netAmount?: number;
     refundedAmount?: number;
     refundedNetAmount?: number;
+    fundsHeldAt?: Date;
+    fundsAvailableAt?: Date;
+    fundsReleasedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }

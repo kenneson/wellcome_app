@@ -68,6 +68,7 @@ export class PrismaUserRepository implements UserRepository {
             dietaryRestrictions: prismaUser.dietaryRestrictions ?? prismaUser.dietary_restrictions ?? [],
             phoneNumber: prismaUser.phoneNumber ?? prismaUser.phone_number ?? prismaUser.phone ?? null,
             walletBalance: prismaUser.walletBalance ? Number(prismaUser.walletBalance) : 0,
+            pendingWalletBalance: prismaUser.pendingWalletBalance ? Number(prismaUser.pendingWalletBalance) : 0,
             pixKey: prismaUser.pixKey ?? null,
             pixKeyType: prismaUser.pixKeyType ?? null,
             kycStatus: prismaUser.kycStatus ?? null,
@@ -86,6 +87,7 @@ export class PrismaUserRepository implements UserRepository {
                 reviewedAt: b.reviewedAt,
                 reviewedBy: b.reviewedBy,
                 rejectionReason: b.rejectionReason,
+                paymentDueAt: b.paymentDueAt,
                 attendedBefore: b.attendedBefore,
                 noShowCount: b.noShowCount,
                 event: b.event ? {
@@ -135,7 +137,7 @@ export class PrismaUserRepository implements UserRepository {
         const [user, futureHostedEvents, activeBookings, pendingWithdrawals] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
-                select: { walletBalance: true }
+                select: { walletBalance: true, pendingWalletBalance: true }
             }),
             prisma.event.count({
                 where: {
@@ -172,6 +174,10 @@ export class PrismaUserRepository implements UserRepository {
 
         if (Math.abs(Number(user.walletBalance || 0)) >= 0.005) {
             blockers.push('Your available wallet balance must be zero before deleting the account.');
+        }
+
+        if (Math.abs(Number(user.pendingWalletBalance || 0)) >= 0.005) {
+            blockers.push('Your pending wallet balance must be zero before deleting the account.');
         }
 
         if (futureHostedEvents > 0) {

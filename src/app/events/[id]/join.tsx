@@ -92,10 +92,24 @@ export default function JoinEventScreen() {
 
             // Se o evento tem preço, redirecionar para pagamento PIX
             const eventPrice = Number(event.price || 0);
-            if (eventPrice > 0 && registration.status === 'APPROVED') {
+            const requiresHostApproval = event.requiresApproval === true
+                || event.accessType === 'OPEN_WITH_APPROVAL';
+
+            if (registration.status === 'WAITLIST') {
                 Alert.alert(
-                    'Inscricao confirmada',
-                    'Sua participacao neste evento ja esta confirmada.',
+                    'VocÃª entrou na lista de espera',
+                    'Avisaremos quando uma vaga for liberada. O pagamento sÃ³ serÃ¡ solicitado depois da promoÃ§Ã£o e, quando exigida, da aprovaÃ§Ã£o do anfitriÃ£o.',
+                    [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
+                );
+                return;
+            }
+
+            if (registration.status === 'PENDING' && requiresHostApproval) {
+                Alert.alert(
+                    'SolicitaÃ§Ã£o enviada',
+                    eventPrice > 0
+                        ? 'O anfitriÃ£o analisa primeiro. Se aprovada, vocÃª receberÃ¡ um prazo para pagar.'
+                        : 'O anfitriÃ£o analisarÃ¡ sua solicitaÃ§Ã£o. Avisaremos quando houver uma resposta.',
                     [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
                 );
                 return;

@@ -40,6 +40,7 @@ export class WithdrawalController {
                 error.message.includes('nao possui') ||
                 error.message.includes('Saldo insuficiente') ||
                 error.message.includes('duas casas') ||
+                error.message.includes('valor minimo para saque') ||
                 error.message.includes('verificacao de identidade') ||
                 error.message.includes('Ja existe um saque')
             ) {

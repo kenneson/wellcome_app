@@ -3,9 +3,14 @@ import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { ProviderPayment } from '../../domain/services/PaymentGateway';
 import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { calculateHostFundsAvailableAt } from '../../domain/services/HostFundsAvailabilityPolicy';
 import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { SendNotificationUseCase } from '../use-cases/SendNotificationUseCase';
+import {
+    calculateSettlementEconomics,
+    getProcessingFeePayer,
+} from '../../domain/services/PaymentEconomics';
 
 export class ConfirmAsaasPaymentService {
     constructor(
@@ -37,23 +42,29 @@ export class ConfirmAsaasPaymentService {
         const providerValue = this.toFiniteMoney(providerPayment.value, payment.valor);
         const providerNetValue = this.toFiniteMoney(providerPayment.netValue, providerValue);
         const processorFee = Number(Math.max(0, providerValue - providerNetValue).toFixed(2));
-        const hostPaysProcessorFee = process.env.PAYMENT_PROCESSING_FEE_PAYER === 'HOST';
-        const netAmount = Number(
-            Math.max(0, payment.valor - platformFee - (hostPaysProcessorFee ? processorFee : 0)).toFixed(2)
+        const processorFeePayer = getProcessingFeePayer();
+        const economics = calculateSettlementEconomics(
+            payment.valor,
+            platformFee,
+            processorFee,
+            processorFeePayer
         );
         const paidAtCandidate = providerPayment.paymentDate || providerPayment.confirmedDate;
         const paidAt = paidAtCandidate ? new Date(paidAtCandidate) : new Date();
 
-        const confirmed = await this.paymentRepository.confirmAndCreditHost({
+        const confirmed = await this.paymentRepository.confirmAndHoldHostFunds({
             paymentId: payment.id,
             bookingId: payment.bookingId,
             hostId: event.hostId,
             platformFee,
             processorFee,
-            netAmount,
+            processorFeePayer,
+            platformMargin: economics.platformMargin,
+            netAmount: economics.hostNetAmount,
             paidAt: Number.isNaN(paidAt.getTime()) ? new Date() : paidAt,
             providerStatus: providerPayment.status,
             approveBookingOnPayment: this.shouldApproveBookingOnPayment(event),
+            fundsAvailableAt: calculateHostFundsAvailableAt(event),
         });
 
         if (confirmed && event.host) {

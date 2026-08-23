@@ -1,11 +1,14 @@
 import { UserRepository } from '../../domain/repositories/UserRepository';
 import { WithdrawalRequest, WithdrawalRequestRepository } from '../../domain/repositories/WithdrawalRequestRepository';
 import { normalizePixKey } from '../../domain/services/PixKeyValidation';
+import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
+import { getMinimumWithdrawalAmount } from '../../domain/services/PaymentEconomics';
 
 export class RequestWithdrawalUseCase {
     constructor(
         private userRepository: UserRepository,
-        private withdrawalRequestRepository: WithdrawalRequestRepository
+        private withdrawalRequestRepository: WithdrawalRequestRepository,
+        private paymentRepository: PaymentRepository
     ) {}
 
     async execute(userId: string, amount: number): Promise<WithdrawalRequest> {
@@ -16,7 +19,12 @@ export class RequestWithdrawalUseCase {
         if (Math.abs(normalizedAmount - amount) >= 0.001) {
             throw new Error('O valor do saque deve ter no maximo duas casas decimais');
         }
+        const minimumAmount = getMinimumWithdrawalAmount();
+        if (normalizedAmount < minimumAmount) {
+            throw new Error(`O valor minimo para saque e R$ ${minimumAmount.toFixed(2).replace('.', ',')}`);
+        }
 
+        await this.paymentRepository.releaseMaturedHostFunds(userId);
         const user = await this.userRepository.findById(userId);
         if (!user) {
             throw new Error('Usuario nao encontrado');

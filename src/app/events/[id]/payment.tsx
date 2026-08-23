@@ -32,6 +32,11 @@ export default function PaymentScreen() {
     const [processing, setProcessing] = useState(false);
     const [checking, setChecking] = useState(false);
     const [paid, setPaid] = useState(false);
+    const [requiresHostApproval, setRequiresHostApproval] = useState(false);
+    const [bookingApproved, setBookingApproved] = useState(false);
+    const [bookingExpired, setBookingExpired] = useState(false);
+    const [bookingStatus, setBookingStatus] = useState<string | null>(null);
+    const [paymentDueAt, setPaymentDueAt] = useState<string | null>(null);
     const [remainingSeconds, setRemainingSeconds] = useState(0);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -40,6 +45,21 @@ export default function PaymentScreen() {
         pollRef.current = null;
     }, []);
 
+    const confirmPaymentAndRefreshApproval = useCallback(async () => {
+        if (id && bookingId) {
+            try {
+                const event = await eventService.getEventById(String(id));
+                const currentBooking = event.bookings?.find(
+                    (booking) => booking.id === String(bookingId)
+                );
+                setBookingApproved(currentBooking?.status === 'APPROVED');
+            } catch {
+                // Payment confirmation is still valid if refreshing the approval status fails.
+            }
+        }
+        setPaid(true);
+    }, [bookingId, id]);
+
     const checkPaymentStatus = useCallback(async (showFeedback = false) => {
         if (!bookingId) return;
         if (showFeedback) setChecking(true);
@@ -47,7 +67,7 @@ export default function PaymentScreen() {
             const result = await registrationService.checkPayment(String(bookingId));
             if (result.paid) {
                 stopPolling();
-                setPaid(true);
+                await confirmPaymentAndRefreshApproval();
                 return;
             }
             if (showFeedback) {
@@ -66,7 +86,7 @@ export default function PaymentScreen() {
         } finally {
             if (showFeedback) setChecking(false);
         }
-    }, [bookingId, stopPolling]);
+    }, [bookingId, confirmPaymentAndRefreshApproval, stopPolling]);
 
     const startPolling = useCallback(() => {
         stopPolling();
@@ -83,6 +103,16 @@ export default function PaymentScreen() {
             ]);
             setWallet(billingWallet);
             setAmount(Number(event.price || 0));
+            setRequiresHostApproval(
+                event.requiresApproval === true || event.accessType === 'OPEN_WITH_APPROVAL'
+            );
+            const currentBooking = event.bookings?.find(
+                (booking) => booking.id === String(bookingId)
+            );
+            setBookingApproved(currentBooking?.status === 'APPROVED');
+            setBookingExpired(currentBooking?.status === 'EXPIRED');
+            setBookingStatus(currentBooking?.status || null);
+            setPaymentDueAt(currentBooking?.paymentDueAt || null);
             setSelectedCardId((current) => {
                 if (current && billingWallet.cards.some((card) => card.id === current)) return current;
                 return billingWallet.cards.find((card) => card.isDefault)?.id || billingWallet.cards[0]?.id || null;
@@ -93,7 +123,7 @@ export default function PaymentScreen() {
         } finally {
             setLoading(false);
         }
-    }, [checkPaymentStatus, id]);
+    }, [bookingId, checkPaymentStatus, id]);
 
     useFocusEffect(useCallback(() => {
         void loadScreen();
@@ -139,7 +169,7 @@ export default function PaymentScreen() {
         try {
             const result = await paymentService.createPixPayment(String(bookingId), String(id));
             setPix(result);
-            if (result.paid) setPaid(true);
+            if (result.paid) await confirmPaymentAndRefreshApproval();
             else startPolling();
         } catch (error: any) {
             Alert.alert('Nao foi possivel gerar o Pix', error.message);
@@ -161,7 +191,7 @@ export default function PaymentScreen() {
         setProcessing(true);
         try {
             const result = await paymentService.payWithCard(String(bookingId), String(id), selectedCardId);
-            if (result.paid) setPaid(true);
+            if (result.paid) await confirmPaymentAndRefreshApproval();
             else {
                 startPolling();
                 Alert.alert('Pagamento em analise', 'Avisaremos assim que o cartao for confirmado.');
@@ -188,6 +218,11 @@ export default function PaymentScreen() {
             : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     };
 
+    const paymentWindowExpired = Boolean(
+        bookingExpired
+        || (paymentDueAt && new Date(paymentDueAt).getTime() <= Date.now() && !paid)
+    );
+
     if (loading) {
         return (
             <SafeAreaView style={styles.safeArea}>
@@ -199,13 +234,76 @@ export default function PaymentScreen() {
         );
     }
 
+    if (bookingStatus === 'WAITLIST') {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.centered}>
+                    <Ionicons name="people-outline" size={72} color="#315E9E" />
+                    <Text style={styles.successTitle}>VocÃª estÃ¡ na lista de espera</Text>
+                    <Text style={styles.successSubtitle}>
+                        Nenhum pagamento Ã© necessÃ¡rio agora. Avisaremos quando uma vaga for liberada.
+                    </Text>
+                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
+                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (requiresHostApproval && !bookingApproved && !paid) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.centered}>
+                    <Ionicons name="hourglass-outline" size={72} color="#C45D22" />
+                    <Text style={styles.successTitle}>Aguardando aprovação</Text>
+                    <Text style={styles.successSubtitle}>
+                        O pagamento será liberado somente depois que o anfitrião aprovar sua solicitação.
+                    </Text>
+                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
+                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (paymentWindowExpired) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={styles.centered}>
+                    <Ionicons name="alert-circle-outline" size={72} color="#B91C1C" />
+                    <Text style={styles.successTitle}>Prazo de pagamento encerrado</Text>
+                    <Text style={styles.successSubtitle}>
+                        Esta aprovação venceu. Volte ao evento para consultar ou solicitar uma nova vaga.
+                    </Text>
+                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
+                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     if (paid) {
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.centered}>
                     <Ionicons name="checkmark-circle" size={76} color="#16855B" />
                     <Text style={styles.successTitle}>Pagamento confirmado</Text>
-                    <Text style={styles.successSubtitle}>Sua inscricao no evento esta confirmada.</Text>
+                    <Text style={styles.successSubtitle}>
+                        {requiresHostApproval && !bookingApproved
+                            ? 'Seu pagamento foi recebido. Sua participação ainda aguarda a aprovação do anfitrião.'
+                            : 'Pagamento e aprovação concluídos. Sua participação no evento está confirmada.'}
+                    </Text>
+                    {requiresHostApproval && !bookingApproved && (
+                        <View style={styles.refundNotice}>
+                            <Ionicons name="return-down-back-outline" size={20} color="#87540B" />
+                            <Text style={styles.refundNoticeText}>
+                                Se o anfitrião não aceitar sua solicitação, o valor será reembolsado.
+                            </Text>
+                        </View>
+                    )}
                     <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
                         <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
                     </TouchableOpacity>
@@ -237,6 +335,43 @@ export default function PaymentScreen() {
                         R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </Text>
                 </View>
+
+                {requiresHostApproval && (
+                    <View style={styles.approvalNotice}>
+                        <View style={styles.approvalNoticeHeader}>
+                            <Ionicons name="information-circle" size={22} color="#9A4819" />
+                            <Text style={styles.approvalNoticeTitle}>Este evento exige aprovação</Text>
+                        </View>
+                        <Text style={styles.approvalNoticeText}>
+                            Sua solicitação já foi aprovada. Conclua o pagamento dentro do prazo para confirmar a vaga e liberar o ingresso.
+                        </Text>
+                        <View style={styles.approvalSteps}>
+                            <Text style={styles.approvalStep}>1  Aprovação do anfitrião concluída</Text>
+                            <Text style={styles.approvalStep}>2  Faça o pagamento em até 24 horas</Text>
+                            <Text style={styles.approvalStep}>3  Receba seu ingresso</Text>
+                        </View>
+                        <Text style={styles.approvalRefundText}>
+                            O valor do anfitrião fica retido até 24 horas após o evento.
+                        </Text>
+                    </View>
+                )}
+
+                <TouchableOpacity
+                    style={styles.protectionCard}
+                    onPress={() => router.push('/legal/protection' as any)}
+                    accessibilityRole="link"
+                    accessibilityLabel="Conhecer a ProteÃ§Ã£o Wellcome"
+                >
+                    <View style={styles.protectionHeader}>
+                        <Ionicons name="shield-checkmark" size={22} color="#187A67" />
+                        <Text style={styles.protectionTitle}>Pague pelo Wellcome</Text>
+                        <Ionicons name="chevron-forward" size={19} color="#187A67" />
+                    </View>
+                    <Text style={styles.protectionText}>
+                        Pagamento registrado, suporte a reembolsos e saldo do anfitriÃ£o retido atÃ© 24 horas apÃ³s o evento.
+                    </Text>
+                    <Text style={styles.protectionWarning}>Pagamentos feitos por fora nÃ£o tÃªm a cobertura da plataforma.</Text>
+                </TouchableOpacity>
 
                 <View style={styles.segmentedControl}>
                     <TouchableOpacity
@@ -270,7 +405,7 @@ export default function PaymentScreen() {
                                         <Ionicons name="time-outline" size={40} color="#A66B00" />
                                         <Text style={styles.reviewTitle}>Pagamento em analise</Text>
                                         <Text style={styles.reviewText}>
-                                            O Asaas confirmou o Pix, mas a liquidacao ainda esta em analise. A inscricao sera liberada automaticamente.
+                                            O Asaas confirmou o Pix, mas a liquidação ainda está em análise. Depois da liquidação, a participação também dependerá da aprovação do anfitrião quando exigida.
                                         </Text>
                                     </View>
                                 ) : (
@@ -411,6 +546,24 @@ const styles = StyleSheet.create({
     amountBlock: { alignItems: 'center', marginVertical: 14, marginBottom: 24 },
     amountLabel: { fontSize: 14, color: '#6D7278', marginBottom: 5 },
     amountValue: { fontSize: 34, fontWeight: '800', color: '#202124' },
+    approvalNotice: {
+        backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FDBA74', borderRadius: 12,
+        padding: 14, marginBottom: 20,
+    },
+    approvalNoticeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    approvalNoticeTitle: { flex: 1, color: '#9A4819', fontSize: 16, fontWeight: '800' },
+    approvalNoticeText: { color: '#7C421F', fontSize: 14, lineHeight: 20 },
+    approvalSteps: { gap: 6, marginTop: 12 },
+    approvalStep: { color: '#4B5563', fontSize: 13, fontWeight: '700' },
+    approvalRefundText: { color: '#87540B', fontSize: 12, lineHeight: 18, marginTop: 12 },
+    protectionCard: {
+        backgroundColor: '#EFFAF7', borderWidth: 1, borderColor: '#A7DDD0', borderRadius: 12,
+        padding: 14, marginBottom: 20, minHeight: 44,
+    },
+    protectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    protectionTitle: { flex: 1, color: '#12604F', fontSize: 16, fontWeight: '800' },
+    protectionText: { color: '#315E55', fontSize: 13, lineHeight: 19, marginTop: 8 },
+    protectionWarning: { color: '#7C421F', fontSize: 12, lineHeight: 18, fontWeight: '700', marginTop: 7 },
     segmentedControl: {
         height: 48, flexDirection: 'row', backgroundColor: '#F0F2F4', borderRadius: 8, padding: 4,
     },
@@ -464,4 +617,9 @@ const styles = StyleSheet.create({
     mutedText: { fontSize: 15, color: '#666B70' },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#202124' },
     successSubtitle: { fontSize: 16, color: '#666B70', textAlign: 'center' },
+    refundNotice: {
+        flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FFF5D8',
+        borderRadius: 10, padding: 12, maxWidth: 340,
+    },
+    refundNoticeText: { flex: 1, color: '#704709', fontSize: 13, lineHeight: 18 },
 });

@@ -46,21 +46,26 @@ export interface PaymentRepository {
     }): Promise<Payment>;
     expirePendingByTxid(txid: string, providerStatus: string): Promise<boolean>;
     updateStatus(id: string, status: string, paidAt?: Date, platformFee?: number, netAmount?: number): Promise<Payment>;
-    confirmAndCreditHost(data: {
+    confirmAndHoldHostFunds(data: {
         paymentId: string;
         bookingId: string;
         hostId: string;
         platformFee: number;
         processorFee?: number;
+        processorFeePayer?: 'PLATFORM' | 'HOST';
+        platformMargin?: number;
         netAmount: number;
         paidAt: Date;
         providerStatus?: string;
         approveBookingOnPayment?: boolean;
+        fundsAvailableAt: Date;
     }): Promise<boolean>;
-    releaseHostCredit(data: {
+    holdHostFunds(data: {
         paymentId: string;
         hostId: string;
+        fundsAvailableAt: Date;
     }): Promise<boolean>;
+    releaseMaturedHostFunds(hostId: string, now?: Date): Promise<number>;
     applyRefund(data: {
         paymentId: string;
         hostId: string;
@@ -69,4 +74,5 @@ export interface PaymentRepository {
         providerStatus: string;
         referenceId: string;
     }): Promise<boolean>;
+    listSettledForEconomics?(limit?: number): Promise<Payment[]>;
 }

@@ -6,7 +6,7 @@ describe('HandleAsaasWebhookUseCase', () => {
         findByBookingId: jest.fn(),
         findByTxid: jest.fn(),
         updateProviderPayment: jest.fn(),
-        confirmAndCreditHost: jest.fn(),
+        confirmAndHoldHostFunds: jest.fn(),
         expirePendingByTxid: jest.fn(),
         findByProviderPaymentId: jest.fn(),
         applyRefund: jest.fn(),
@@ -99,11 +99,13 @@ describe('HandleAsaasWebhookUseCase', () => {
             updatedAt: new Date(),
         });
         paymentRepository.updateProviderPayment.mockResolvedValue({});
-        paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
+        paymentRepository.confirmAndHoldHostFunds.mockResolvedValue(true);
         eventRepository.findById.mockResolvedValue({
             id: 'event-1',
             title: 'Jantar de teste',
             hostId: 'host-1',
+            eventDate: new Date('2026-08-24T18:00:00.000Z'),
+            endTime: new Date('2026-08-24T22:00:00.000Z'),
             host: { id: 'host-1', expoPushToken: null },
             accessType: 'OPEN',
             requiresApproval: false,
@@ -127,7 +129,7 @@ describe('HandleAsaasWebhookUseCase', () => {
         });
 
         expect(result).toEqual({ duplicate: false, action: 'payment_confirmed' });
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledWith(expect.objectContaining({
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledWith(expect.objectContaining({
             paymentId: 'payment-1',
             bookingId: 'booking-1',
             hostId: 'host-1',
@@ -151,7 +153,7 @@ describe('HandleAsaasWebhookUseCase', () => {
 
         expect(result).toEqual({ duplicate: true, action: 'ignored' });
         expect(paymentGateway.listCheckoutPayments).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('confirms a direct Pix payment from the authoritative provider response', async () => {
@@ -163,7 +165,7 @@ describe('HandleAsaasWebhookUseCase', () => {
 
         expect(result).toEqual({ duplicate: false, action: 'payment_confirmed' });
         expect(paymentGateway.getPayment).toHaveBeenCalledWith('pay-1');
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledTimes(1);
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
         expect(webhookRepository.markProcessed).toHaveBeenCalledWith('evt-pix-1');
     });
 
@@ -184,7 +186,7 @@ describe('HandleAsaasWebhookUseCase', () => {
         expect(result).toEqual({ duplicate: false, action: 'payment_confirmed' });
         expect(paymentRepository.findByBookingId).toHaveBeenCalledWith('booking-1');
         expect(paymentGateway.getPayment).toHaveBeenCalledWith('pay-1');
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledTimes(1);
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
     });
     it('rejects a direct payment when the provider amount diverges', async () => {
         paymentGateway.getPayment.mockResolvedValue({
@@ -201,7 +203,7 @@ describe('HandleAsaasWebhookUseCase', () => {
             payment: { id: 'pay-1', status: 'RECEIVED', value: 80 },
         })).rejects.toThrow('Valor divergente');
 
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
         expect(webhookRepository.markFailed).toHaveBeenCalledWith(
             'evt-pix-divergent',
             expect.stringContaining('Valor divergente')
@@ -230,7 +232,7 @@ describe('HandleAsaasWebhookUseCase', () => {
             paymentMethod: 'PIX',
             providerStatus: 'CONFIRMED',
         });
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('records a refused card without approving the booking', async () => {
@@ -251,7 +253,7 @@ describe('HandleAsaasWebhookUseCase', () => {
             paymentMethod: 'CREDIT_CARD',
             providerStatus: 'CREDIT_CARD_CAPTURE_REFUSED',
         });
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('links an early transfer webhook using externalReference', async () => {

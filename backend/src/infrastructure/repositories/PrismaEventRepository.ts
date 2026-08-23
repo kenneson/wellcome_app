@@ -303,6 +303,7 @@ export class PrismaEventRepository implements EventRepository {
                 reviewedAt: b.reviewedAt,
                 reviewedBy: b.reviewedBy,
                 rejectionReason: b.rejectionReason,
+                paymentDueAt: b.paymentDueAt,
                 attendedBefore: b.attendedBefore,
                 noShowCount: b.noShowCount,
                 createdAt: b.createdAt,

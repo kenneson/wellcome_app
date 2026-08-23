@@ -16,13 +16,12 @@ export class UserController {
     async getProfile(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as { id: string };
         try {
-            const user = await this.getUserProfileUseCase.execute(id);
+            const viewer = await getOptionalAuthenticatedUserContext(request);
+            const canSeePrivateProfile = viewer?.userId === id || viewer?.role === 'ADMIN';
+            const user = await this.getUserProfileUseCase.execute(id, canSeePrivateProfile);
             if (!user) {
                 return reply.code(404).send({ message: 'User not found' });
             }
-
-            const viewer = await getOptionalAuthenticatedUserContext(request);
-            const canSeePrivateProfile = viewer?.userId === id || viewer?.role === 'ADMIN';
 
             return reply.send(canSeePrivateProfile ? user : this.toPublicProfile(user));
         } catch (error: any) {

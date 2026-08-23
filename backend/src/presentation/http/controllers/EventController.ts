@@ -2,7 +2,10 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { CreateEventUseCase } from '../../../application/use-cases/CreateEventUseCase';
 import { ListEventsUseCase } from '../../../application/use-cases/ListEventsUseCase';
 import { UpdateEventUseCase } from '../../../application/use-cases/UpdateEventUseCase';
-import { DeleteEventUseCase } from '../../../application/use-cases/DeleteEventUseCase';
+import {
+    DeleteEventUseCase,
+    EventHasRegistrationHistoryError,
+} from '../../../application/use-cases/DeleteEventUseCase';
 import { z } from 'zod';
 
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
@@ -16,6 +19,7 @@ import {
     zodFieldErrors,
 } from '../../../application/validation/EventCreationSchema';
 import { EventCreationError } from '../../../application/errors/EventCreationError';
+import { registrationHoldsCapacity } from '../../../domain/services/RegistrationPaymentPolicy';
 
 const eventPriceSchema = z.number().nonnegative().refine(isValidEventPrice, {
     message: INVALID_EVENT_PRICE_MESSAGE,
@@ -259,9 +263,10 @@ export class EventController {
                 reviewedBy: booking.reviewedBy,
                 reviewedAt: booking.reviewedAt,
                 rejectionReason: booking.rejectionReason,
+                paymentDueAt: booking.paymentDueAt,
             })),
-            participantCount: event.bookings?.filter(
-                (booking: any) => booking.status === 'PENDING' || booking.status === 'APPROVED'
+            participantCount: event.bookings?.filter((booking: any) =>
+                registrationHoldsCapacity(event, booking)
             ).length || 0,
             pendingRegistrationCount: isHost ? pendingRegistrationCount : undefined,
             confirmedRegistrationCount: isHost ? confirmedRegistrationCount : undefined,
@@ -315,6 +320,13 @@ export class EventController {
         } catch (error) {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ code: 'UNAUTHORIZED', message: error.message, fieldErrors: {} });
+            }
+            if (error instanceof EventHasRegistrationHistoryError) {
+                return reply.code(409).send({
+                    code: 'EVENT_HAS_REGISTRATION_HISTORY',
+                    message: error.message,
+                    fieldErrors: {},
+                });
             }
             if (error instanceof Error) {
                 if (error.message === 'Event not found') {

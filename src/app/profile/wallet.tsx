@@ -30,8 +30,10 @@ export default function WalletScreen() {
     const [requesting, setRequesting] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
     const [balance, setBalance] = useState(0);
+    const [pendingBalance, setPendingBalance] = useState(0);
     const [pixKey, setPixKey] = useState<string | null>(null);
     const [pixKeyType, setPixKeyType] = useState<string | null>(null);
+    const [minimumWithdrawalAmount, setMinimumWithdrawalAmount] = useState(50);
 
     const loadData = useCallback(async (showLoader = true) => {
         if (showLoader) setLoading(true);
@@ -39,10 +41,15 @@ export default function WalletScreen() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) { router.replace('/auth/login'); return; }
             setUserId(session.user.id);
-            const profile = await userService.getProfile(session.user.id);
+            const [profile, withdrawalConfig] = await Promise.all([
+                userService.getProfile(session.user.id),
+                walletService.getWithdrawalConfig(),
+            ]);
             setBalance(Number(profile.walletBalance ?? 0));
+            setPendingBalance(Number(profile.pendingWalletBalance ?? 0));
             setPixKey(profile.pixKey ?? null);
             setPixKeyType(profile.pixKeyType ?? null);
+            setMinimumWithdrawalAmount(Number(withdrawalConfig.minimumWithdrawalAmount || 50));
         } catch (e) {
             console.error('Error loading wallet:', e);
         } finally {
@@ -73,8 +80,11 @@ export default function WalletScreen() {
             return;
         }
 
-        if (balance <= 0) {
-            Alert.alert('Saldo insuficiente', 'Você não possui saldo disponível para saque.');
+        if (balance < minimumWithdrawalAmount) {
+            Alert.alert(
+                'Saldo abaixo do saque mínimo',
+                `O saque mínimo é de R$ ${minimumWithdrawalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Seu saldo continua disponível e pode ser acumulado.`
+            );
             return;
         }
 
@@ -140,6 +150,19 @@ export default function WalletScreen() {
                     <Text style={styles.balanceSubtitle}>Atualizado agora há pouco</Text>
                 </View>
 
+                <View style={styles.pendingBalanceCard}>
+                    <View style={styles.pendingBalanceHeader}>
+                        <Ionicons name="time-outline" size={22} color="#B45309" />
+                        <Text style={styles.pendingBalanceTitle}>Saldo retido</Text>
+                    </View>
+                    <Text style={styles.pendingBalanceValue}>
+                        R$ {pendingBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                    <Text style={styles.pendingBalanceHelp}>
+                        Pagamentos aprovados ficam protegidos e são liberados 24 horas após o fim do evento.
+                    </Text>
+                </View>
+
                 {/* PIX Key Card */}
                 <View style={styles.sectionCard}>
                     <View style={styles.sectionHeader}>
@@ -180,9 +203,9 @@ export default function WalletScreen() {
                         <Text style={[styles.sectionTitle, { color: '#1565C0' }]}>Como funciona?</Text>
                     </View>
                     {[
-                        { icon: 'checkmark-circle-outline', text: 'Quando um convidado paga o PIX do ingresso, 90% do valor é creditado na sua carteira.' },
-                        { icon: 'time-outline', text: 'O crédito é confirmado após o pagamento ser processado pelo Asaas (pode levar alguns minutos).' },
-                        { icon: 'cash-outline', text: 'Solicite o saque a qualquer momento. O pagamento é feito em até 2 dias úteis.' },
+                        { icon: 'checkmark-circle-outline', text: 'Quando um convidado aprovado paga o ingresso, o valor líquido aparece como saldo retido.' },
+                        { icon: 'time-outline', text: 'O saldo fica retido até 24 horas após o fim do evento para cobrir cancelamentos e reembolsos.' },
+                        { icon: 'cash-outline', text: `Depois da liberação, valores a partir de R$ ${minimumWithdrawalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} podem ser sacados.` },
                     ].map((item, i) => (
                         <View key={i} style={styles.howItWorksItem}>
                             <Ionicons name={item.icon as any} size={18} color="#2196F3" style={{ marginTop: 1 }} />
@@ -193,9 +216,9 @@ export default function WalletScreen() {
 
                 {/* Withdraw Button */}
                 <TouchableOpacity
-                    style={[styles.withdrawButton, (balance <= 0 || requesting) && styles.withdrawButtonDisabled]}
+                    style={[styles.withdrawButton, (balance < minimumWithdrawalAmount || requesting) && styles.withdrawButtonDisabled]}
                     onPress={handleRequestWithdrawal}
-                    disabled={requesting}
+                    disabled={requesting || balance < minimumWithdrawalAmount}
                 >
                     {requesting ? (
                         <ActivityIndicator color="#fff" />
@@ -210,6 +233,12 @@ export default function WalletScreen() {
                 {!pixKey && (
                     <Text style={styles.noKeyWarning}>
                         ⚠️ Cadastre uma chave PIX para poder solicitar saques.
+                    </Text>
+                )}
+
+                {pixKey && balance < minimumWithdrawalAmount && (
+                    <Text style={styles.noKeyWarning}>
+                        Acumule pelo menos R$ {minimumWithdrawalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para solicitar um saque.
                     </Text>
                 )}
 
@@ -271,6 +300,17 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     balanceSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+    pendingBalanceCard: {
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+        borderWidth: 1,
+        borderRadius: 16,
+        padding: 18,
+    },
+    pendingBalanceHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    pendingBalanceTitle: { fontSize: 15, fontWeight: '700', color: '#92400E' },
+    pendingBalanceValue: { fontSize: 28, fontWeight: '800', color: '#78350F', marginBottom: 6 },
+    pendingBalanceHelp: { fontSize: 13, lineHeight: 19, color: '#92400E' },
 
     // Section Cards
     sectionCard: {

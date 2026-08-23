@@ -13,6 +13,11 @@ import {
 } from '../../../application/use-cases/HandleAsaasWebhookUseCase';
 import { PaymentGatewayError } from '../../../domain/services/PaymentGateway';
 import { INVALID_EVENT_PRICE_MESSAGE } from '../../../domain/constants/payments';
+import {
+    RegistrationApprovalRequiredError,
+    RegistrationNotEligibleForPaymentError,
+    RegistrationPaymentWindowExpiredError,
+} from '../../../domain/services/RegistrationPaymentPolicy';
 import { UnauthorizedRequestError, getAuthenticatedUserId } from '../helpers/auth';
 
 const createCheckoutSchema = z.object({
@@ -122,6 +127,15 @@ export class PaymentController {
             if (error.message === 'Payment checkout is being created') {
                 return reply.code(409).send({ message: error.message });
             }
+            if (error instanceof RegistrationPaymentWindowExpiredError) {
+                return reply.code(410).send({ message: error.message });
+            }
+            if (
+                error instanceof RegistrationApprovalRequiredError ||
+                error instanceof RegistrationNotEligibleForPaymentError
+            ) {
+                return reply.code(409).send({ message: error.message });
+            }
             if (error.message?.includes('does not belong')) {
                 return reply.code(403).send({ message: error.message });
             }
@@ -224,6 +238,15 @@ export class PaymentController {
             return reply.code(409).send({ message });
         }
         if (message === 'Payment is being created' || message === 'Payment is being processed') {
+            return reply.code(409).send({ message });
+        }
+        if (error instanceof RegistrationPaymentWindowExpiredError) {
+            return reply.code(410).send({ message });
+        }
+        if (
+            error instanceof RegistrationApprovalRequiredError ||
+            error instanceof RegistrationNotEligibleForPaymentError
+        ) {
             return reply.code(409).send({ message });
         }
         if (

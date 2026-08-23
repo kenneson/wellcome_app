@@ -249,4 +249,50 @@ describe('UpdateEventUseCase', () => {
         });
         expect(mockEventRepository.update).not.toHaveBeenCalled();
     });
+
+    it('blocks contractual changes after the first confirmed sale', async () => {
+        mockEventRepository.findById.mockResolvedValue({
+            id: 'event-123',
+            hostId: 'host-123',
+            price: 50,
+            maxGuests: 10,
+            bookings: [{ paymentStatus: 'CONFIRMED' }],
+        } as Event);
+
+        await expect(updateEventUseCase.execute('event-123', 'host-123', {
+            price: 60,
+            maxGuests: 12,
+        })).rejects.toMatchObject({
+            code: 'EVENT_CONTRACT_LOCKED_AFTER_SALE',
+            statusCode: 409,
+            fieldErrors: {
+                price: expect.any(String),
+                maxGuests: expect.any(String),
+            },
+        });
+        expect(mockEventRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('allows non-contractual presentation changes after a sale', async () => {
+        const existingEvent = {
+            id: 'event-123',
+            hostId: 'host-123',
+            title: 'Jantar original',
+            description: 'Descricao',
+            bookings: [{ paymentStatus: 'CONFIRMED' }],
+        } as Event;
+        mockEventRepository.findById.mockResolvedValue(existingEvent);
+        mockEventRepository.update.mockResolvedValue({
+            ...existingEvent,
+            title: 'Jantar atualizado',
+        });
+
+        await updateEventUseCase.execute('event-123', 'host-123', {
+            title: 'Jantar atualizado',
+        });
+
+        expect(mockEventRepository.update).toHaveBeenCalledWith('event-123', {
+            title: 'Jantar atualizado',
+        });
+    });
 });

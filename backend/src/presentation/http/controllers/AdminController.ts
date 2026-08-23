@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../../../infrastructure/database/prismaClient';
 import { supabaseAdmin } from '../../../infrastructure/external/supabaseClient';
 import { ForbiddenRequestError, UnauthorizedRequestError, requireAdminUser } from '../helpers/auth';
+import { GetPlatformEconomicsUseCase } from '../../../application/use-cases/GetPlatformEconomicsUseCase';
 
 const listKycQuerySchema = z.object({
     status: z.enum(['ALL', 'PENDING', 'APPROVED', 'REJECTED']).optional().default('PENDING'),
@@ -14,6 +15,25 @@ const rejectKycBodySchema = z.object({
 });
 
 export class AdminController {
+    constructor(private getPlatformEconomicsUseCase?: GetPlatformEconomicsUseCase) {}
+
+    async paymentEconomics(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            await requireAdminUser(request);
+            const query = z.object({ limit: z.coerce.number().int().min(1).max(500).default(100) })
+                .parse(request.query ?? {});
+            if (!this.getPlatformEconomicsUseCase) {
+                return reply.code(503).send({ message: 'Relatorio financeiro indisponivel' });
+            }
+            return reply.send(await this.getPlatformEconomicsUseCase.execute(query.limit));
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return reply.code(400).send({ message: 'Limite invalido' });
+            }
+            return this.handleAuthError(error, reply);
+        }
+    }
+
     async overview(request: FastifyRequest, reply: FastifyReply) {
         try {
             await requireAdminUser(request);

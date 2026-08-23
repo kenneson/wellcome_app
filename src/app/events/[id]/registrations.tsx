@@ -51,6 +51,7 @@ export default function EventRegistrationsScreen() {
                 const paymentConfirmed = registration.paymentStatus === 'CONFIRMED'
                     || registration.paymentStatus === 'PARTIALLY_REFUNDED';
                 return registration.status === RegistrationStatus.PENDING
+                    || registration.status === RegistrationStatus.WAITLIST
                     || (registration.status === RegistrationStatus.APPROVED && isPaid && !paymentConfirmed);
             });
 
@@ -74,13 +75,26 @@ export default function EventRegistrationsScreen() {
     async function handleApprove(registrationId: string) {
         setProcessingId(registrationId);
         try {
-            await registrationService.approveRegistration(registrationId);
+            const registration = registrations.find(r => r.id === registrationId);
+            const paymentConfirmed = registration?.paymentStatus === 'CONFIRMED'
+                || registration?.paymentStatus === 'PARTIALLY_REFUNDED';
+            const updatedRegistration = await registrationService.approveRegistration(registrationId);
             setRegistrations(prev => prev.map(r =>
-                r.id === registrationId ? { ...r, status: RegistrationStatus.APPROVED } : r
+                r.id === registrationId ? { ...r, ...updatedRegistration } : r
             ));
-            Alert.alert('Sucesso', 'Inscrição aprovada.');
-        } catch (error) {
-            Alert.alert('Erro', 'Falha ao aprovar inscrição.');
+            Alert.alert(
+                'Inscrição aprovada',
+                Number(event?.price || 0) > 0 && !paymentConfirmed
+                    ? 'O participante foi aprovado e terá até 24 horas para pagar. A vaga será confirmada após o pagamento.'
+                    : 'A participação está confirmada. Valores pagos ficam retidos até 24 horas após o evento.'
+            );
+        } catch (error: any) {
+            Alert.alert(
+                'Não foi possível aprovar',
+                error?.message === 'Event is full'
+                    ? 'Todas as vagas já estão reservadas. Cancele uma aprovação ou aguarde a expiração de um pagamento.'
+                    : error?.message || 'Falha ao aprovar inscrição.'
+            );
         } finally {
             setProcessingId(null);
         }
@@ -107,21 +121,80 @@ export default function EventRegistrationsScreen() {
     }, [event]);
 
     const isPaidEvent = Number(event?.price || 0) > 0;
+    const requiresHostApproval = event?.requiresApproval === true
+        || event?.accessType === 'OPEN_WITH_APPROVAL';
     const isPaymentConfirmed = (registration: any) =>
         registration.paymentStatus === 'CONFIRMED' || registration.paymentStatus === 'PARTIALLY_REFUNDED';
     const isFinalConfirmed = (registration: any) =>
         registration.status === RegistrationStatus.APPROVED && (!isPaidEvent || isPaymentConfirmed(registration));
     const isAwaitingPayment = (registration: any) =>
-        registration.status === RegistrationStatus.APPROVED && isPaidEvent && !isPaymentConfirmed(registration);
+        isPaidEvent
+        && !isPaymentConfirmed(registration)
+        && (
+            registration.status === RegistrationStatus.APPROVED
+            || (registration.status === RegistrationStatus.PENDING && !requiresHostApproval)
+        );
+    const isPaymentExpired = (registration: any) =>
+        registration.status === RegistrationStatus.EXPIRED
+        || (
+            isAwaitingPayment(registration)
+            && registration.paymentDueAt
+            && new Date(registration.paymentDueAt).getTime() <= Date.now()
+        );
+    const isAwaitingHostApproval = (registration: any) =>
+        registration.status === RegistrationStatus.PENDING && requiresHostApproval;
+    const isWaitlisted = (registration: any) =>
+        registration.status === RegistrationStatus.WAITLIST;
     const getStatusLabel = (registration: any) => {
         if (isFinalConfirmed(registration)) return 'CONFIRMADO';
+        if (isPaymentExpired(registration)) return 'PRAZO VENCIDO';
         if (isAwaitingPayment(registration)) return 'PGTO PENDENTE';
-        return 'PENDENTE';
+        if (isWaitlisted(registration)) return 'LISTA DE ESPERA';
+        if (isAwaitingHostApproval(registration) && isPaymentConfirmed(registration)) return 'PAGO · APROVAR';
+        return 'AGUARDA APROVAÇÃO';
+    };
+    const getStatusTone = (registration: any) => {
+        if (isFinalConfirmed(registration)) {
+            return { badge: styles.statusConfirmed, text: styles.textConfirmed };
+        }
+        if (isPaymentExpired(registration)) {
+            return { badge: styles.statusPending, text: styles.textPending };
+        }
+        if (isAwaitingPayment(registration)) {
+            return { badge: styles.statusPaymentPending, text: styles.textPaymentPending };
+        }
+        return { badge: styles.statusPending, text: styles.textPending };
+    };
+    const getStatusExplanation = (registration: any) => {
+        if (isFinalConfirmed(registration)) {
+            return isPaidEvent
+                ? 'Aprovação e pagamento concluídos. O participante tem acesso ao ingresso.'
+                : 'Participante aprovado e confirmado no evento.';
+        }
+        if (isPaymentExpired(registration)) {
+            return 'O prazo de pagamento venceu. Esta aprovação não ocupa mais uma vaga; você pode cancelá-la.';
+        }
+        if (isAwaitingPayment(registration)) {
+            return registration.paymentDueAt
+                ? `Você aprovou esta pessoa. O pagamento deve ser feito até ${new Date(registration.paymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.`
+                : 'Você já aprovou esta pessoa. Falta o pagamento para confirmar a vaga.';
+        }
+        if (isWaitlisted(registration)) {
+            return 'Esta pessoa está na lista de espera e pode ser aprovada quando houver uma vaga.';
+        }
+        if (isPaymentConfirmed(registration)) {
+            return 'Pagamento recebido. Aprove para confirmar a vaga e liberar o saldo do evento.';
+        }
+        return isPaidEvent
+            ? 'Aguardando sua decisão. O pagamento só será liberado depois da aprovação.'
+            : 'Esta pessoa aguarda sua aprovação para participar.';
     };
 
     let filteredRegistrations = activeTab === 'confirmed'
         ? registrations.filter(r => isFinalConfirmed(r))
-        : registrations.filter(r => r.status === RegistrationStatus.PENDING || isAwaitingPayment(r));
+        : registrations.filter(r =>
+            r.status === RegistrationStatus.PENDING || isWaitlisted(r) || isAwaitingPayment(r)
+        );
 
     if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -132,7 +205,9 @@ export default function EventRegistrationsScreen() {
     }
 
     const confirmedCount = registrations.filter(r => isFinalConfirmed(r)).length;
-    const pendingCount = registrations.filter(r => r.status === RegistrationStatus.PENDING || isAwaitingPayment(r)).length;
+    const pendingCount = registrations.filter(r =>
+        r.status === RegistrationStatus.PENDING || isWaitlisted(r) || isAwaitingPayment(r)
+    ).length;
     const stats = {
         confirmedCount,
         pendingCount,
@@ -161,14 +236,8 @@ export default function EventRegistrationsScreen() {
                 <View style={styles.userInfo}>
                     <View style={styles.headerTop}>
                         <Text style={styles.userName}>{item.user?.fullName}</Text>
-                        <View style={[
-                            styles.statusBadge, 
-                            isFinalConfirmed(item) ? styles.statusConfirmed : styles.statusPending
-                        ]}>
-                            <Text style={[
-                                styles.statusText,
-                                isFinalConfirmed(item) ? styles.textConfirmed : styles.textPending
-                            ]}>
+                        <View style={[styles.statusBadge, getStatusTone(item).badge]}>
+                            <Text style={[styles.statusText, getStatusTone(item).text]}>
                                 {getStatusLabel(item)}
                             </Text>
                         </View>
@@ -194,6 +263,26 @@ export default function EventRegistrationsScreen() {
                     </View>
                 </View>
             </TouchableOpacity>
+
+            <View style={[
+                styles.statusExplanation,
+                isFinalConfirmed(item)
+                    ? styles.statusExplanationConfirmed
+                    : isAwaitingPayment(item)
+                        ? styles.statusExplanationPayment
+                        : styles.statusExplanationPending,
+            ]}>
+                <Ionicons
+                    name={isFinalConfirmed(item)
+                        ? 'checkmark-circle-outline'
+                        : isAwaitingPayment(item) ? 'card-outline' : 'time-outline'}
+                    size={17}
+                    color={isFinalConfirmed(item)
+                        ? '#166534'
+                        : isAwaitingPayment(item) ? '#1D4ED8' : '#9A4819'}
+                />
+                <Text style={styles.statusExplanationText}>{getStatusExplanation(item)}</Text>
+            </View>
 
             {/* Bio snippet */}
             {item.user?.bio && (
@@ -238,15 +327,15 @@ export default function EventRegistrationsScreen() {
                 {!isEventPast && (
                     <TouchableOpacity 
                         style={styles.secondaryButton}
-                        onPress={() => item.status === RegistrationStatus.APPROVED ? handleReject(item.id) : handleApprove(item.id)}
+                        onPress={() => handleReject(item.id)}
                     >
                         <Ionicons 
-                            name={item.status === RegistrationStatus.APPROVED ? "close-circle-outline" : "reload-outline"} 
+                            name="close-circle-outline"
                             size={18} 
                             color="#666" 
                         />
                         <Text style={styles.secondaryButtonText}>
-                            {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Reenviar'}
+                            {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Recusar'}
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -273,7 +362,10 @@ export default function EventRegistrationsScreen() {
                     <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Chat</Text>
                 </TouchableOpacity>
 
-                {!isEventPast && item.status === RegistrationStatus.PENDING && (
+                {!isEventPast && (
+                    (item.status === RegistrationStatus.PENDING && requiresHostApproval)
+                    || item.status === RegistrationStatus.WAITLIST
+                ) && (
                     <TouchableOpacity 
                         style={styles.primaryButton}
                         onPress={() => handleApprove(item.id)}
@@ -366,6 +458,18 @@ export default function EventRegistrationsScreen() {
                             Pendentes ({stats.pendingCount})
                         </Text>
                     </TouchableOpacity>
+                </View>
+
+                <View style={styles.flowInfo}>
+                    <Ionicons name="information-circle-outline" size={21} color="#9A4819" />
+                    <View style={styles.flowInfoText}>
+                        <Text style={styles.flowInfoTitle}>Quando a vaga fica confirmada?</Text>
+                        <Text style={styles.flowInfoDescription}>
+                            {isPaidEvent
+                                ? 'Somente depois da sua aprovação e do pagamento. Se uma pessoa já pagou e for recusada, o reembolso será solicitado.'
+                                : 'Depois que você aprovar a solicitação do participante.'}
+                        </Text>
+                    </View>
                 </View>
 
                 {/* Search Bar */}
@@ -540,6 +644,32 @@ const styles = StyleSheet.create({
         color: '#9A4819',
         fontWeight: '700',
     },
+    flowInfo: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#FFF7ED',
+        borderWidth: 1,
+        borderColor: '#FDBA74',
+        borderRadius: 14,
+        marginHorizontal: 16,
+        marginBottom: 14,
+        padding: 13,
+        gap: 9,
+    },
+    flowInfoText: {
+        flex: 1,
+    },
+    flowInfoTitle: {
+        color: '#9A4819',
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    flowInfoDescription: {
+        color: '#7C421F',
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 3,
+    },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -667,6 +797,9 @@ const styles = StyleSheet.create({
     statusPending: {
         backgroundColor: '#FFEDD5', // Orange-100
     },
+    statusPaymentPending: {
+        backgroundColor: '#DBEAFE',
+    },
     statusText: {
         fontSize: 10,
         fontWeight: 'bold',
@@ -676,6 +809,32 @@ const styles = StyleSheet.create({
     },
     textPending: {
         color: '#C2410C',
+    },
+    textPaymentPending: {
+        color: '#1D4ED8',
+    },
+    statusExplanation: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 7,
+        padding: 10,
+        borderRadius: 10,
+        marginBottom: 10,
+    },
+    statusExplanationConfirmed: {
+        backgroundColor: '#F0FDF4',
+    },
+    statusExplanationPayment: {
+        backgroundColor: '#EFF6FF',
+    },
+    statusExplanationPending: {
+        backgroundColor: '#FFF7ED',
+    },
+    statusExplanationText: {
+        flex: 1,
+        color: '#4B5563',
+        fontSize: 12,
+        lineHeight: 17,
     },
     warningBox: {
         flexDirection: 'row',

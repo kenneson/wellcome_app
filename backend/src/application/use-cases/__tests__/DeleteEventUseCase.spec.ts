@@ -1,7 +1,6 @@
-import { DeleteEventUseCase } from '../DeleteEventUseCase';
+import { DeleteEventUseCase, EventHasRegistrationHistoryError } from '../DeleteEventUseCase';
 import { EventRepository } from '../../../domain/repositories/EventRepository';
 import { EventRegistrationRepository } from '../../../domain/repositories/EventRegistrationRepository';
-import { SendNotificationUseCase } from '../SendNotificationUseCase';
 import { Event } from '../../../domain/entities/Event';
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
 
@@ -9,7 +8,6 @@ describe('DeleteEventUseCase', () => {
     let deleteEventUseCase: DeleteEventUseCase;
     let mockEventRepository: jest.Mocked<EventRepository>;
     let mockEventRegistrationRepository: jest.Mocked<EventRegistrationRepository>;
-    let mockSendNotificationUseCase: jest.Mocked<SendNotificationUseCase>;
 
     beforeEach(() => {
         mockEventRepository = {
@@ -29,14 +27,9 @@ describe('DeleteEventUseCase', () => {
             cancel: jest.fn(),
         } as unknown as jest.Mocked<EventRegistrationRepository>;
 
-        mockSendNotificationUseCase = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<SendNotificationUseCase>;
-
         deleteEventUseCase = new DeleteEventUseCase(
             mockEventRepository,
-            mockEventRegistrationRepository,
-            mockSendNotificationUseCase
+            mockEventRegistrationRepository
         );
     });
 
@@ -129,6 +122,28 @@ describe('DeleteEventUseCase', () => {
         mockEventRepository.findById.mockResolvedValue(existingEvent);
 
         await expect(deleteEventUseCase.execute('event-123', 'other-host')).rejects.toThrow('Only the host can delete this event');
+        expect(mockEventRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('should preserve an event that already has registration history', async () => {
+        const existingEvent = {
+            id: 'event-123',
+            hostId: 'host-123',
+            title: 'Event',
+        } as Event;
+        mockEventRepository.findById.mockResolvedValue(existingEvent);
+        mockEventRegistrationRepository.findByEventIdWithUser.mockResolvedValue([
+            {
+                id: 'booking-1',
+                eventId: 'event-123',
+                userId: 'guest-1',
+                status: 'CANCELLED',
+            } as any,
+        ]);
+
+        await expect(deleteEventUseCase.execute('event-123', 'host-123'))
+            .rejects.toBeInstanceOf(EventHasRegistrationHistoryError);
+
         expect(mockEventRepository.delete).not.toHaveBeenCalled();
     });
 });

@@ -46,6 +46,12 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
             textClass = 'text-gray-600';
             label = 'Cancelado';
             break;
+        case RegistrationStatus.EXPIRED:
+        case 'EXPIRED':
+            containerClass = 'bg-orange-100';
+            textClass = 'text-orange-800';
+            label = 'Prazo expirado';
+            break;
     }
 
     return (

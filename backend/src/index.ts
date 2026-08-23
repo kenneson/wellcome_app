@@ -18,6 +18,7 @@ import { DeleteReviewUseCase } from './application/use-cases/DeleteReviewUseCase
 import { DeleteUserAccountUseCase } from './application/use-cases/DeleteUserAccountUseCase';
 import { GetBillingWalletUseCase } from './application/use-cases/GetBillingWalletUseCase';
 import { GetUserProfileUseCase } from './application/use-cases/GetUserProfileUseCase';
+import { GetPlatformEconomicsUseCase } from './application/use-cases/GetPlatformEconomicsUseCase';
 import { HandleAsaasWebhookUseCase } from './application/use-cases/HandleAsaasWebhookUseCase';
 import { JoinEventUseCase } from './application/use-cases/JoinEventUseCase';
 import { ListEventsUseCase } from './application/use-cases/ListEventsUseCase';
@@ -59,6 +60,7 @@ import { ReviewController } from './presentation/http/controllers/ReviewControll
 import { UserController } from './presentation/http/controllers/UserController';
 import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
 import { ForbiddenRequestError, getAuthenticatedUserContext, getAuthenticatedUserId } from './presentation/http/helpers/auth';
+import { getMinimumWithdrawalAmount, getProcessingFeePayer } from './domain/services/PaymentEconomics';
 
 
 const fastify = Fastify({
@@ -193,7 +195,11 @@ const start = async () => {
         const geoapifyLocationService = new GeoapifyLocationService();
 
         // Use Cases
-        const requestWithdrawalUseCase = new RequestWithdrawalUseCase(userRepository, withdrawalRepository);
+        const requestWithdrawalUseCase = new RequestWithdrawalUseCase(
+            userRepository,
+            withdrawalRepository,
+            paymentRepository
+        );
         const approveWithdrawalUseCase = new ApproveWithdrawalUseCase(
             withdrawalRepository,
             asaasPaymentService,
@@ -211,11 +217,22 @@ const start = async () => {
         );
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
-        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository, sendNotificationUseCase);
+        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository);
         
         const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
-        const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
-        const approveRegistrationUseCase = new ApproveRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository);
+        const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(
+            eventRegistrationRepository,
+            eventRepository,
+            sendNotificationUseCase,
+            paymentRepository,
+            asaasPaymentService
+        );
+        const approveRegistrationUseCase = new ApproveRegistrationUseCase(
+            eventRegistrationRepository,
+            sendNotificationUseCase,
+            paymentRepository,
+            eventRepository
+        );
         const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository, asaasPaymentService);
 
         const createPaymentCheckoutUseCase = new CreatePaymentCheckoutUseCase(
@@ -269,7 +286,7 @@ const start = async () => {
         const createReviewUseCase = new CreateReviewUseCase(eventReviewRepository, eventRepository, sendNotificationUseCase);
         const deleteReviewUseCase = new DeleteReviewUseCase(eventReviewRepository);
 
-        const getUserProfileUseCase = new GetUserProfileUseCase(userRepository);
+        const getUserProfileUseCase = new GetUserProfileUseCase(userRepository, paymentRepository);
         const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
         const deleteUserAccountUseCase = new DeleteUserAccountUseCase(userRepository);
 
@@ -315,7 +332,8 @@ const start = async () => {
             reconcileWithdrawalUseCase,
             withdrawalRepository
         );
-        const adminController = new AdminController();
+        const getPlatformEconomicsUseCase = new GetPlatformEconomicsUseCase(paymentRepository);
+        const adminController = new AdminController(getPlatformEconomicsUseCase);
 
         // Test route to verify deploy
         fastify.get('/test-deploy', async () => {
@@ -1058,6 +1076,7 @@ const start = async () => {
                             dietaryRestrictions: { type: 'array', items: { type: 'string' } },
                             avatarUrl: { type: 'string', nullable: true },
                             walletBalance: { type: 'number' },
+                            pendingWalletBalance: { type: 'number' },
                             pixKey: { type: 'string', nullable: true },
                             pixKeyType: { type: 'string', nullable: true },
                             events: { type: 'array', items: { type: 'object', additionalProperties: true } },
@@ -1255,6 +1274,17 @@ const start = async () => {
                 tags: ['Users'],
             }
         }, (req, reply) => adminController.overview(req, reply));
+
+        fastify.get('/admin/finance/payments', {
+            schema: {
+                summary: 'Get realized platform margin by payment (admin)',
+                tags: ['Payments', 'Admin'],
+                querystring: {
+                    type: 'object',
+                    properties: { limit: { type: 'integer', minimum: 1, maximum: 500 } },
+                },
+            },
+        }, (req, reply) => adminController.paymentEconomics(req, reply));
 
         fastify.get('/admin/me', {
             schema: {
@@ -1562,9 +1592,11 @@ const start = async () => {
                 response: {
                     200: {
                         type: 'object',
-                        required: ['platformFeePercentage'],
+                        required: ['platformFeePercentage', 'minimumWithdrawalAmount', 'processorFeePayer'],
                         properties: {
                             platformFeePercentage: { type: 'number' },
+                            minimumWithdrawalAmount: { type: 'number' },
+                            processorFeePayer: { type: 'string', enum: ['PLATFORM', 'HOST'] },
                         },
                     },
                 },
@@ -1575,6 +1607,8 @@ const start = async () => {
                 platformFeePercentage: Number.isFinite(configuredFee)
                     ? Math.min(100, Math.max(0, configuredFee))
                     : 10,
+                minimumWithdrawalAmount: getMinimumWithdrawalAmount(),
+                processorFeePayer: getProcessingFeePayer(),
             };
         });
 

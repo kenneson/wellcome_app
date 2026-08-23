@@ -38,6 +38,7 @@ const sections = [
     title: '5. Participantes',
     paragraphs: [
       'Ao solicitar ou confirmar participacao em um evento, voce deve observar as regras, horarios, endereco, politica de acesso, preco, itens inclusos e demais condicoes divulgadas pelo anfitriao.',
+      'Em eventos com aprovacao, o anfitriao decide primeiro. Somente depois da aprovacao o participante recebe o prazo indicado no aplicativo para pagar. Se o prazo expirar, a inscricao deixa de ocupar vaga e a proxima pessoa da lista de espera pode ser promovida.',
       'Voce deve agir com respeito, boa-fe e seguranca durante a experiencia. Condutas ofensivas, discriminatorias, violentas, fraudulentas, assediadoras ou que coloquem outras pessoas em risco podem levar a remocao do evento, suspensao da conta e comunicacao as autoridades competentes quando necessario.',
     ],
   },
@@ -45,6 +46,7 @@ const sections = [
     title: '6. Anfitrioes e eventos',
     paragraphs: [
       'Ao publicar um evento, o anfitriao declara que possui capacidade para realizar a experiencia anunciada e que as informacoes sobre local, horario, cardapio, preco, vagas, regras, restricoes alimentares, politica de cancelamento e requisitos de participacao sao corretas.',
+      'Depois da primeira venda, preco, data, local, capacidade, regras e outras condicoes essenciais ficam protegidos contra alteracoes. Mudancas indispensaveis devem ser tratadas com suporte e comunicacao adequada aos participantes.',
       'O anfitriao e responsavel por cumprir leis, normas sanitarias, regras de seguranca, obrigacoes fiscais, direitos de terceiros e demais exigencias aplicaveis ao evento. A Wellcome pode revisar, ocultar, cancelar ou remover eventos que violem estes termos, politicas da plataforma ou a legislacao aplicavel.',
     ],
   },
@@ -53,6 +55,7 @@ const sections = [
     paragraphs: [
       'Eventos pagos podem ser processados por provedores de pagamento contratados pela Wellcome, como Asaas ou outros parceiros. Ao pagar por uma experiencia, voce concorda com a cobranca do valor informado no aplicativo, incluindo eventuais taxas apresentadas antes da confirmacao.',
       'A Wellcome pode reter taxa de servico, comissao ou outros valores informados ao anfitriao. Repasses ao anfitriao dependem de verificacao de identidade aprovada, chave Pix valida, saldo disponivel, ausencia de bloqueios, antifraude e processamento pelo provedor de pagamento.',
+      'O valor liquido do anfitriao permanece retido ate 24 horas depois do termino do evento. Saques tambem dependem do valor minimo vigente, exibido na carteira do aplicativo.',
       'Pagamentos por eventos presenciais, alimentacao, experiencias ou ingressos para eventos ao vivo podem ser processados fora do sistema de faturamento do Google Play, quando permitido pelas politicas aplicaveis da loja.',
     ],
   },
@@ -61,6 +64,7 @@ const sections = [
     paragraphs: [
       'As condicoes de cancelamento e reembolso podem variar conforme o evento, prazo, status da reserva, regras do anfitriao, regras do provedor de pagamento e legislacao aplicavel.',
       'Quando um evento for cancelado pelo anfitriao ou pela Wellcome, poderemos notificar os participantes e avaliar as medidas cabiveis, incluindo reembolso total ou parcial quando aplicavel. Estornos e chargebacks podem afetar saldos, repasses e disponibilidade da conta do anfitriao.',
+      'O historico de pagamento, cancelamento e reembolso e preservado para suporte, auditoria, prevencao a fraude e cumprimento legal. Pagamentos feitos fora da Wellcome nao contam com a Protecao Wellcome.',
       'A Wellcome pode bloquear, compensar ou descontar valores de repasses futuros quando houver fraude, disputa, chargeback, cancelamento, erro operacional ou violacao destes termos.',
     ],
   },
@@ -113,13 +117,13 @@ export default function TermsOfUsePage() {
         <p className="eyebrow">TERMOS DE USO</p>
         <h1 id="terms-title">Regras para usar a Wellcome com seguranca e clareza.</h1>
         <p>
-          Ultima atualizacao: 19 de agosto de 2026. Este documento descreve as condicoes de uso da plataforma Wellcome por participantes, anfitrioes e visitantes.
+          Ultima atualizacao: 23 de agosto de 2026. Este documento descreve as condicoes de uso da plataforma Wellcome por participantes, anfitrioes e visitantes.
         </p>
       </section>
 
       <article className="legal-content shell">
         <div className="legal-notice">
-          <strong>Aviso importante:</strong> este texto e um rascunho operacional para publicacao e revisao. Por envolver pagamentos, KYC, eventos presenciais e dados pessoais, recomendamos revisao juridica antes do lancamento publico.
+          <strong>Versao vigente:</strong> estas regras se aplicam aos fluxos atuais de inscricao, pagamento, realizacao de eventos e saque dentro da Wellcome.
         </div>
 
         {sections.map((section) => (

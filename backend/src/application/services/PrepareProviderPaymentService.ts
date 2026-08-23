@@ -13,6 +13,7 @@ import {
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { INVALID_EVENT_PRICE_MESSAGE, MIN_PAID_EVENT_PRICE } from '../../domain/constants/payments';
 import { EnsureAsaasCustomerService } from './EnsureAsaasCustomerService';
+import { assertRegistrationCanPay } from '../../domain/services/RegistrationPaymentPolicy';
 
 export interface PrepareProviderPaymentInput {
     bookingId: string;
@@ -51,6 +52,7 @@ export class PrepareProviderPaymentService {
         if (!registration) throw new Error('Booking not found');
         if (registration.userId !== input.userId) throw new Error('Booking does not belong to this user');
         if (registration.eventId !== input.eventId) throw new Error('Booking does not belong to this event');
+        assertRegistrationCanPay(event, registration);
 
         const billingProfile = await this.billingRepository.findProfileByUserId(input.userId);
         if (!billingProfile) throw new Error('Complete seus dados de cobranca');

@@ -23,6 +23,7 @@ export interface User {
     bookings?: EventRegistration[];
     expoPushToken?: string | null;
     walletBalance?: number;
+    pendingWalletBalance?: number;
     pixKey?: string | null;
     pixKeyType?: string | null;
     kycStatus?: string | null;

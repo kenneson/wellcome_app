@@ -42,8 +42,9 @@ describe('CheckPixPaymentUseCase', () => {
             updateProviderPayment: jest.fn(),
             expirePendingByTxid: jest.fn(),
             updateStatus: jest.fn(),
-            confirmAndCreditHost: jest.fn(),
-            releaseHostCredit: jest.fn(),
+            confirmAndHoldHostFunds: jest.fn(),
+            holdHostFunds: jest.fn(),
+            releaseMaturedHostFunds: jest.fn(),
             applyRefund: jest.fn(),
         };
         eventRepository = {
@@ -70,7 +71,7 @@ describe('CheckPixPaymentUseCase', () => {
             .rejects.toThrow('Payment does not belong to this user');
 
         expect(efiPixService.getChargeStatus).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('confirms and credits the host through the single transactional operation', async () => {
@@ -80,11 +81,13 @@ describe('CheckPixPaymentUseCase', () => {
             id: payment.eventId,
             title: 'Jantar de teste',
             hostId: 'host-1',
+            eventDate: new Date('2026-08-24T18:00:00.000Z'),
+            endTime: new Date('2026-08-24T22:00:00.000Z'),
             host: { id: 'host-1', expoPushToken: null },
             accessType: 'OPEN',
             requiresApproval: false,
         } as any);
-        paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
+        paymentRepository.confirmAndHoldHostFunds.mockResolvedValue(true);
 
         const result = await useCase.execute(payment.bookingId, payment.userId);
 
@@ -94,7 +97,7 @@ describe('CheckPixPaymentUseCase', () => {
             status: PaymentStatus.CONFIRMED,
             paid: true,
         });
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledWith(expect.objectContaining({
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledWith(expect.objectContaining({
             paymentId: payment.id,
             bookingId: payment.bookingId,
             hostId: 'host-1',
@@ -112,16 +115,18 @@ describe('CheckPixPaymentUseCase', () => {
             id: payment.eventId,
             title: 'Jantar de teste',
             hostId: 'host-1',
+            eventDate: new Date('2026-08-24T18:00:00.000Z'),
+            endTime: new Date('2026-08-24T22:00:00.000Z'),
             host: { id: 'host-1', expoPushToken: null },
             accessType: 'OPEN',
             requiresApproval: false,
         } as any);
-        paymentRepository.confirmAndCreditHost.mockResolvedValue(false);
+        paymentRepository.confirmAndHoldHostFunds.mockResolvedValue(false);
 
         const result = await useCase.executeByTxid(payment.txid);
 
         expect(result.paid).toBe(true);
-        expect(paymentRepository.confirmAndCreditHost).toHaveBeenCalledTimes(1);
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
         expect(sendNotificationUseCase.execute).not.toHaveBeenCalled();
     });
 });

@@ -5,6 +5,7 @@ import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { PaymentGateway } from '../../domain/services/PaymentGateway';
 import { INVALID_EVENT_PRICE_MESSAGE, MIN_PAID_EVENT_PRICE } from '../../domain/constants/payments';
+import { assertRegistrationCanPay } from '../../domain/services/RegistrationPaymentPolicy';
 
 export interface CreatePaymentCheckoutDTO {
     bookingId: string;
@@ -46,9 +47,7 @@ export class CreatePaymentCheckoutUseCase {
             throw new Error('Booking does not belong to this event');
         }
 
-        if (['REJECTED', 'CANCELLED', 'WAITLIST'].includes(registration.status)) {
-            throw new Error('Booking is not eligible for payment');
-        }
+        assertRegistrationCanPay(event, registration);
 
         let payment = await this.paymentRepository.findByBookingId(data.bookingId);
         if (payment?.status === PaymentStatus.CONFIRMED) {

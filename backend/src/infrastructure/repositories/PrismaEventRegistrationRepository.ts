@@ -1,15 +1,165 @@
 import { CreateRegistrationDTO, EventRegistration } from '../../domain/entities/EventRegistration';
-import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
+import {
+    CapacityReconciliationAction,
+    EventRegistrationRepository,
+} from '../../domain/repositories/EventRegistrationRepository';
 import { RegistrationStatus } from '../../domain/value-objects/RegistrationStatus';
+import { EventAccessType } from '../../domain/value-objects/EventAccessType';
+import {
+    calculateRegistrationPaymentDueAt,
+    registrationHoldsCapacity,
+} from '../../domain/services/RegistrationPaymentPolicy';
 import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRegistrationRepository implements EventRegistrationRepository {
+    async reconcileEventCapacity(eventId: string, now = new Date()): Promise<CapacityReconciliationAction[]> {
+        const rows = await prisma.$queryRaw<Array<{
+            action: string;
+            booking_id: string;
+            user_id: string;
+            new_status: string;
+        }>>`
+            select *
+            from private.reconcile_event_capacity(cast(${eventId} as uuid), ${now})
+        `;
+
+        return rows.map((row) => ({
+            action: row.action as CapacityReconciliationAction['action'],
+            bookingId: row.booking_id,
+            userId: row.user_id,
+            newStatus: row.new_status,
+        }));
+    }
+
+    async createWithCapacityGuard(data: CreateRegistrationDTO, now = new Date()): Promise<EventRegistration> {
+        const booking = await prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`
+                select *
+                from private.reconcile_event_capacity(cast(${data.eventId} as uuid), ${now})
+            `;
+
+            const event = await tx.event.findUnique({
+                where: { id: data.eventId },
+                include: { bookings: { include: { payment: { select: { status: true } } } } },
+            });
+            if (!event) throw new Error('Event not found');
+
+            const mappedEvent = {
+                accessType: event.accessType as EventAccessType,
+                requiresApproval: event.requiresApproval,
+                price: Number(event.price || 0),
+            };
+            const occupiedSpots = event.bookings.filter((current) => registrationHoldsCapacity(
+                mappedEvent as any,
+                {
+                    status: current.status as RegistrationStatus,
+                    paymentDueAt: current.paymentDueAt ?? undefined,
+                    capacityHeldAt: current.capacityHeldAt ?? undefined,
+                    paymentStatus: current.payment?.status as any,
+                },
+                now
+            )).length;
+            const isFull = Boolean(event.maxGuests && occupiedSpots >= event.maxGuests);
+            if (isFull && !event.allowWaitlist) throw new Error('Event is full');
+
+            let status = RegistrationStatus.PENDING;
+            if (isFull) {
+                status = RegistrationStatus.WAITLIST;
+            } else if (Number(event.price || 0) <= 0 && event.accessType === EventAccessType.OPEN) {
+                status = RegistrationStatus.APPROVED;
+            }
+
+            const paymentDueAt = Number(event.price || 0) > 0
+                && status === RegistrationStatus.PENDING
+                && event.accessType === EventAccessType.OPEN
+                && !event.requiresApproval
+                ? calculateRegistrationPaymentDueAt({ eventDate: event.eventDate } as any, now)
+                : null;
+
+            return tx.booking.create({
+                data: {
+                    eventId: data.eventId,
+                    userId: data.userId,
+                    status,
+                    paymentDueAt,
+                    ...(data.answers?.length ? {
+                        answers: {
+                            create: data.answers.map((answer) => ({
+                                questionId: answer.questionId,
+                                answer: answer.answer.trim(),
+                            })),
+                        },
+                    } : {}),
+                },
+                include: { answers: true },
+            });
+        });
+
+        return this.mapToDomain(booking);
+    }
+
+    async approveWithCapacityGuard(
+        registrationId: string,
+        eventId: string,
+        hostId: string,
+        paymentDueAt: Date | null,
+        now = new Date()
+    ): Promise<EventRegistration | null> {
+        const booking = await prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`
+                select *
+                from private.reconcile_event_capacity(cast(${eventId} as uuid), ${now})
+            `;
+
+            const event = await tx.event.findUnique({
+                where: { id: eventId },
+                include: { bookings: { include: { payment: { select: { status: true } } } } },
+            });
+            if (!event) throw new Error('Event not found');
+            if (event.hostId !== hostId) throw new Error('Unauthorized: You are not the host of this event');
+
+            const occupiedSpots = event.bookings.filter((current) =>
+                current.id !== registrationId && registrationHoldsCapacity(
+                    {
+                        accessType: event.accessType as EventAccessType,
+                        requiresApproval: event.requiresApproval,
+                        price: Number(event.price || 0),
+                    } as any,
+                    {
+                        status: current.status as RegistrationStatus,
+                        paymentDueAt: current.paymentDueAt ?? undefined,
+                        capacityHeldAt: current.capacityHeldAt ?? undefined,
+                        paymentStatus: current.payment?.status as any,
+                    },
+                    now
+                )
+            ).length;
+            if (event.maxGuests && occupiedSpots >= event.maxGuests) return null;
+
+            return tx.booking.update({
+                where: { id: registrationId },
+                data: {
+                    status: RegistrationStatus.APPROVED,
+                    reviewedBy: hostId,
+                    reviewedAt: now,
+                    rejectionReason: null,
+                    paymentDueAt,
+                    capacityHeldAt: null,
+                },
+                include: { guest: true, event: true, payment: true },
+            });
+        });
+
+        return booking ? this.mapToDomain(booking) : null;
+    }
+
     async create(data: CreateRegistrationDTO): Promise<EventRegistration> {
         const booking = await prisma.booking.create({
             data: {
                 eventId: data.eventId,
                 userId: data.userId,
                 status: data.status ?? RegistrationStatus.PENDING,
+                paymentDueAt: data.paymentDueAt ?? null,
                 ...(data.answers?.length ? {
                     answers: {
                         create: data.answers.map((answer) => ({
@@ -71,13 +221,22 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
         });
     }
 
-    async updateStatus(id: string, status: string, rejectionReason?: string, reviewedBy?: string): Promise<EventRegistration> {
+    async updateStatus(
+        id: string,
+        status: string,
+        rejectionReason?: string,
+        reviewedBy?: string,
+        paymentDueAt?: Date | null
+    ): Promise<EventRegistration> {
         const data: any = { status };
         if (rejectionReason) data.rejectionReason = rejectionReason;
         if (reviewedBy) {
             data.reviewedBy = reviewedBy;
             data.reviewedAt = new Date();
         }
+        if (paymentDueAt !== undefined) data.paymentDueAt = paymentDueAt;
+        if (status !== RegistrationStatus.APPROVED) data.paymentDueAt = null;
+        if (status !== RegistrationStatus.PENDING) data.capacityHeldAt = null;
 
         const booking = await prisma.booking.update({
             where: { id },
@@ -115,6 +274,8 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             reviewedAt: prismaBooking.reviewedAt,
             reviewedBy: prismaBooking.reviewedBy,
             rejectionReason: prismaBooking.rejectionReason,
+            paymentDueAt: prismaBooking.paymentDueAt ?? undefined,
+            capacityHeldAt: prismaBooking.capacityHeldAt ?? undefined,
             attendedBefore: prismaBooking.attendedBefore,
             noShowCount: prismaBooking.noShowCount,
             user: prismaBooking.guest ? {

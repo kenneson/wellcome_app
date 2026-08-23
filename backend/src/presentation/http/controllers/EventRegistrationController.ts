@@ -86,6 +86,15 @@ export class EventRegistrationController {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
+            if (error instanceof Error && error.message === 'Event is full') {
+                return reply.code(409).send({ message: error.message });
+            }
+            if (error instanceof Error && (error.message === 'Registration not found' || error.message === 'Event not found')) {
+                return reply.code(404).send({ message: error.message });
+            }
+            if (error instanceof Error && error.message.startsWith('Unauthorized:')) {
+                return reply.code(403).send({ message: error.message });
+            }
             return reply.code(500).send({ message: 'Internal server error', error });
         }
     }

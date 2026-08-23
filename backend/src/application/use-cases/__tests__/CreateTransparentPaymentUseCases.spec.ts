@@ -33,7 +33,7 @@ describe('Transparent payment use cases', () => {
         claimCardPaymentAttempt: jest.fn(),
         markCheckoutCreationFailed: jest.fn(),
         updateProviderPayment: jest.fn(),
-        confirmAndCreditHost: jest.fn(),
+        confirmAndHoldHostFunds: jest.fn(),
     };
     const billingRepository = {
         findProfileByUserId: jest.fn(),
@@ -111,7 +111,7 @@ describe('Transparent payment use cases', () => {
         paymentGateway.updateCustomer.mockResolvedValue({ id: 'cus-1' });
         paymentRepository.savePixData.mockResolvedValue(payment);
         paymentRepository.updateProviderPayment.mockResolvedValue(payment);
-        paymentRepository.confirmAndCreditHost.mockResolvedValue(true);
+        paymentRepository.confirmAndHoldHostFunds.mockResolvedValue(true);
         paymentRepository.claimCardPaymentAttempt.mockResolvedValue(true);
         paymentGateway.payWithCreditCard.mockReset().mockResolvedValue({
             id: 'pay-1',
@@ -149,6 +149,39 @@ describe('Transparent payment use cases', () => {
         expect(result).toEqual(expect.objectContaining({ paid: false, environment: 'sandbox' }));
     });
 
+    it('blocks Pix before approval without synchronizing or creating an Asaas customer', async () => {
+        eventRepository.findById.mockResolvedValue({
+            id: 'event-1',
+            title: 'Evento moderado',
+            price: 100,
+            hostId: 'host-1',
+            accessType: 'OPEN_WITH_APPROVAL',
+            requiresApproval: true,
+        });
+        registrationRepository.findById.mockResolvedValue({
+            id: 'booking-1',
+            eventId: 'event-1',
+            userId: 'user-1',
+            status: 'PENDING',
+        });
+        const useCase = new CreatePixPaymentUseCase(
+            paymentGateway as any,
+            eventRepository as any,
+            registrationRepository as any,
+            paymentRepository as any,
+            billingRepository as any,
+            notifications as any
+        );
+
+        await expect(useCase.execute({
+            bookingId: 'booking-1', eventId: 'event-1', userId: 'user-1',
+        })).rejects.toThrow('Registration must be approved before payment');
+
+        expect(billingRepository.findProfileByUserId).not.toHaveBeenCalled();
+        expect(paymentGateway.createCustomer).not.toHaveBeenCalled();
+        expect(paymentGateway.createPayment).not.toHaveBeenCalled();
+    });
+
     it('shows Pix as awaiting settlement during a cautionary confirmation', async () => {
         paymentGateway.getPayment.mockResolvedValue({
             id: 'pay-1',
@@ -176,7 +209,7 @@ describe('Transparent payment use cases', () => {
             status: 'CONFIRMED',
         }));
         expect(paymentGateway.getPixQrCode).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('does not request another Pix QR when the provider charge is already paid', async () => {
@@ -202,7 +235,7 @@ describe('Transparent payment use cases', () => {
 
         expect(result).toEqual(expect.objectContaining({ paid: false, awaitingSettlement: true }));
         expect(paymentGateway.getPixQrCode).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('records a definitive card refusal and does not approve the booking', async () => {
@@ -230,7 +263,7 @@ describe('Transparent payment use cases', () => {
             paymentMethod: 'CREDIT_CARD',
             providerStatus: 'invalid_creditCard',
         });
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
     it('blocks a concurrent card capture attempt', async () => {
@@ -275,6 +308,6 @@ describe('Transparent payment use cases', () => {
         expect(result).toEqual(expect.objectContaining({ paid: false, awaitingSettlement: true }));
         expect(paymentGateway.payWithCreditCard).not.toHaveBeenCalled();
         expect(paymentRepository.claimCardPaymentAttempt).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndCreditHost).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 });

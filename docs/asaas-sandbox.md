@@ -10,6 +10,8 @@ ASAAS_BASE_URL=https://api-sandbox.asaas.com/v3
 ASAAS_WEBHOOK_TOKEN=<segredo aleatorio de 32 a 255 caracteres>
 PUBLIC_API_URL=https://wellcome-backend.igpqhp.easypanel.host
 PAYMENT_CHECKOUT_EXPIRATION_MINUTES=60
+REGISTRATION_PAYMENT_TTL_HOURS=24
+HOST_FUNDS_HOLD_HOURS=24
 PAYMENT_PROCESSING_FEE_PAYER=PLATFORM
 APP_FEE_PERCENTAGE=10
 ```
@@ -60,21 +62,22 @@ EXPO_PUBLIC_API_URL=https://wellcome-backend.igpqhp.easypanel.host
 
 ## Validacao antes de producao
 
-1. Criar uma inscricao em evento pago.
-2. Abrir o checkout e validar Pix.
+1. Criar uma solicitacao em evento pago com aprovacao e confirmar que ainda nao e possivel pagar.
+2. Aprovar a solicitacao, abrir o checkout e validar Pix.
 3. Repetir com cartao de teste do Sandbox.
-4. Confirmar que a inscricao muda para aprovada uma unica vez.
-5. Confirmar o credito liquido na carteira do anfitriao.
-6. Reenviar o mesmo webhook e confirmar que nao duplica o credito.
+4. Confirmar que a inscricao e o pagamento mudam de estado uma unica vez.
+5. Confirmar o valor liquido no saldo retido do anfitriao.
+6. Reenviar o mesmo webhook e confirmar que nao duplica a retencao.
 7. Validar estorno total e parcial.
 8. Solicitar um saque Pix e validar sucesso e falha.
 9. Conferir a fila do webhook no Asaas.
 
 ## Regra de repasse
 
-O saldo do anfitriao so e creditado quando a cobranca estiver efetivamente
+O saldo retido do anfitriao so e registrado quando a cobranca estiver efetivamente
 recebida no Asaas (RECEIVED ou RECEIVED_IN_CASH). CONFIRMED representa
-autorizacao do pagamento, mas ainda nao libera saque.
+autorizacao do pagamento, mas ainda nao libera saque. O saldo se torna
+disponivel 24 horas depois do fim do evento.
 
 Com APP_FEE_PERCENTAGE=10 e PAYMENT_PROCESSING_FEE_PAYER=PLATFORM, uma
 inscricao de R$ 100,00 gera:
@@ -104,8 +107,8 @@ repasse do anfitriao.
 - Reembolsos e chargebacks podem deixar a carteira negativa se o anfitriao ja
   tiver sacado; novos saques ficam bloqueados enquanto nao houver saldo.
 
-Antes do deploy do codigo, aplique a migration
-20260809165533_secure_asaas_payouts.sql no ambiente correspondente.
+Antes do deploy do codigo, aplique todas as migrations pendentes em ordem no
+ambiente correspondente.
 
 Para producao, gere novas chaves e um novo token. Nao reutilize credenciais do
 Sandbox.

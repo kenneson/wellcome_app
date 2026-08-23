@@ -5,6 +5,8 @@ import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { EfiPixService } from '../../infrastructure/external/EfiPixService';
+import { calculateHostFundsAvailableAt } from '../../domain/services/HostFundsAvailabilityPolicy';
+import { calculateSettlementEconomics, getProcessingFeePayer } from '../../domain/services/PaymentEconomics';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
 
 export interface CheckPixPaymentResult {
@@ -66,15 +68,20 @@ export class CheckPixPaymentUseCase {
 
             const feePercentage = Number(process.env.APP_FEE_PERCENTAGE || '10') / 100;
             const platformFee = Number((payment.valor * feePercentage).toFixed(2));
-            const netAmount = Number((payment.valor - platformFee).toFixed(2));
-            const confirmed = await this.paymentRepository.confirmAndCreditHost({
+            const processorFeePayer = getProcessingFeePayer();
+            const economics = calculateSettlementEconomics(payment.valor, platformFee, 0, processorFeePayer);
+            const confirmed = await this.paymentRepository.confirmAndHoldHostFunds({
                 paymentId: payment.id,
                 bookingId: payment.bookingId,
                 hostId: event.hostId,
                 platformFee,
-                netAmount,
+                processorFee: 0,
+                processorFeePayer,
+                platformMargin: economics.platformMargin,
+                netAmount: economics.hostNetAmount,
                 paidAt: new Date(),
                 approveBookingOnPayment: event.accessType === EventAccessType.OPEN && !event.requiresApproval,
+                fundsAvailableAt: calculateHostFundsAvailableAt(event),
             });
 
             newStatus = PaymentStatus.CONFIRMED;

@@ -10,7 +10,8 @@ export enum RegistrationStatus {
     APPROVED = 'APPROVED',
     REJECTED = 'REJECTED',
     WAITLIST = 'WAITLIST',
-    CANCELLED = 'CANCELLED'
+    CANCELLED = 'CANCELLED',
+    EXPIRED = 'EXPIRED'
 }
 
 export interface EventQuestion {
@@ -91,6 +92,7 @@ export interface Event {
     host?: EventHost;
     accessType: EventAccessType;
     requiresApproval: boolean;
+    allowWaitlist: boolean;
     questions?: EventQuestion[];
     bookings?: EventRegistration[];
     dishes?: EventDish[];
@@ -115,5 +117,6 @@ export interface EventRegistration {
     reviewedBy?: string | null;
     reviewedAt?: string | null;
     rejectionReason?: string | null;
+    paymentDueAt?: string | null;
     paymentStatus?: 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'CHARGEBACK' | null;
 }

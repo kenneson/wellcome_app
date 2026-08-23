@@ -39,6 +39,7 @@ model User {
   blocksMade          UserBlock[]         @relation("BlocksMade")
   blocksReceived      UserBlock[]         @relation("BlocksReceived")
   walletBalance       Decimal             @default(0) @map("wallet_balance") @db.Decimal(10, 2)
+  pendingWalletBalance Decimal             @default(0) @map("pending_wallet_balance") @db.Decimal(10, 2)
   pixKey              String?             @map("pix_key")
   pixKeyType          String?             @map("pix_key_type")
   withdrawals         WithdrawalRequest[]
@@ -130,6 +131,8 @@ model Booking {
   reviewedAt      DateTime?            @map("reviewed_at") @db.Timestamptz(6)
   reviewedBy      String?              @map("reviewed_by") @db.Uuid
   rejectionReason String?              @map("rejection_reason")
+  paymentDueAt    DateTime?            @map("payment_due_at") @db.Timestamptz(6)
+  capacityHeldAt  DateTime?            @map("capacity_held_at") @db.Timestamptz(6)
   attendedBefore  Boolean              @default(false) @map("attended_before")
   noShowCount     Int                  @default(0) @map("no_show_count")
   event           Event                @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "event_participants_event_fkey")
@@ -329,9 +332,16 @@ model Payment {
   paidAt            DateTime?     @map("paid_at") @db.Timestamptz(6)
   platformFee       Decimal?      @default(0) @map("platform_fee") @db.Decimal(10, 2)
   processorFee      Decimal       @default(0) @map("processor_fee") @db.Decimal(10, 2)
+  processorFeePayer String        @default("PLATFORM") @map("processor_fee_payer")
+  platformMargin    Decimal       @default(0) @map("platform_margin") @db.Decimal(10, 2)
+  refundedPlatformFee Decimal     @default(0) @map("refunded_platform_fee") @db.Decimal(10, 2)
+  refundedProcessorFee Decimal    @default(0) @map("refunded_processor_fee") @db.Decimal(10, 2)
   netAmount         Decimal?      @default(0) @map("net_amount") @db.Decimal(10, 2)
   refundedAmount    Decimal       @default(0) @map("refunded_amount") @db.Decimal(10, 2)
   refundedNetAmount Decimal       @default(0) @map("refunded_net_amount") @db.Decimal(10, 2)
+  fundsHeldAt       DateTime?     @map("funds_held_at") @db.Timestamptz(6)
+  fundsAvailableAt  DateTime?     @map("funds_available_at") @db.Timestamptz(6)
+  fundsReleasedAt   DateTime?     @map("funds_released_at") @db.Timestamptz(6)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -894,6 +904,7 @@ enum RegistrationStatus {
   REJECTED
   WAITLIST
   CANCELLED
+  EXPIRED
 
   @@schema("public")
 }
@@ -918,6 +929,8 @@ enum NotificationType {
   EVENT_CANCELED
   PARTICIPANT_CANCELED
   NEW_REVIEW
+  REGISTRATION_EXPIRED
+  WAITLIST_PROMOTED
 
   @@schema("public")
 }

@@ -4,6 +4,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
@@ -140,7 +141,7 @@ export default function KycVerificationScreen() {
             .from('kyc-documents')
             .upload(path, arrayBuffer, {
                 contentType: 'image/jpeg',
-                upsert: true,
+                upsert: false,
             });
 
         if (error) {
@@ -161,8 +162,9 @@ export default function KycVerificationScreen() {
 
         try {
             // Upload images to Supabase Storage
-            const documentPath = `${userId}/document.jpg`;
-            const selfiePath = `${userId}/selfie.jpg`;
+            const submissionId = Crypto.randomUUID();
+            const documentPath = `${userId}/${submissionId}/document.jpg`;
+            const selfiePath = `${userId}/${submissionId}/selfie.jpg`;
 
             await Promise.all([
                 uploadImage(documentImage, documentPath),
