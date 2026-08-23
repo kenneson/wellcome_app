@@ -4,6 +4,7 @@ import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { ReviewList } from '@/features/reviews/ReviewList';
 import { eventService } from '@/services/api/EventService';
 import { registrationService } from '@/services/api/RegistrationService';
+import { chatService } from '@/services/api/ChatService';
 import { reviewService } from '@/services/api/ReviewService';
 import { DEFAULT_AVATAR_PLACEHOLDER, DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
@@ -168,25 +169,15 @@ export default function EventDetailsScreen() {
     };
 
     const handleContactHost = async () => {
-        if (!event?.host?.phoneNumber) {
-            Alert.alert('Indisponível', 'O anfitrião não cadastrou um telefone de contato.');
-            return;
-        }
-
-        let phone = event.host.phoneNumber.replace(/\D/g, '');
-        // Simple heuristic for BR numbers: if 10 or 11 digits, prepend 55
-        if (phone.length === 10 || phone.length === 11) {
-            phone = `55${phone}`;
-        }
-        
-        const message = `Olá ${event.host.fullName ? event.host.fullName.split(' ')[0] : 'Anfitrião'}, vi seu evento "${event.title}" no Wellcome e gostaria de tirar uma dúvida.`;
-        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-        const supported = await Linking.canOpenURL(url);
-        if (supported) {
-            await Linking.openURL(url);
-        } else {
-            Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
+        if (!event || joining) return;
+        setJoining(true);
+        try {
+            const conversation = await chatService.open(event.id);
+            router.push(`/messages/${conversation.id}` as any);
+        } catch (error: any) {
+            Alert.alert('Não foi possível abrir o chat', error?.message || 'Tente novamente.');
+        } finally {
+            setJoining(false);
         }
     };
 
@@ -715,13 +706,14 @@ export default function EventDetailsScreen() {
                             </Text>
 
                             {/* Contact Host Button */}
-                            {!isHost && event.host?.phoneNumber && (
+                            {!isHost && (
                                 <TouchableOpacity 
-                                    className="bg-[#25D366] mt-4 flex-row items-center justify-center py-3 rounded-xl shadow-sm"
+                                    className="bg-[#FF8C42] mt-4 flex-row items-center justify-center py-3 rounded-xl shadow-sm"
                                     onPress={handleContactHost}
+                                    disabled={joining}
                                 >
-                                    <Ionicons name="logo-whatsapp" size={20} color="white" />
-                                    <Text className="text-white font-bold ml-2">Conversar com anfitriã(o)</Text>
+                                    {joining ? <ActivityIndicator size="small" color="white" /> : <Ionicons name="chatbubble-ellipses-outline" size={20} color="white" />}
+                                    <Text className="text-white font-bold ml-2">Perguntar ao anfitrião</Text>
                                 </TouchableOpacity>
                             )}
                         </View>

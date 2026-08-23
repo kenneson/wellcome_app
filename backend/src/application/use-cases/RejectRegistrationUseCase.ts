@@ -5,13 +5,15 @@ import { PaymentGateway } from '../../domain/services/PaymentGateway';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
+import { ChatService } from '../services/ChatService';
 
 export class RejectRegistrationUseCase {
     constructor(
         private eventRegistrationRepository: EventRegistrationRepository,
         private sendNotificationUseCase: SendNotificationUseCase,
         private paymentRepository: PaymentRepository,
-        private paymentGateway: PaymentGateway
+        private paymentGateway: PaymentGateway,
+        private chatService?: ChatService
     ) { }
 
     async execute(registrationId: string, hostId: string, reason: string): Promise<EventRegistration> {
@@ -66,6 +68,9 @@ export class RejectRegistrationUseCase {
             );
         }
 
+        await this.chatService?.recordRegistrationRejected(registrationId, reason).catch((error) =>
+            console.error('Failed to record rejection in chat', error)
+        );
         return updatedRegistration;
     }
 

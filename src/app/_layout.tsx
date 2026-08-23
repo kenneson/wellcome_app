@@ -191,6 +191,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile/my-events" options={{ headerShown: false }} />
                 <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
                 <Stack.Screen name="notifications/index" options={{ headerShown: false, presentation: 'modal' }} />
+                <Stack.Screen name="messages" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="welcome"
                   options={{

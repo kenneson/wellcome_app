@@ -8,6 +8,7 @@ import { EfiPixService } from '../../infrastructure/external/EfiPixService';
 import { calculateHostFundsAvailableAt } from '../../domain/services/HostFundsAvailabilityPolicy';
 import { calculateSettlementEconomics, getProcessingFeePayer } from '../../domain/services/PaymentEconomics';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
+import { ChatService } from '../services/ChatService';
 
 export interface CheckPixPaymentResult {
     paymentId: string;
@@ -21,7 +22,8 @@ export class CheckPixPaymentUseCase {
         private efiPixService: EfiPixService,
         private paymentRepository: PaymentRepository,
         private eventRepository: EventRepository,
-        private sendNotificationUseCase: SendNotificationUseCase
+        private sendNotificationUseCase: SendNotificationUseCase,
+        private chatService?: ChatService
     ) {}
 
     async execute(bookingId: string, userId: string): Promise<CheckPixPaymentResult> {
@@ -97,6 +99,9 @@ export class CheckPixPaymentUseCase {
                     { eventId: event.id }
                 );
             }
+            if (confirmed) await this.chatService?.recordPaymentConfirmed(payment.bookingId).catch((error) =>
+                console.error('Failed to record Pix confirmation in chat', error)
+            );
         } else if (
             efiStatus.status === 'REMOVIDA_PELO_USUARIO_RECEBEDOR' ||
             efiStatus.status === 'REMOVIDA_PELO_PSP'

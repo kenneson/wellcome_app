@@ -105,6 +105,11 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                         onPress={() => handleNavigation('/events/create')}
                     />
                     <MenuItem
+                        icon="message"
+                        label="Mensagens"
+                        onPress={() => handleNavigation('/messages')}
+                    />
+                    <MenuItem
                         icon="bell"
                         label="Notificacoes"
                         onPress={() => handleNavigation('/notifications')}

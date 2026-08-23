@@ -72,7 +72,9 @@ export default function NotificationsScreen() {
         }
 
         // 2. Navigate based on type/data
-        if (notification.data && notification.data.eventId) {
+        if (notification.data?.conversationId) {
+            router.push(`/messages/${notification.data.conversationId}` as any);
+        } else if (notification.data && notification.data.eventId) {
             router.push(`/events/${notification.data.eventId}`);
         } else {
             // Default action if just informational
@@ -159,6 +161,7 @@ function getIconName(type: string): keyof typeof Ionicons.glyphMap {
         case 'EVENT_CANCELED': return 'alert-circle-outline';
         case 'PARTICIPANT_CANCELED': return 'person-remove-outline';
         case 'NEW_REVIEW': return 'star-outline';
+        case 'CHAT_MESSAGE': return 'chatbubble-ellipses-outline';
         default: return 'notifications-outline';
     }
 }

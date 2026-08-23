@@ -5,6 +5,7 @@ import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPol
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { ConfirmAsaasPaymentService } from '../services/ConfirmAsaasPaymentService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
+import { ChatService } from '../services/ChatService';
 
 export interface CheckPaymentResult {
     paymentId: string;
@@ -26,13 +27,15 @@ export class CheckPaymentUseCase {
         private paymentRepository: PaymentRepository,
         private paymentGateway?: PaymentGateway,
         private eventRepository?: EventRepository,
-        private sendNotificationUseCase?: SendNotificationUseCase
+        private sendNotificationUseCase?: SendNotificationUseCase,
+        private chatService?: ChatService
     ) {
         if (paymentGateway && eventRepository && sendNotificationUseCase) {
             this.confirmPaymentService = new ConfirmAsaasPaymentService(
                 paymentRepository,
                 eventRepository,
-                sendNotificationUseCase
+                sendNotificationUseCase,
+                chatService
             );
         }
     }

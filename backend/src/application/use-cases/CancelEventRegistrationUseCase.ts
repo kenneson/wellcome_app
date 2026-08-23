@@ -5,6 +5,7 @@ import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { PaymentGateway } from '../../domain/services/PaymentGateway';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
+import { ChatService } from '../services/ChatService';
 
 export class CancelEventRegistrationUseCase {
     constructor(
@@ -12,7 +13,8 @@ export class CancelEventRegistrationUseCase {
         private eventRepository: EventRepository,
         private sendNotificationUseCase: SendNotificationUseCase,
         private paymentRepository: PaymentRepository,
-        private paymentGateway: PaymentGateway
+        private paymentGateway: PaymentGateway,
+        private chatService?: ChatService
     ) { }
 
     async execute(eventId: string, userId: string): Promise<void> {
@@ -70,6 +72,10 @@ export class CancelEventRegistrationUseCase {
                 { eventId: event.id, refundRequested }
             );
         }
+
+        await this.chatService?.recordRegistrationCancelled(registration.id, refundRequested).catch((error) =>
+            console.error('Failed to record cancellation in chat', error)
+        );
     }
 
     private async cancelPendingProviderPayment(payment: {

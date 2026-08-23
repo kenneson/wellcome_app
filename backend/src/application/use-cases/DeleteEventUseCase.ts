@@ -1,5 +1,6 @@
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { EventRegistrationRepository } from '../../domain/repositories/EventRegistrationRepository';
+import { ChatService } from '../services/ChatService';
 
 export class EventHasRegistrationHistoryError extends Error {
     constructor() {
@@ -11,7 +12,8 @@ export class EventHasRegistrationHistoryError extends Error {
 export class DeleteEventUseCase {
     constructor(
         private eventRepository: EventRepository,
-        private eventRegistrationRepository: EventRegistrationRepository
+        private eventRegistrationRepository: EventRegistrationRepository,
+        private chatService?: ChatService
     ) { }
 
     async execute(eventId: string, hostId: string): Promise<void> {
@@ -26,6 +28,10 @@ export class DeleteEventUseCase {
 
         const registrations = await this.eventRegistrationRepository.findByEventIdWithUser(eventId);
         if (registrations.length > 0) {
+            throw new EventHasRegistrationHistoryError();
+        }
+
+        if (await this.chatService?.hasEventHistory(eventId)) {
             throw new EventHasRegistrationHistoryError();
         }
 

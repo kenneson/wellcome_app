@@ -104,7 +104,9 @@ export function usePushNotifications(id: string | undefined) {
         responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
             console.log('User tapped notification:', response);
             const data = response.notification.request.content.data;
-            if (data && data.eventId) {
+            if (data?.conversationId) {
+                router.push(`/messages/${data.conversationId}` as any);
+            } else if (data && data.eventId) {
                 router.push(`/events/${data.eventId}`);
             } else {
                 router.push('/notifications');

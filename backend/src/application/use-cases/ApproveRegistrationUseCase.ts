@@ -10,13 +10,15 @@ import {
     calculateRegistrationPaymentDueAt,
     registrationHoldsCapacity,
 } from '../../domain/services/RegistrationPaymentPolicy';
+import { ChatService } from '../services/ChatService';
 
 export class ApproveRegistrationUseCase {
     constructor(
         private eventRegistrationRepository: EventRegistrationRepository,
         private sendNotificationUseCase: SendNotificationUseCase,
         private paymentRepository: PaymentRepository,
-        private eventRepository: EventRepository
+        private eventRepository: EventRepository,
+        private chatService?: ChatService
     ) { }
 
     async execute(registrationId: string, hostId: string): Promise<EventRegistration> {
@@ -104,6 +106,9 @@ export class ApproveRegistrationUseCase {
             );
         }
 
+        await this.chatService?.recordRegistrationApproved(registrationId).catch((error) =>
+            console.error('Failed to record approval in chat', error)
+        );
         return updatedRegistration;
     }
 }

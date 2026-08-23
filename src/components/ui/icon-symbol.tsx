@@ -17,6 +17,7 @@ const MAPPING = {
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'message': 'chat-bubble-outline',
   'chevron.right': 'chevron-right',
   'chevron.left': 'chevron-left',
   'person.fill': 'person',

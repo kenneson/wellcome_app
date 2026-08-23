@@ -1,6 +1,7 @@
 import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
+import { ChatService } from './application/services/ChatService';
 import Fastify from 'fastify';
 import { AddPaymentCardUseCase } from './application/use-cases/AddPaymentCardUseCase';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
@@ -35,6 +36,7 @@ import './env';
 import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
 import { GeoapifyLocationService } from './infrastructure/external/GeoapifyLocationService';
 import { PrismaBillingRepository } from './infrastructure/repositories/PrismaBillingRepository';
+import { PrismaChatRepository } from './infrastructure/repositories/PrismaChatRepository';
 import { PrismaEventDraftRepository } from './infrastructure/repositories/PrismaEventDraftRepository';
 import { PrismaEventQuestionRepository } from './infrastructure/repositories/PrismaEventQuestionRepository';
 import { PrismaEventRegistrationRepository } from './infrastructure/repositories/PrismaEventRegistrationRepository';
@@ -55,6 +57,7 @@ import { EventRegistrationController } from './presentation/http/controllers/Eve
 import { LocationController } from './presentation/http/controllers/LocationController';
 import { ModerationController } from './presentation/http/controllers/ModerationController';
 import { NotificationController } from './presentation/http/controllers/NotificationController';
+import { ChatController } from './presentation/http/controllers/ChatController';
 import { PaymentController } from './presentation/http/controllers/PaymentController';
 import { ReviewController } from './presentation/http/controllers/ReviewController';
 import { UserController } from './presentation/http/controllers/UserController';
@@ -185,6 +188,8 @@ const start = async () => {
         const notificationRepository = new PrismaNotificationRepository();
         const moderationRepository = new PrismaModerationRepository();
         const sendNotificationUseCase = new SendNotificationUseCase(notificationRepository, notificationService);
+        const chatRepository = new PrismaChatRepository();
+        const chatService = new ChatService(chatRepository, sendNotificationUseCase);
         const eventRegistrationRepository = new PrismaEventRegistrationRepository();
         const eventReviewRepository = new PrismaEventReviewRepository();
         const paymentRepository = new PrismaPaymentRepository();
@@ -217,23 +222,25 @@ const start = async () => {
         );
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
-        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository);
+        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository, chatService);
         
-        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase);
+        const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase, chatService);
         const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(
             eventRegistrationRepository,
             eventRepository,
             sendNotificationUseCase,
             paymentRepository,
-            asaasPaymentService
+            asaasPaymentService,
+            chatService
         );
         const approveRegistrationUseCase = new ApproveRegistrationUseCase(
             eventRegistrationRepository,
             sendNotificationUseCase,
             paymentRepository,
-            eventRepository
+            eventRepository,
+            chatService
         );
-        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository, asaasPaymentService);
+        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository, asaasPaymentService, chatService);
 
         const createPaymentCheckoutUseCase = new CreatePaymentCheckoutUseCase(
             asaasPaymentService,
@@ -261,7 +268,8 @@ const start = async () => {
             paymentRepository,
             asaasPaymentService,
             eventRepository,
-            sendNotificationUseCase
+            sendNotificationUseCase,
+            chatService
         );
         const handleAsaasWebhookUseCase = new HandleAsaasWebhookUseCase(
             asaasPaymentService,
@@ -269,7 +277,8 @@ const start = async () => {
             eventRepository,
             withdrawalRepository,
             webhookEventRepository,
-            sendNotificationUseCase
+            sendNotificationUseCase,
+            chatService
         );
         const getBillingWalletUseCase = new GetBillingWalletUseCase(billingRepository);
         const saveBillingProfileUseCase = new SaveBillingProfileUseCase(
@@ -310,6 +319,7 @@ const start = async () => {
         );
         const userController = new UserController(getUserProfileUseCase, updateUserProfileUseCase, deleteUserAccountUseCase);
         const notificationController = new NotificationController(notificationRepository);
+        const chatController = new ChatController(chatService);
         const locationController = new LocationController(geoapifyLocationService);
         const moderationController = new ModerationController(moderationRepository);
         const paymentController = new PaymentController(
@@ -778,7 +788,6 @@ const start = async () => {
                                         neighborhood: { type: 'string', nullable: true },
                                         languages: { type: 'array', items: { type: 'string' } },
                                         dietaryRestrictions: { type: 'array', items: { type: 'string' } },
-                                        phoneNumber: { type: 'string', nullable: true }
                                     }
                                 },
                                 createdAt: { type: 'string' },
@@ -845,7 +854,6 @@ const start = async () => {
                         neighborhood: registration.user.neighborhood,
                         languages: registration.user.languages,
                         dietaryRestrictions: registration.user.dietaryRestrictions,
-                        phoneNumber: registration.user.phoneNumber,
                     } : undefined,
                 })));
             } catch (error) {
@@ -996,6 +1004,42 @@ const start = async () => {
                 return reply.code(statusCode).send({ message: error?.message || 'Failed to send test notification' });
             }
         });
+
+        // Internal event chat. Every operation derives the user from the bearer token.
+        fastify.post('/conversations', {
+            schema: {
+                summary: 'Open an event conversation',
+                tags: ['Chat'],
+                body: {
+                    type: 'object',
+                    required: ['eventId'],
+                    properties: {
+                        eventId: { type: 'string', format: 'uuid' },
+                        guestId: { type: 'string', format: 'uuid' },
+                    },
+                },
+            },
+        }, (req, reply) => chatController.open(req, reply));
+
+        fastify.get('/conversations', {
+            schema: { summary: 'List my event conversations', tags: ['Chat'] },
+        }, (req, reply) => chatController.list(req, reply));
+
+        fastify.get('/conversations/:id', {
+            schema: { summary: 'Get an event conversation', tags: ['Chat'] },
+        }, (req, reply) => chatController.get(req, reply));
+
+        fastify.get('/conversations/:id/messages', {
+            schema: { summary: 'List conversation messages', tags: ['Chat'] },
+        }, (req, reply) => chatController.messages(req, reply));
+
+        fastify.post('/conversations/:id/messages', {
+            schema: { summary: 'Send a conversation message', tags: ['Chat'] },
+        }, (req, reply) => chatController.send(req, reply));
+
+        fastify.put('/conversations/:id/read', {
+            schema: { summary: 'Mark a conversation as read', tags: ['Chat'] },
+        }, (req, reply) => chatController.markRead(req, reply));
 
         // Notification endpoints
         fastify.get('/notifications', {

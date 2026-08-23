@@ -1,6 +1,7 @@
 import { RegistrationStatus } from '@/entities/event/types';
 import { eventService } from '@/services/api/EventService';
 import { registrationService } from '@/services/api/RegistrationService';
+import { chatService } from '@/services/api/ChatService';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
@@ -8,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Linking, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EventRegistrationsScreen() {
@@ -25,15 +26,6 @@ export default function EventRegistrationsScreen() {
     const [searchQuery, setSearchQuery] = useState('');
 
     // Helper to open links
-    const openLink = (url: string) => {
-        if (!url) return;
-        // Add protocol if missing
-        const fullUrl = url.startsWith('http') ? url : `https://${url}`;
-        Linking.canOpenURL(fullUrl).then(supported => {
-            if (supported) Linking.openURL(fullUrl);
-            else Alert.alert('Erro', 'Não foi possível abrir o link: ' + url);
-        });
-    };
 
     const fetchData = React.useCallback(async () => {
         try {
@@ -71,6 +63,15 @@ export default function EventRegistrationsScreen() {
     useFocusEffect(React.useCallback(() => {
         if (id) void fetchData();
     }, [fetchData, id]));
+
+    async function handleOpenChat(guestId: string) {
+        try {
+            const conversation = await chatService.open(id as string, guestId);
+            router.push(`/messages/${conversation.id}` as any);
+        } catch (error: any) {
+            Alert.alert('Não foi possível abrir o chat', error?.message || 'Tente novamente.');
+        }
+    }
 
     async function handleApprove(registrationId: string) {
         setProcessingId(registrationId);
@@ -340,23 +341,9 @@ export default function EventRegistrationsScreen() {
                     </TouchableOpacity>
                 )}
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.secondaryButton, styles.contactButton]}
-                    onPress={() => {
-                        const phone = item.user?.phoneNumber || item.user?.phone_number || item.user?.phone;
-                        
-                        if (phone) {
-                            let formattedPhone = phone.replace(/\D/g, '');
-                            if (formattedPhone.length >= 10 && formattedPhone.length <= 11) {
-                                formattedPhone = `55${formattedPhone}`;
-                            }
-                            
-                            const message = `Olá ${item.user.fullName?.split(' ')[0] || ''}, vi sua inscrição para o evento "${event?.title || 'Wellcome'}"!`;
-                            Linking.openURL(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`);
-                        } else {
-                            Alert.alert('Contato', 'Telefone não disponível para este usuário.');
-                        }
-                    }}
+                    onPress={() => handleOpenChat(item.userId || item.user?.id)}
                 >
                     <Ionicons name="chatbubble-outline" size={18} color="#FF8C42" />
                     <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Chat</Text>

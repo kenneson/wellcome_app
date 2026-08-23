@@ -7,6 +7,7 @@ import { calculateHostFundsAvailableAt } from '../../domain/services/HostFundsAv
 import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { SendNotificationUseCase } from '../use-cases/SendNotificationUseCase';
+import { ChatService } from './ChatService';
 import {
     calculateSettlementEconomics,
     getProcessingFeePayer,
@@ -16,7 +17,8 @@ export class ConfirmAsaasPaymentService {
     constructor(
         private paymentRepository: PaymentRepository,
         private eventRepository: EventRepository,
-        private sendNotificationUseCase: SendNotificationUseCase
+        private sendNotificationUseCase: SendNotificationUseCase,
+        private chatService?: ChatService
     ) {}
 
     async execute(payment: Payment, providerPayment: ProviderPayment): Promise<boolean> {
@@ -77,6 +79,9 @@ export class ConfirmAsaasPaymentService {
                 { eventId: event.id }
             );
         }
+        if (confirmed) await this.chatService?.recordPaymentConfirmed(payment.bookingId).catch((error) =>
+            console.error('Failed to record payment confirmation in chat', error)
+        );
         return confirmed;
     }
 

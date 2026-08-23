@@ -119,7 +119,8 @@ export class UserController {
                     title: event.title,
                     description: event.description,
                     eventDate: event.eventDate,
-                    location: event.location,
+                    location: [event.city, event.state].filter(Boolean).join(' - ')
+                        || 'Local exato informado após a confirmação',
                     coverImageUrl: event.coverImageUrl ?? null,
                 })),
             bookings: (user.bookings ?? [])

@@ -6,6 +6,7 @@ import { PaymentGateway, ProviderPayment } from '../../domain/services/PaymentGa
 import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
 import { ConfirmAsaasPaymentService } from '../services/ConfirmAsaasPaymentService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
+import { ChatService } from '../services/ChatService';
 
 export interface AsaasWebhookPayload {
     id: string;
@@ -53,12 +54,14 @@ export class HandleAsaasWebhookUseCase {
         private eventRepository: EventRepository,
         private withdrawalRepository: WithdrawalRequestRepository,
         private webhookEventRepository: WebhookEventRepository,
-        private sendNotificationUseCase: SendNotificationUseCase
+        private sendNotificationUseCase: SendNotificationUseCase,
+        private chatService?: ChatService
     ) {
         this.confirmPaymentService = new ConfirmAsaasPaymentService(
             paymentRepository,
             eventRepository,
-            sendNotificationUseCase
+            sendNotificationUseCase,
+            chatService
         );
     }
 

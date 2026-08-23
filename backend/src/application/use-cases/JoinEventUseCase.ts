@@ -11,6 +11,7 @@ import {
     eventRequiresHostApproval,
     registrationHoldsCapacity,
 } from '../../domain/services/RegistrationPaymentPolicy';
+import { ChatService } from '../services/ChatService';
 
 export interface JoinEventDTO {
     eventId: string;
@@ -22,7 +23,8 @@ export class JoinEventUseCase {
     constructor(
         private eventRegistrationRepository: EventRegistrationRepository,
         private eventRepository: EventRepository,
-        private sendNotificationUseCase: SendNotificationUseCase
+        private sendNotificationUseCase: SendNotificationUseCase,
+        private chatService?: ChatService
     ) { }
 
     async execute(data: JoinEventDTO): Promise<EventRegistration> {
@@ -113,6 +115,9 @@ export class JoinEventUseCase {
             );
         }
 
+        await this.chatService?.recordBookingCreated(registration.id).catch((error) =>
+            console.error('Failed to record booking in chat', error)
+        );
         return registration;
     }
 }
