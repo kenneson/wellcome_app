@@ -7,19 +7,20 @@ import 'react-native-reanimated';
 import './global.css';
 
 
+import { AppLoadingScreen } from '@/components/ui/AppLoadingScreen';
 import { supabase } from '@/shared/lib/supabase';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 import { KycStatus, UserProfileContext } from '@/context/UserProfileContext';
 import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 import { queryClient } from '@/shared/lib/react-query';
 import { GluestackUIProvider } from '@/shared/ui/gluestack-ui-provider';
 import { QueryClientProvider } from '@tanstack/react-query';
+
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
 
 export default function RootLayout() {
 
@@ -163,11 +164,7 @@ export default function RootLayout() {
     (!session && !inAuthGroup) ||
     (session && inAuthGroup)
   ) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#FF8C42" />
-      </View>
-    );
+    return <AppLoadingScreen />;
   }
 
   const isEventDetails = currentSegment === 'events' && segments[1] === '[id]';
