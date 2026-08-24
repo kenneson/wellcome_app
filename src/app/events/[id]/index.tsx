@@ -316,7 +316,7 @@ export default function EventDetailsScreen() {
             return {
                 icon: 'people-outline',
                 title: 'Na lista de espera',
-                description: 'Sua posiÃ§Ã£o estÃ¡ registrada. Avisaremos quando uma vaga for liberada; vocÃª nÃ£o precisa pagar agora.',
+                description: 'Sua posição está registrada. Avisaremos quando uma vaga for liberada; você não precisa pagar agora.',
                 containerClass: 'border-blue-200 bg-blue-50',
                 iconColor: '#1D4ED8',
                 titleClass: 'text-blue-800',

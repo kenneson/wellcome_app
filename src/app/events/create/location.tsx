@@ -15,11 +15,11 @@ import { Alert, Linking, Text, TextInput, useWindowDimensions, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const FACILITIES = [
-    'Estacionamento para visitantes', 'EdifÃ­cio com elevador', 'Ar condicionado',
-    'PrÃ³ximo a pontos de Ã´nibus ou metrÃ´', 'Estacionamento rotativo prÃ³ximo',
-    'EspaÃ§o para fumantes', 'SeguranÃ§a privada', 'Rampas de acessibilidade',
+    'Estacionamento para visitantes', 'Edifício com elevador', 'Ar condicionado',
+    'Próximo a pontos de ônibus ou metrô', 'Estacionamento rotativo próximo',
+    'Espaço para fumantes', 'Segurança privada', 'Rampas de acessibilidade',
 ];
-const RULES = ['NÃ£o Ã© permitido fumar', 'Barulho moderado', 'NÃ£o indicado para crianÃ§as', 'NÃ£o aceita animais'];
+const RULES = ['Não é permitido fumar', 'Barulho moderado', 'Não indicado para crianças', 'Não aceita animais'];
 
 export default function EventCreateLocation() {
     const router = useRouter();
@@ -57,8 +57,8 @@ export default function EventCreateLocation() {
         try {
             const permission = await Location.requestForegroundPermissionsAsync();
             if (permission.status !== 'granted') {
-                Alert.alert('LocalizaÃ§Ã£o desativada', 'Autorize o acesso Ã  localizaÃ§Ã£o nos ajustes do aparelho.', [
-                    { text: 'Agora nÃ£o', style: 'cancel' },
+                Alert.alert('Localização desativada', 'Autorize o acesso à localização nos ajustes do aparelho.', [
+                    { text: 'Agora não', style: 'cancel' },
                     { text: 'Abrir ajustes', onPress: () => void Linking.openSettings() },
                 ]);
                 return;
@@ -66,7 +66,7 @@ export default function EventCreateLocation() {
             const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
             applyAddress(await locationService.reverseGeocode(current.coords.latitude, current.coords.longitude));
         } catch (locationError: any) {
-            setError(locationError?.message || 'NÃ£o foi possÃ­vel obter sua localizaÃ§Ã£o');
+            setError(locationError?.message || 'Não foi possível obter sua localização');
         } finally {
             setLoadingGPS(false);
         }
@@ -97,8 +97,8 @@ export default function EventCreateLocation() {
                 style={{ flex: 1 }}
             >
                 <WizardProgress currentStep={2} />
-                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Onde serÃ¡ o evento?</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">O endereÃ§o exato sÃ³ serÃ¡ liberado para participantes autorizados.</Text>
+                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Onde será o evento?</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">O endereço exato só será liberado para participantes autorizados.</Text>
 
                 <View className="mb-4">
                     <WellcomeButton
@@ -197,7 +197,7 @@ export default function EventCreateLocation() {
                 allowIncompleteAddress
                 type="address"
                 asModal
-                placeholder="Rua, nÃºmero, bairro ou local"
+                placeholder="Rua, número, bairro ou local"
             />
         </SafeAreaView>
     );

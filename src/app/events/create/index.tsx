@@ -15,13 +15,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const EVENT_TYPES = ['CafÃƒÂ© da manhÃƒÂ£', 'Brunch', 'AlmoÃƒÂ§o', 'Lanche', 'Jantar', 'DegustaÃƒÂ§ÃƒÂ£o', 'Pic-nic', 'Coquetel', 'Outro'] as const;
+const EVENT_TYPES = ['Café da manhã', 'Brunch', 'Almoço', 'Lanche', 'Jantar', 'Degustação', 'Pic-nic', 'Coquetel', 'Outro'] as const;
 const CUISINE_TYPES = [
-    'Africana', 'AlemÃƒÂ£', 'AsiÃƒÂ¡tica', 'ÃƒÂrabe', 'Argentina', 'Baiana', 'Brasileira', 'Carnes',
-    'CafÃƒÂ© colonial', 'Chinesa', 'Colombiana', 'ContemporÃƒÂ¢nea', 'Coreana', 'Crepes',
-    'Doces e bolos', 'Espanhola', 'Francesa', 'Frutos do mar', 'GaÃƒÂºcha', 'Grega',
-    'HambÃƒÂºrguer', 'Indiana', 'Italiana', 'Japonesa', 'Lanches', 'Mexicana', 'Mineira',
-    'MediterrÃƒÂ¢nea', 'Nordestina', 'PastÃƒÂ©is', 'Peruana', 'Pizza', 'Portuguesa',
+    'Africana', 'Alemã', 'Asiática', 'Árabe', 'Argentina', 'Baiana', 'Brasileira', 'Carnes',
+    'Café colonial', 'Chinesa', 'Colombiana', 'Contemporânea', 'Coreana', 'Crepes',
+    'Doces e bolos', 'Espanhola', 'Francesa', 'Frutos do mar', 'Gaúcha', 'Grega',
+    'Hambúrguer', 'Indiana', 'Italiana', 'Japonesa', 'Lanches', 'Mexicana', 'Mineira',
+    'Mediterrânea', 'Nordestina', 'Pastéis', 'Peruana', 'Pizza', 'Portuguesa',
     'Sopas e caldos', 'Tailandesa', 'Variada', 'Vegana', 'Vegetariana',
 ] as const;
 
@@ -60,7 +60,7 @@ export default function EventCreateEssentials() {
         router.push('/events/create/menu');
     };
 
-    const handleExit = () => Alert.alert('Sair da criaÃƒÂ§ÃƒÂ£o?', 'Seu rascunho estÃƒÂ¡ salvo e poderÃƒÂ¡ ser retomado em Meus eventos.', [
+    const handleExit = () => Alert.alert('Sair da criação?', 'Seu rascunho está salvo e poderá ser retomado em Meus eventos.', [
         { text: 'Continuar editando', style: 'cancel' },
         { text: 'Sair', onPress: () => router.replace('/(tabs)') },
         {
@@ -79,8 +79,8 @@ export default function EventCreateEssentials() {
                 style={{ flex: 1 }}
             >
                 <WizardProgress currentStep={0} />
-                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Comece pela experiÃƒÂªncia</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">Uma boa apresentaÃƒÂ§ÃƒÂ£o ajuda as pessoas a entenderem o que torna seu evento especial.</Text>
+                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Comece pela experiência</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Uma boa apresentação ajuda as pessoas a entenderem o que torna seu evento especial.</Text>
 
                 <TouchableOpacity
                     onPress={details.pickImage}
@@ -107,11 +107,11 @@ export default function EventCreateEssentials() {
                 </TouchableOpacity>
                 {errors.coverImageUrl && <Text className="text-xs text-red-600 mb-4">{errors.coverImageUrl}</Text>}
 
-                <Field label="TÃƒÂ­tulo do evento" error={errors.title} count={`${creation.data.details.title.length}/80`}>
+                <Field label="Título do evento" error={errors.title} count={`${creation.data.details.title.length}/80`}>
                     <TextInput
                         ref={titleRef}
                         className="text-base text-[#1A1A1A] p-4"
-                        placeholder="Ex: Jantar ÃƒÂ¡rabe na casa da Ju"
+                        placeholder="Ex: Jantar árabe na casa da Ju"
                         placeholderTextColor="#9CA3AF"
                         value={creation.data.details.title}
                         maxLength={80}
@@ -119,7 +119,7 @@ export default function EventCreateEssentials() {
                     />
                 </Field>
 
-                <Field label="DescriÃƒÂ§ÃƒÂ£o" error={errors.description} count={`${creation.data.details.description.length}/1500`}>
+                <Field label="Descrição" error={errors.description} count={`${creation.data.details.description.length}/1500`}>
                     <TextInput
                         ref={descriptionRef}
                         className="text-base text-[#1A1A1A] p-4"
@@ -139,8 +139,8 @@ export default function EventCreateEssentials() {
                     {errors.eventType && <Text className="text-xs text-red-600 mt-1">{errors.eventType}</Text>}
                 </View>
 
-                <Text className="text-lg font-bold text-[#1A1A1A]">CulinÃƒÂ¡rias</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-3">Escolha atÃƒÂ© cinco opÃƒÂ§ÃƒÂµes.</Text>
+                <Text className="text-lg font-bold text-[#1A1A1A]">Culinárias</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-3">Escolha até cinco opções.</Text>
                 <View className="flex-row flex-wrap gap-2 mb-3">
                     {creation.data.cuisineTypes.map((item) => <SelectionPill key={item} label={item} selected onPress={() => creation.toggleCuisineType(item)} />)}
                 </View>
@@ -150,7 +150,7 @@ export default function EventCreateEssentials() {
                     onPress={() => setShowCuisines(true)}
                 >
                     <Ionicons name="search" size={18} color="#C45D22" />
-                    <Text className="text-[#C45D22] font-bold ml-2">Buscar culinÃƒÂ¡rias</Text>
+                    <Text className="text-[#C45D22] font-bold ml-2">Buscar culinárias</Text>
                 </TouchableOpacity>
                 {errors.cuisineTypes && <Text className="text-xs text-red-600">{errors.cuisineTypes}</Text>}
             </KeyboardAwareScrollView>

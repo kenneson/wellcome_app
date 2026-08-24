@@ -97,7 +97,7 @@ export function LocationAutocomplete({
             } catch (error: any) {
                 if (!cancelled) {
                     setResults([]);
-                    setErrorMessage(error?.message || 'NÃƒÂ£o foi possÃƒÂ­vel buscar endereÃƒÂ§os');
+                    setErrorMessage(error?.message || 'Não foi possível buscar endereços');
                 }
             } finally {
                 if (!cancelled) setLoading(false);
@@ -147,7 +147,7 @@ export function LocationAutocomplete({
         try {
             const result = await locationService.retrieveAddress(suggestion.id, sessionToken);
             if (!hasUsableGeocodingResult(result)) {
-                setErrorMessage('Este resultado nÃ£o possui uma localizaÃ§Ã£o exata. Escolha outra opÃ§Ã£o abaixo ou ajuste a busca.');
+                setErrorMessage('Este resultado não possui uma localização exata. Escolha outra opção abaixo ou ajuste a busca.');
                 return;
             }
 
@@ -160,7 +160,7 @@ export function LocationAutocomplete({
             onSelectAddress?.(result, complete);
             onClose?.();
         } catch (error: any) {
-            setErrorMessage(error?.message || 'NÃ£o foi possÃ­vel confirmar o endereÃ§o. VocÃª pode tentar outra opÃ§Ã£o.');
+            setErrorMessage(error?.message || 'Não foi possível confirmar o endereço. Você pode tentar outra opção.');
         } finally {
             setLoadingCoords(false);
         }
@@ -300,10 +300,10 @@ export function LocationAutocomplete({
                         <WellcomeIconButton
                             icon="close"
                             onPress={onClose}
-                            accessibilityLabel="Fechar busca de endereÃ§o"
+                            accessibilityLabel="Fechar busca de endereço"
                         />
                         <Text style={styles.modalTitle} numberOfLines={1}>
-                            {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereÃ§o'}
+                            {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
                         </Text>
                         <View style={styles.headerSpacer} />
                     </View>

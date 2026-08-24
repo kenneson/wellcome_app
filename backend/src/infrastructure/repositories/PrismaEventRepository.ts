@@ -91,7 +91,14 @@ export class PrismaEventRepository implements EventRepository {
             orderBy: { eventDate: 'asc' },
             include: {
                 host: true,
-                bookings: { select: { status: true } },
+                bookings: {
+                    select: {
+                        status: true,
+                        paymentDueAt: true,
+                        capacityHeldAt: true,
+                        payment: { select: { status: true } },
+                    },
+                },
             }
         });
 
@@ -304,6 +311,7 @@ export class PrismaEventRepository implements EventRepository {
                 reviewedBy: b.reviewedBy,
                 rejectionReason: b.rejectionReason,
                 paymentDueAt: b.paymentDueAt,
+                capacityHeldAt: b.capacityHeldAt ?? undefined,
                 attendedBefore: b.attendedBefore,
                 noShowCount: b.noShowCount,
                 createdAt: b.createdAt,

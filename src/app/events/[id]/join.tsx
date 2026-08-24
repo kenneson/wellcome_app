@@ -97,8 +97,8 @@ export default function JoinEventScreen() {
 
             if (registration.status === 'WAITLIST') {
                 Alert.alert(
-                    'VocÃª entrou na lista de espera',
-                    'Avisaremos quando uma vaga for liberada. O pagamento sÃ³ serÃ¡ solicitado depois da promoÃ§Ã£o e, quando exigida, da aprovaÃ§Ã£o do anfitriÃ£o.',
+                    'Você entrou na lista de espera',
+                    'Avisaremos quando uma vaga for liberada. O pagamento só será solicitado depois da promoção e, quando exigida, da aprovação do anfitrião.',
                     [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
                 );
                 return;
@@ -106,10 +106,10 @@ export default function JoinEventScreen() {
 
             if (registration.status === 'PENDING' && requiresHostApproval) {
                 Alert.alert(
-                    'SolicitaÃ§Ã£o enviada',
+                    'Solicitação enviada',
                     eventPrice > 0
-                        ? 'O anfitriÃ£o analisa primeiro. Se aprovada, vocÃª receberÃ¡ um prazo para pagar.'
-                        : 'O anfitriÃ£o analisarÃ¡ sua solicitaÃ§Ã£o. Avisaremos quando houver uma resposta.',
+                        ? 'O anfitrião analisa primeiro. Se aprovada, você receberá um prazo para pagar.'
+                        : 'O anfitrião analisará sua solicitação. Avisaremos quando houver uma resposta.',
                     [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
                 );
                 return;
@@ -139,7 +139,7 @@ export default function JoinEventScreen() {
             // Handle 409 specifically if message matches
             if (error.message && (error.message.includes('already registered') || error.message.includes('409'))) {
                 Alert.alert(
-                    'JÃ¡ Solicitado',
+                    'Já Solicitado',
                     'Você já enviou uma solicitação para este evento.',
                     [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
                 );

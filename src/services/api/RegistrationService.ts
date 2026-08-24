@@ -11,7 +11,7 @@ export interface CreateBookingData {
 export class RegistrationService {
     private async getAuthHeaders(): Promise<Record<string, string>> {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('UsuÃ¡rio nÃ£o autenticado');
+        if (!session?.access_token) throw new Error('Usuário não autenticado');
 
         return {
             'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ export class RegistrationService {
         return response.json();
     }
 
-    async rejectRegistration(registrationId: string, reason: string = 'Rejeitado pelo anfitriÃ£o') {
+    async rejectRegistration(registrationId: string, reason: string = 'Rejeitado pelo anfitrião') {
         const { data: { session } } = await supabase.auth.getSession();
         const hostId = session?.user?.id;
 

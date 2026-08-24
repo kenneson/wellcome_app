@@ -239,9 +239,9 @@ export default function PaymentScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.centered}>
                     <Ionicons name="people-outline" size={72} color="#315E9E" />
-                    <Text style={styles.successTitle}>VocÃª estÃ¡ na lista de espera</Text>
+                    <Text style={styles.successTitle}>Você está na lista de espera</Text>
                     <Text style={styles.successSubtitle}>
-                        Nenhum pagamento Ã© necessÃ¡rio agora. Avisaremos quando uma vaga for liberada.
+                        Nenhum pagamento é necessário agora. Avisaremos quando uma vaga for liberada.
                     </Text>
                     <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
                         <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
@@ -360,7 +360,7 @@ export default function PaymentScreen() {
                     style={styles.protectionCard}
                     onPress={() => router.push('/legal/protection' as any)}
                     accessibilityRole="link"
-                    accessibilityLabel="Conhecer a ProteÃ§Ã£o Wellcome"
+                    accessibilityLabel="Conhecer a Proteção Wellcome"
                 >
                     <View style={styles.protectionHeader}>
                         <Ionicons name="shield-checkmark" size={22} color="#187A67" />
@@ -368,9 +368,9 @@ export default function PaymentScreen() {
                         <Ionicons name="chevron-forward" size={19} color="#187A67" />
                     </View>
                     <Text style={styles.protectionText}>
-                        Pagamento registrado, suporte a reembolsos e saldo do anfitriÃ£o retido atÃ© 24 horas apÃ³s o evento.
+                        Pagamento registrado, suporte a reembolsos e saldo do anfitrião retido até 24 horas após o evento.
                     </Text>
-                    <Text style={styles.protectionWarning}>Pagamentos feitos por fora nÃ£o tÃªm a cobertura da plataforma.</Text>
+                    <Text style={styles.protectionWarning}>Pagamentos feitos por fora não têm a cobertura da plataforma.</Text>
                 </TouchableOpacity>
 
                 <View style={styles.segmentedControl}>

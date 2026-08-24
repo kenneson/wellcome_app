@@ -168,29 +168,29 @@ export default function SettingsScreen() {
                     )}
                 </SettingsSection>
 
-                <SettingsSection title="LEGAL E SEGURANÃ‡A">
+                <SettingsSection title="LEGAL E SEGURANÇA">
                     <SettingsRow
                         icon="document-text-outline"
                         iconColor="#315E9E"
                         iconBackground="#EDF3FB"
                         title="Termos de Uso"
-                        subtitle="Regras para participantes e anfitriÃµes"
+                        subtitle="Regras para participantes e anfitriões"
                         onPress={() => router.push('/legal/terms' as any)}
                     />
                     <SettingsRow
                         icon="lock-closed-outline"
                         iconColor="#187A67"
                         iconBackground="#EAF7F3"
-                        title="PolÃ­tica de Privacidade"
-                        subtitle="Como seus dados sÃ£o tratados"
+                        title="Política de Privacidade"
+                        subtitle="Como seus dados são tratados"
                         onPress={() => router.push('/legal/privacy' as any)}
                     />
                     <SettingsRow
                         icon="shield-checkmark-outline"
                         iconColor="#C45D22"
                         iconBackground="#FFF1E8"
-                        title="ProteÃ§Ã£o Wellcome"
-                        subtitle="BenefÃ­cios de pagar dentro da plataforma"
+                        title="Proteção Wellcome"
+                        subtitle="Benefícios de pagar dentro da plataforma"
                         onPress={() => router.push('/legal/protection' as any)}
                     />
                 </SettingsSection>

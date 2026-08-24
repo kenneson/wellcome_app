@@ -105,7 +105,7 @@ export default function EventCreateDateAndPrice() {
             <KeyboardAwareScrollView contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
                 <WizardProgress currentStep={3} />
                 <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Data, vagas e valor</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">Defina horÃ¡rios claros para que ninguÃ©m fique com dÃºvidas.</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Defina horários claros para que ninguém fique com dúvidas.</Text>
 
                 <View className="flex-row gap-3 mb-2">
                     <InputField label="VALOR POR PESSOA" error={errors.price}>
@@ -135,9 +135,9 @@ export default function EventCreateDateAndPrice() {
 
                 {Number.isFinite(price) && price > 0 && (
                     <View className="bg-emerald-50 border border-emerald-200 p-4 mb-5" style={{ borderRadius: 8 }}>
-                        <Text className="text-sm font-bold text-emerald-900">Estimativa por inscriÃ§Ã£o</Text>
+                        <Text className="text-sm font-bold text-emerald-900">Estimativa por inscrição</Text>
                         <View className="flex-row justify-between mt-2"><Text className="text-sm text-emerald-800">Taxa Wellcome ({platformFeePercentage}%)</Text><Text className="text-sm text-emerald-900">R$ {(price * feeRate).toFixed(2).replace('.', ',')}</Text></View>
-                        <View className="flex-row justify-between mt-1"><Text className="text-sm font-bold text-emerald-900">VocÃª recebe</Text><Text className="text-sm font-bold text-emerald-900">R$ {estimatedNet.toFixed(2).replace('.', ',')}</Text></View>
+                        <View className="flex-row justify-between mt-1"><Text className="text-sm font-bold text-emerald-900">Você recebe</Text><Text className="text-sm font-bold text-emerald-900">R$ {estimatedNet.toFixed(2).replace('.', ',')}</Text></View>
                         <Text className="text-xs text-emerald-700 mt-2">A taxa do processador pode variar conforme o meio de pagamento.</Text>
                     </View>
                 )}
@@ -147,21 +147,21 @@ export default function EventCreateDateAndPrice() {
                 {errors.eventDate && <ErrorText>{errors.eventDate}</ErrorText>}
 
                 <View className="flex-row gap-3 mt-3">
-                    <InputField label="INÃCIO" error={errors.eventDate}>
+                    <InputField label="INÍCIO" error={errors.eventDate}>
                         <TouchableOpacity className="px-4 py-4" onPress={() => openPicker('start')} disabled={!date}>
                             <Text className={`text-lg font-bold ${date ? 'text-[#1A1A1A]' : 'text-gray-300'}`}>{date ? formatTime(date) : '--:--'}</Text>
                         </TouchableOpacity>
                     </InputField>
-                    <InputField label="TÃ‰RMINO" error={errors.endTime}>
+                    <InputField label="TÉRMINO" error={errors.endTime}>
                         <TouchableOpacity className="px-4 py-4" onPress={() => openPicker('end')} disabled={!date}>
                             <Text className={`text-lg font-bold ${endTime ? 'text-[#1A1A1A]' : 'text-gray-300'}`}>{endTime ? formatTime(endTime) : '--:--'}</Text>
                         </TouchableOpacity>
                     </InputField>
                 </View>
-                {!!duration && <Text className="text-xs text-gray-500 text-center mb-5">DuraÃ§Ã£o estimada: {duration}</Text>}
+                {!!duration && <Text className="text-xs text-gray-500 text-center mb-5">Duração estimada: {duration}</Text>}
 
                 <View className="flex-row items-center justify-between mt-2 mb-2">
-                    <Text className="text-xs text-gray-600 font-bold">PRAZO PARA INSCRIÃ‡Ã•ES</Text>
+                    <Text className="text-xs text-gray-600 font-bold">PRAZO PARA INSCRIÇÕES</Text>
                     {registrationDeadline && <TouchableOpacity onPress={() => creation.updateDetails({ registrationDeadline: null })}><Text className="text-xs text-red-600 font-bold">Remover</Text></TouchableOpacity>}
                 </View>
                 <View className="flex-row gap-3">
@@ -215,4 +215,4 @@ function ErrorText({ children }: { children: React.ReactNode }) { return <Text c
 function formatDate(date: Date) { return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function formatTime(date: Date) { return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 function pickerMode(kind: Exclude<PickerKind, null>): 'date' | 'time' { return kind === 'date' || kind === 'deadlineDate' ? 'date' : 'time'; }
-function pickerTitle(kind: Exclude<PickerKind, null>) { return ({ date: 'Data do evento', start: 'HorÃ¡rio de inÃ­cio', end: 'HorÃ¡rio de tÃ©rmino', deadlineDate: 'Data limite', deadlineTime: 'HorÃ¡rio limite' })[kind]; }
+function pickerTitle(kind: Exclude<PickerKind, null>) { return ({ date: 'Data do evento', start: 'Horário de início', end: 'Horário de término', deadlineDate: 'Data limite', deadlineTime: 'Horário limite' })[kind]; }

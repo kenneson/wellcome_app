@@ -45,15 +45,17 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
   const optimizedCoverImage = getOptimizedImageUrl(coverImageUrl, { width: 600 });
   const eventDate = event.event_date || event.eventDate;
   const endTime = event.end_time || event.endTime;
-  const maxGuests = event.max_guests || event.maxGuests || 0;
+  const rawMaxGuests = event.maxGuests ?? event.max_guests ?? 0;
+  const maxGuests = Math.max(0, Number(rawMaxGuests) || 0);
   const averageRating = event.average_rating || event.averageRating;
   const distanceKm = event.distance_km || event.distanceKm;
   const cuisineTypes = event.cuisine_types || event.cuisineTypes || [];
   const hostName = event.host?.full_name || event.host?.fullName;
   
-  // Count valid bookings (APPROVED or PENDING)
-  const taken = event.participantCount ?? event.event_participants?.[0]?.count ??
-                event.bookings?.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').length ?? 0;
+  // The API applies payment expiry, approval and capacity-hold rules before returning this count.
+  // Do not infer occupancy from raw booking statuses here because expired requests are not seats.
+  const rawTaken = event.participantCount ?? event.event_participants?.[0]?.count ?? 0;
+  const taken = Math.min(maxGuests, Math.max(0, Number(rawTaken) || 0));
   const spotsLabel = formatSpotsAvailable(taken, maxGuests);
 
   // Get first 3 tags (combine cuisine and vibe)

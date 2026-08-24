@@ -19,7 +19,7 @@ export class WalletService {
 
     private async getAuthHeaders(): Promise<Record<string, string>> {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('UsuÃ¡rio nÃ£o autenticado');
+        if (!session?.access_token) throw new Error('Usuário não autenticado');
 
         return {
             'Content-Type': 'application/json',

@@ -40,6 +40,40 @@ describe('PrismaEventRepository.findAll', () => {
                 hostId: { not: 'current-user' },
             },
             orderBy: { eventDate: 'asc' },
+            include: {
+                host: true,
+                bookings: {
+                    select: {
+                        status: true,
+                        paymentDueAt: true,
+                        capacityHeldAt: true,
+                        payment: { select: { status: true } },
+                    },
+                },
+            },
+        }));
+    });
+
+    it('maps every field required by the capacity policy', () => {
+        const repository = new PrismaEventRepository();
+        const paymentDueAt = new Date('2026-08-24T12:00:00.000Z');
+        const capacityHeldAt = new Date('2026-08-24T11:00:00.000Z');
+
+        const event = (repository as any).mapToDomain({
+            price: { toNumber: () => 80 },
+            bookings: [{
+                status: 'PENDING',
+                paymentDueAt,
+                capacityHeldAt,
+                payment: { status: 'PENDING' },
+            }],
+        });
+
+        expect(event.bookings[0]).toEqual(expect.objectContaining({
+            status: 'PENDING',
+            paymentDueAt,
+            capacityHeldAt,
+            paymentStatus: 'PENDING',
         }));
     });
 });

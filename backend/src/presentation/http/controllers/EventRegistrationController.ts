@@ -55,7 +55,11 @@ export class EventRegistrationController {
             if (error.message === 'Registration deadline has passed' || error.message === 'Host cannot join their own event') {
                 return reply.code(400).send({ message: error.message });
             }
-            return reply.code(500).send({ message: 'Internal server error', error });
+            request.log.error({ err: error }, 'Failed to create event booking');
+            return reply.code(500).send({
+                code: 'INTERNAL_ERROR',
+                message: 'Não foi possível realizar a inscrição. Tente novamente.',
+            });
         }
     }
 

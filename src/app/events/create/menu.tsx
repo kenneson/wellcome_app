@@ -37,11 +37,11 @@ export default function EventCreateMenu() {
             <CreateEventHeader saveStatus={creation.saveStatus} />
             <KeyboardAwareScrollView contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
                 <WizardProgress currentStep={1} />
-                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Monte o cardÃ¡pio</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">Apresente os pratos na ordem em que serÃ£o servidos.</Text>
+                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Monte o cardápio</Text>
+                <Text className="text-sm text-gray-500 mt-1 mb-5">Apresente os pratos na ordem em que serão servidos.</Text>
 
                 <View className="bg-gray-50 border border-gray-200 p-4 mb-5" style={{ borderRadius: 8 }}>
-                    <Checkbox label="ServiÃ§o em sequÃªncia" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
+                    <Checkbox label="Serviço em sequência" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
                     <Text className="text-xs text-gray-500 mt-2 ml-8">Entrada, prato principal e sobremesa servidos em etapas.</Text>
                 </View>
 
@@ -71,11 +71,11 @@ export default function EventCreateMenu() {
                     <Text className="text-[#C45D22] font-bold ml-2">Adicionar prato</Text>
                 </TouchableOpacity>
 
-                <Text className="text-lg font-bold text-[#1A1A1A] mb-3">InformaÃ§Ãµes alimentares</Text>
+                <Text className="text-lg font-bold text-[#1A1A1A] mb-3">Informações alimentares</Text>
                 <View className="gap-4 pb-4">
-                    <Checkbox label="OpÃ§Ãµes veganas e vegetarianas disponÃ­veis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
-                    <Checkbox label="Aceito adaptaÃ§Ãµes por restriÃ§Ãµes alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
-                    <Checkbox label="CardÃ¡pio sujeito a alteraÃ§Ãµes de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
+                    <Checkbox label="Opções veganas e vegetarianas disponíveis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
+                    <Checkbox label="Aceito adaptações por restrições alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
+                    <Checkbox label="Cardápio sujeito a alterações de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
                 </View>
             </KeyboardAwareScrollView>
 
