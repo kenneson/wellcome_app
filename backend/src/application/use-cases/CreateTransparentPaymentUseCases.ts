@@ -3,7 +3,7 @@ import { EventRegistrationRepository } from '../../domain/repositories/EventRegi
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { PaymentGateway, PaymentGatewayError } from '../../domain/services/PaymentGateway';
-import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { isProviderPaymentPaid } from '../../domain/services/PaymentStatusPolicy';
 import { ConfirmAsaasPaymentService } from '../services/ConfirmAsaasPaymentService';
 import { PrepareProviderPaymentInput, PrepareProviderPaymentService } from '../services/PrepareProviderPaymentService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
@@ -36,7 +36,7 @@ export class CreatePixPaymentUseCase {
 
     async execute(input: PrepareProviderPaymentInput) {
         const prepared = await this.preparePaymentService.execute(input);
-        const paid = isProviderPaymentSettled(prepared.providerPayment);
+        const paid = isProviderPaymentPaid(prepared.providerPayment);
         if (paid) {
             await this.confirmPaymentService.execute(prepared.payment, prepared.providerPayment);
             return {
@@ -127,7 +127,7 @@ export class PayWithSavedCardUseCase {
         if (!card) throw new Error('Cartao nao encontrado');
 
         const prepared = await this.preparePaymentService.execute(input);
-        if (isProviderPaymentSettled(prepared.providerPayment)) {
+        if (isProviderPaymentPaid(prepared.providerPayment)) {
             await this.confirmPaymentService.execute(prepared.payment, prepared.providerPayment);
             return {
                 paymentId: prepared.payment.id,
@@ -136,26 +136,6 @@ export class PayWithSavedCardUseCase {
                 status: prepared.providerPayment.status,
                 paid: true,
                 awaitingSettlement: false,
-            };
-        }
-
-        if (
-            prepared.providerPayment.billingType === 'CREDIT_CARD' &&
-            prepared.providerPayment.status === 'CONFIRMED'
-        ) {
-            await this.paymentRepository.updateProviderPayment({
-                paymentId: prepared.payment.id,
-                providerPaymentId: prepared.providerPayment.id,
-                paymentMethod: 'CREDIT_CARD',
-                providerStatus: prepared.providerPayment.status,
-            });
-            return {
-                paymentId: prepared.payment.id,
-                providerPaymentId: prepared.providerPayment.id,
-                value: prepared.payment.valor.toFixed(2),
-                status: prepared.providerPayment.status,
-                paid: false,
-                awaitingSettlement: true,
             };
         }
 
@@ -189,7 +169,7 @@ export class PayWithSavedCardUseCase {
             paymentMethod: 'CREDIT_CARD',
             providerStatus: providerPayment.status,
         });
-        const paid = isProviderPaymentSettled(providerPayment);
+        const paid = isProviderPaymentPaid(providerPayment);
         if (paid) await this.confirmPaymentService.execute(prepared.payment, providerPayment);
 
         return {

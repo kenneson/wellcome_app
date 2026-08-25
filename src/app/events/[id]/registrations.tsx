@@ -3,7 +3,6 @@ import { eventService } from '@/services/api/EventService';
 import { registrationService } from '@/services/api/RegistrationService';
 import { chatService } from '@/services/api/ChatService';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
-import { formatPrice } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Image } from 'expo-image';
@@ -117,8 +116,8 @@ export default function EventRegistrationsScreen() {
     }
 
     const isEventPast = useMemo(() => {
-        if (!event || !event.event_date) return false;
-        return new Date(event.event_date) < new Date();
+        if (!event?.eventDate) return false;
+        return new Date(event.eventDate) < new Date();
     }, [event]);
 
     const isPaidEvent = Number(event?.price || 0) > 0;
@@ -176,9 +175,14 @@ export default function EventRegistrationsScreen() {
             return 'O prazo de pagamento venceu. Esta aprovação não ocupa mais uma vaga; você pode cancelá-la.';
         }
         if (isAwaitingPayment(registration)) {
+            if (requiresHostApproval) {
+                return registration.paymentDueAt
+                    ? `Você aprovou esta pessoa. O pagamento deve ser feito até ${new Date(registration.paymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.`
+                    : 'Você aprovou esta pessoa. Falta o pagamento para confirmar a vaga.';
+            }
             return registration.paymentDueAt
-                ? `Você aprovou esta pessoa. O pagamento deve ser feito até ${new Date(registration.paymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.`
-                : 'Você já aprovou esta pessoa. Falta o pagamento para confirmar a vaga.';
+                ? `Inscrição imediata: o participante deve pagar até ${new Date(registration.paymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} para confirmar a vaga.`
+                : 'Inscrição imediata: falta o participante concluir o pagamento para confirmar a vaga.';
         }
         if (isWaitlisted(registration)) {
             return 'Esta pessoa está na lista de espera e pode ser aprovada quando houver uma vaga.';
@@ -212,7 +216,7 @@ export default function EventRegistrationsScreen() {
     const stats = {
         confirmedCount,
         pendingCount,
-        revenue: event ? confirmedCount * (event.price || 0) : 0,
+        revenue: event ? confirmedCount * Number(event.price || 0) : 0,
         occupancy: event ? `${confirmedCount} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0',
     };
 
@@ -390,7 +394,7 @@ export default function EventRegistrationsScreen() {
                             <View style={styles.eventDateContainer}>
                                 <Ionicons name="calendar-outline" size={16} color="#fff" />
                                 <Text style={styles.eventDate}>
-                                    {new Date(event.event_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} • {new Date(event.event_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(event.eventDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} • {new Date(event.eventDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                 </Text>
                             </View>
                         </View>
@@ -405,7 +409,7 @@ export default function EventRegistrationsScreen() {
                     <View style={styles.statItem}>
                         <Text style={styles.statLabel}>RECEITA</Text>
                         <Text style={styles.statValue}>
-                            {event ? formatPrice(stats.revenue) : 'R$ 0,00'}
+                            {event ? `R$ ${stats.revenue.toFixed(2).replace('.', ',')}` : 'R$ 0,00'}
                         </Text>
                     </View>
                     <View style={styles.statDivider} />
@@ -450,11 +454,17 @@ export default function EventRegistrationsScreen() {
                 <View style={styles.flowInfo}>
                     <Ionicons name="information-circle-outline" size={21} color="#9A4819" />
                     <View style={styles.flowInfoText}>
-                        <Text style={styles.flowInfoTitle}>Quando a vaga fica confirmada?</Text>
+                        <Text style={styles.flowInfoTitle}>
+                            {requiresHostApproval ? 'Fluxo: aprovação antes do pagamento' : 'Fluxo: inscrição imediata'}
+                        </Text>
                         <Text style={styles.flowInfoDescription}>
-                            {isPaidEvent
-                                ? 'Somente depois da sua aprovação e do pagamento. Se uma pessoa já pagou e for recusada, o reembolso será solicitado.'
-                                : 'Depois que você aprovar a solicitação do participante.'}
+                            {requiresHostApproval
+                                ? isPaidEvent
+                                    ? 'Primeiro você aprova a solicitação. Depois, o participante paga em até 24 horas para confirmar a vaga.'
+                                    : 'A vaga fica confirmada quando você aprovar a solicitação.'
+                                : isPaidEvent
+                                    ? 'Este evento tem inscrição imediata. A vaga fica confirmada automaticamente quando o pagamento for recebido.'
+                                    : 'Este evento tem inscrição imediata e gratuita. A vaga é confirmada no momento da inscrição.'}
                         </Text>
                     </View>
                 </View>

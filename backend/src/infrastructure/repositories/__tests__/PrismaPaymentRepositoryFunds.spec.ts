@@ -74,6 +74,8 @@ describe('PrismaPaymentRepository host fund lifecycle', () => {
         (prisma.payment.findMany as jest.Mock).mockResolvedValue([{ id: 'payment-1' }]);
         tx.payment.findUnique.mockResolvedValue({
             status: PaymentStatus.CONFIRMED,
+            provider: 'ASAAS',
+            providerStatus: 'RECEIVED',
             netAmount: 90,
             refundedNetAmount: 0,
             fundsHeldAt: new Date('2026-08-24T18:00:00.000Z'),
@@ -103,6 +105,34 @@ describe('PrismaPaymentRepository host fund lifecycle', () => {
             where: { id: 'payment-1' },
             data: { fundsReleasedAt: now },
         });
+        expect(prisma.payment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({
+                OR: [
+                    { provider: { not: 'ASAAS' } },
+                    { providerStatus: { in: ['RECEIVED', 'RECEIVED_IN_CASH'] } },
+                ],
+            }),
+        }));
+    });
+
+    it('does not release card receivables before Asaas marks them as received', async () => {
+        const now = new Date('2026-08-26T00:00:00.000Z');
+        (prisma.payment.findMany as jest.Mock).mockResolvedValue([{ id: 'payment-1' }]);
+        tx.payment.findUnique.mockResolvedValue({
+            status: PaymentStatus.CONFIRMED,
+            provider: 'ASAAS',
+            providerStatus: 'CONFIRMED',
+            netAmount: 90,
+            refundedNetAmount: 0,
+            fundsHeldAt: new Date('2026-08-24T18:00:00.000Z'),
+            fundsAvailableAt: new Date('2026-08-25T22:00:00.000Z'),
+            fundsReleasedAt: null,
+            booking: { status: 'APPROVED', event: { hostId: 'host-1' } },
+        });
+
+        await expect(repository.releaseMaturedHostFunds('host-1', now)).resolves.toBe(0);
+        expect(tx.user.updateMany).not.toHaveBeenCalled();
+        expect(tx.walletTransaction.create).not.toHaveBeenCalled();
     });
 
     it('deducts a refund from pending balance before funds are released', async () => {

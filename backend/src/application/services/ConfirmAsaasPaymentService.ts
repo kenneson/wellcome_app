@@ -2,7 +2,7 @@ import { Payment } from '../../domain/entities/Payment';
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { ProviderPayment } from '../../domain/services/PaymentGateway';
-import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { isProviderPaymentPaid } from '../../domain/services/PaymentStatusPolicy';
 import { calculateHostFundsAvailableAt } from '../../domain/services/HostFundsAvailabilityPolicy';
 import { EventAccessType } from '../../domain/value-objects/EventAccessType';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
@@ -22,8 +22,8 @@ export class ConfirmAsaasPaymentService {
     ) {}
 
     async execute(payment: Payment, providerPayment: ProviderPayment): Promise<boolean> {
-        if (!isProviderPaymentSettled(providerPayment)) {
-            throw new Error(`Cobranca Asaas ${providerPayment.id} ainda nao esta liquidada`);
+        if (!isProviderPaymentPaid(providerPayment)) {
+            throw new Error(`Cobranca Asaas ${providerPayment.id} ainda nao esta confirmada`);
         }
         if (!this.sameMoney(providerPayment.value, payment.valor)) {
             throw new Error(`Valor divergente no pagamento Asaas ${providerPayment.id}`);

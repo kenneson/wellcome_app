@@ -40,6 +40,25 @@ describe('EventController location privacy', () => {
         }));
     });
 
+    it('returns the payment status to the authenticated participant', () => {
+        const paidEvent = {
+            ...event,
+            bookings: [{
+                id: 'booking-1',
+                userId: 'guest-1',
+                status: 'APPROVED',
+                paymentStatus: 'CONFIRMED',
+            }],
+        };
+
+        expect(controller.serializeEvent(paidEvent, 'guest-1').bookings).toEqual([
+            expect.objectContaining({
+                id: 'booking-1',
+                paymentStatus: 'CONFIRMED',
+            }),
+        ]);
+    });
+
     it('shows registration summaries only to the event host', () => {
         const eventWithRegistrations = {
             ...event,

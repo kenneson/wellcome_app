@@ -127,6 +127,34 @@ describe('CheckPaymentUseCase', () => {
         }));
     });
 
+    it('confirms a captured credit card while keeping provider settlement separate', async () => {
+        paymentGateway.listCheckoutPayments.mockResolvedValueOnce([{
+            id: 'pay-card',
+            billingType: 'CREDIT_CARD',
+            status: 'CONFIRMED',
+            value: 100,
+            netValue: 97.5,
+            confirmedDate: '2026-08-18',
+            externalReference: 'booking-1',
+        }]);
+        paymentRepository.updateProviderPayment.mockResolvedValueOnce({
+            ...basePayment,
+            providerPaymentId: 'pay-card',
+            providerStatus: 'CONFIRMED',
+            paymentMethod: 'CREDIT_CARD',
+        });
+
+        const result = await useCase.execute('booking-1', 'user-1');
+
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
+        expect(result).toEqual(expect.objectContaining({
+            status: PaymentStatus.CONFIRMED,
+            providerStatus: 'CONFIRMED',
+            paymentMethod: 'CREDIT_CARD',
+            paid: true,
+        }));
+    });
+
     it('falls back to the local status if Asaas reconciliation fails', async () => {
         paymentGateway.listCheckoutPayments.mockRejectedValueOnce(new Error('Asaas unavailable'));
 

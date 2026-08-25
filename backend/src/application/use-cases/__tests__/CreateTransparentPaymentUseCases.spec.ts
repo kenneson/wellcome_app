@@ -64,6 +64,8 @@ describe('Transparent payment use cases', () => {
             price: 100,
             hostId: 'host-1',
             host: { id: 'host-1', expoPushToken: null },
+            eventDate: new Date('2026-08-30T18:00:00.000Z'),
+            endTime: new Date('2026-08-30T22:00:00.000Z'),
         });
         registrationRepository.findById.mockResolvedValue({
             id: 'booking-1',
@@ -233,9 +235,9 @@ describe('Transparent payment use cases', () => {
             bookingId: 'booking-1', eventId: 'event-1', userId: 'user-1',
         });
 
-        expect(result).toEqual(expect.objectContaining({ paid: false, awaitingSettlement: true }));
+        expect(result).toEqual(expect.objectContaining({ paid: true, awaitingSettlement: false }));
         expect(paymentGateway.getPixQrCode).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
     });
 
     it('records a definitive card refusal and does not approve the booking', async () => {
@@ -305,9 +307,9 @@ describe('Transparent payment use cases', () => {
             bookingId: 'booking-1', eventId: 'event-1', userId: 'user-1', cardId: 'card-1',
         });
 
-        expect(result).toEqual(expect.objectContaining({ paid: false, awaitingSettlement: true }));
+        expect(result).toEqual(expect.objectContaining({ paid: true, awaitingSettlement: false }));
         expect(paymentGateway.payWithCreditCard).not.toHaveBeenCalled();
         expect(paymentRepository.claimCardPaymentAttempt).not.toHaveBeenCalled();
-        expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
     });
 });

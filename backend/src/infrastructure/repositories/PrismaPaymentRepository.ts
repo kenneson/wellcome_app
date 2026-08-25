@@ -1,5 +1,6 @@
 import { Payment } from '../../domain/entities/Payment';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
+import { isProviderSettlementStatus } from '../../domain/services/PaymentStatusPolicy';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { prisma } from '../database/prismaClient';
 
@@ -414,6 +415,10 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 fundsHeldAt: { not: null },
                 fundsAvailableAt: { lte: now },
                 fundsReleasedAt: null,
+                OR: [
+                    { provider: { not: 'ASAAS' } },
+                    { providerStatus: { in: ['RECEIVED', 'RECEIVED_IN_CASH'] } },
+                ],
                 booking: {
                     status: 'APPROVED',
                     event: { hostId },
@@ -455,6 +460,8 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 fundsHeldAt: true,
                 fundsAvailableAt: true,
                 fundsReleasedAt: true,
+                provider: true,
+                providerStatus: true,
                 booking: {
                     select: {
                         status: true,
@@ -471,6 +478,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
             !payment.fundsAvailableAt ||
             payment.fundsAvailableAt > now ||
             payment.fundsReleasedAt ||
+            (payment.provider === 'ASAAS' && !isProviderSettlementStatus(payment.providerStatus)) ||
             payment.booking.status !== 'APPROVED' ||
             payment.booking.event.hostId !== hostId
         ) {

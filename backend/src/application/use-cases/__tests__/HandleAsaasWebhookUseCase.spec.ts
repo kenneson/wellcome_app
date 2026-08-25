@@ -235,6 +235,26 @@ describe('HandleAsaasWebhookUseCase', () => {
         expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
     });
 
+    it('confirms a captured credit card on PAYMENT_CONFIRMED', async () => {
+        paymentGateway.getPayment.mockResolvedValue({
+            id: 'pay-1',
+            billingType: 'CREDIT_CARD',
+            status: 'CONFIRMED',
+            value: 100,
+            netValue: 97.5,
+            confirmedDate: '2026-08-25',
+        });
+
+        const result = await useCase.execute({
+            id: 'evt-card-confirmed',
+            event: 'PAYMENT_CONFIRMED',
+            payment: { id: 'pay-1', status: 'CONFIRMED', value: 100, billingType: 'CREDIT_CARD' },
+        });
+
+        expect(result).toEqual({ duplicate: false, action: 'payment_confirmed' });
+        expect(paymentRepository.confirmAndHoldHostFunds).toHaveBeenCalledTimes(1);
+    });
+
     it('records a refused card without approving the booking', async () => {
         const result = await useCase.execute({
             id: 'evt-card-refused',

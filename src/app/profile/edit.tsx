@@ -126,8 +126,7 @@ export default function EditProfileScreen() {
 
         try {
             setSaving(true);
-            const { error } = await supabase.from('profiles').upsert({
-                id: userId,
+            const { error } = await supabase.from('profiles').update({
                 full_name: fullName.trim(),
                 occupation: occupation.trim(),
                 looking_for: lookingFor,
@@ -138,8 +137,11 @@ export default function EditProfileScreen() {
                 phone_number: phoneNumber.trim(),
                 dietary_restrictions: splitList(dietaryRestriction),
                 avatar_url: avatarUrl,
-                updated_at: new Date(),
-            });
+                updated_at: new Date().toISOString(),
+            })
+                .eq('id', userId)
+                .select('id')
+                .single();
             if (error) throw error;
 
             await refetchProfile();
@@ -147,7 +149,11 @@ export default function EditProfileScreen() {
                 { text: 'OK', onPress: () => router.replace('/(tabs)/profile') },
             ]);
         } catch (error: any) {
-            Alert.alert('Erro ao salvar', error.message);
+            console.error('[EditProfile] Falha ao atualizar perfil', error?.code || error?.message);
+            Alert.alert(
+                'Erro ao salvar',
+                'Não foi possível salvar suas alterações. Verifique sua conexão e tente novamente.',
+            );
         } finally {
             setSaving(false);
         }

@@ -3,7 +3,7 @@ import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { WebhookEventRepository } from '../../domain/repositories/WebhookEventRepository';
 import { WithdrawalRequestRepository } from '../../domain/repositories/WithdrawalRequestRepository';
 import { PaymentGateway, ProviderPayment } from '../../domain/services/PaymentGateway';
-import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { isProviderPaymentPaid } from '../../domain/services/PaymentStatusPolicy';
 import { ConfirmAsaasPaymentService } from '../services/ConfirmAsaasPaymentService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
 import { ChatService } from '../services/ChatService';
@@ -159,7 +159,7 @@ export class HandleAsaasWebhookUseCase {
             paymentMethod: providerPayment.billingType,
             providerStatus: providerPayment.status,
         });
-        if (!isProviderPaymentSettled(providerPayment as ProviderPayment)) {
+        if (!isProviderPaymentPaid(providerPayment as ProviderPayment)) {
             return false;
         }
         await this.confirmPaymentService.execute(payment, providerPayment as ProviderPayment);
@@ -178,7 +178,7 @@ export class HandleAsaasWebhookUseCase {
         if (!payment) return false;
 
         const providerPayment = await this.paymentGateway.getPayment(providerPaymentId);
-        if (!isProviderPaymentSettled(providerPayment)) {
+        if (!isProviderPaymentPaid(providerPayment)) {
             await this.paymentRepository.updateProviderPayment({
                 paymentId: payment.id,
                 providerPaymentId,

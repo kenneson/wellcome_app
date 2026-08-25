@@ -1,7 +1,7 @@
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { PaymentGateway, ProviderPayment } from '../../domain/services/PaymentGateway';
-import { isProviderPaymentSettled } from '../../domain/services/PaymentStatusPolicy';
+import { isProviderPaymentPaid } from '../../domain/services/PaymentStatusPolicy';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { ConfirmAsaasPaymentService } from '../services/ConfirmAsaasPaymentService';
 import { SendNotificationUseCase } from './SendNotificationUseCase';
@@ -79,7 +79,7 @@ export class CheckPaymentUseCase {
                 providerStatus: providerPayment.status,
             });
 
-            if (!isProviderPaymentSettled(providerPayment)) return updated;
+            if (!isProviderPaymentPaid(providerPayment)) return updated;
 
             await this.confirmPaymentService.execute(payment, providerPayment);
             return {
@@ -90,7 +90,12 @@ export class CheckPaymentUseCase {
                 providerPaymentId: providerPayment.id,
                 paidAt: this.parseProviderPaidAt(providerPayment),
             };
-        } catch {
+        } catch (error) {
+            console.error('[CheckPayment] Provider reconciliation failed', {
+                paymentId: payment.id,
+                bookingId: payment.bookingId,
+                error: error instanceof Error ? error.message : String(error),
+            });
             return payment;
         }
     }
