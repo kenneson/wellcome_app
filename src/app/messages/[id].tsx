@@ -18,11 +18,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConversationScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const listRef = useRef<FlatList<ChatMessage>>(null);
     const [conversation, setConversation] = useState<ChatConversation | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -84,23 +85,27 @@ export default function ConversationScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <Stack.Screen options={{ headerShown: false }} />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} hitSlop={10}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-                </TouchableOpacity>
-                <Image source={{ uri: other?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }} style={styles.avatar} contentFit="cover" />
-                <View style={styles.headerText}>
-                    <Text style={styles.name} numberOfLines={1}>{other?.fullName || 'Participante'}</Text>
-                    <Text style={styles.eventTitle} numberOfLines={1}>{conversation?.event.title}</Text>
+            <KeyboardAvoidingView
+                style={styles.flex}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={0}
+            >
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} hitSlop={10} accessibilityLabel="Voltar">
+                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                    </TouchableOpacity>
+                    <Image source={{ uri: other?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }} style={styles.avatar} contentFit="cover" />
+                    <View style={styles.headerText}>
+                        <Text style={styles.name} numberOfLines={1}>{other?.fullName || 'Participante'}</Text>
+                        <Text style={styles.eventTitle} numberOfLines={1}>{conversation?.event.title}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setReportVisible(true)} style={styles.headerButton} accessibilityLabel="Denunciar conversa">
+                        <Ionicons name="flag-outline" size={22} color="#6B7280" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => setReportVisible(true)} style={styles.headerButton} accessibilityLabel="Denunciar conversa">
-                    <Ionicons name="flag-outline" size={22} color="#6B7280" />
-                </TouchableOpacity>
-            </View>
 
-            <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
                 <FlatList
                     ref={listRef}
                     data={messages}
@@ -109,6 +114,7 @@ export default function ConversationScreen() {
                     contentContainerStyle={styles.messages}
                     onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                     ListHeaderComponent={
                         <View style={styles.contextCard}>
                             <Ionicons name="shield-checkmark-outline" size={18} color="#C96D22" />
@@ -117,7 +123,7 @@ export default function ConversationScreen() {
                     }
                 />
 
-                <View style={styles.composer}>
+                <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                     <TextInput
                         style={styles.input}
                         value={draft}
@@ -127,6 +133,8 @@ export default function ConversationScreen() {
                         multiline
                         maxLength={2000}
                         editable={!sending}
+                        textAlignVertical="top"
+                        onFocus={() => requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }))}
                     />
                     <TouchableOpacity
                         style={[styles.sendButton, (!draft.trim() || sending) && styles.sendDisabled]}
@@ -200,7 +208,7 @@ const styles = StyleSheet.create({
     mineText: { color: '#FFFFFF' },
     messageTime: { alignSelf: 'flex-end', marginTop: 3, fontSize: 10, color: '#9CA3AF' },
     mineTime: { color: 'rgba(255,255,255,0.78)' },
-    composer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
+    composer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
     input: { flex: 1, minHeight: 46, maxHeight: 120, paddingHorizontal: 15, paddingVertical: 12, borderRadius: 23, backgroundColor: '#F3F4F6', color: '#1A1A1A', fontSize: 15 },
     sendButton: { width: 46, height: 46, borderRadius: 23, marginLeft: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FF8C42' },
     sendDisabled: { opacity: 0.45 },

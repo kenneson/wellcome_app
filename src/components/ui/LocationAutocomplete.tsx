@@ -1,6 +1,5 @@
 import { GeocodingResult, GeocodingSuggestion, locationService, Municipality } from '@/services/api/LocationService';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
-import { WellcomeIconButton } from '@/components/ui/wellcome';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import { hasUsableGeocodingResult, isCompleteGeocodingResult } from './locationAutocompleteUtils';
 import * as Crypto from 'expo-crypto';
@@ -18,7 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -71,6 +70,11 @@ export function LocationAutocomplete({
     const wasVisible = useRef(false);
     const reducedMotion = useReducedMotion();
     const debouncedQuery = useDebounce(query, 300);
+    const insets = useSafeAreaInsets();
+    // Native modals can lose the provider measurement on iOS. The initial
+    // window metrics preserve the Dynamic Island/notch inset in that case.
+    const modalTopInset = Math.max(insets.top, initialWindowMetrics?.insets.top ?? 0);
+    const modalBottomInset = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
 
     // Search when debounced query changes
     useEffect(() => {
@@ -295,13 +299,23 @@ export function LocationAutocomplete({
                 navigationBarTranslucent={false}
                 onRequestClose={onClose}
             >
-                <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+                <View
+                    style={[
+                        styles.modalContainer,
+                        { paddingTop: modalTopInset, paddingBottom: modalBottomInset },
+                    ]}
+                >
                     <View style={styles.modalHeader}>
-                        <WellcomeIconButton
-                            icon="close"
+                        <TouchableOpacity
+                            style={styles.closeButton}
                             onPress={onClose}
+                            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                            accessibilityRole="button"
                             accessibilityLabel="Fechar busca de endereço"
-                        />
+                            testID="location-modal-close"
+                        >
+                            <Ionicons name="close" size={24} color="#202124" />
+                        </TouchableOpacity>
                         <Text style={styles.modalTitle} numberOfLines={1}>
                             {type === 'municipality' ? 'Selecione sua cidade' : 'Buscar endereço'}
                         </Text>
@@ -314,7 +328,7 @@ export function LocationAutocomplete({
                     >
                         {content}
                     </KeyboardAvoidingView>
-                </SafeAreaView>
+                </View>
             </Modal>
         );
     }
@@ -343,7 +357,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 8,
+        paddingHorizontal: 12,
         paddingVertical: 6,
         minHeight: 64,
         borderBottomWidth: 1,

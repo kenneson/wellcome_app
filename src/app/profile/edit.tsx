@@ -1,5 +1,10 @@
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
+import { AppIcon } from '@/components/ui/icon';
+import { WellcomeButton, WellcomeField, WellcomeIconButton } from '@/components/ui/wellcome';
+import { useUserProfile } from '@/context/UserProfileContext';
 import { supabase } from '@/shared/lib/supabase';
-import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { Box } from '@/shared/ui/box';
+import { Text } from '@/shared/ui/text';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -7,41 +12,28 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    StyleSheet,
-    Text,
     TextInput,
     TouchableOpacity,
+    useWindowDimensions,
     View,
 } from 'react-native';
-import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const occupations = [
-    'Estudante',
-    'Professor(a)',
-    'Engenheiro(a)',
-    'Médico(a)',
-    'Designer',
-    'Desenvolvedor(a)',
-    'Outro',
-];
-
 const lookingForOptions = [
-    { label: 'Comer', value: 'comer' },
-    { label: 'Cozinhar', value: 'cozinhar' },
-    { label: 'Ambos', value: 'ambos' },
+    { label: 'Participar', value: 'comer', icon: 'restaurant-outline' },
+    { label: 'Criar eventos', value: 'cozinhar', icon: 'calendar-outline' },
+    { label: 'Os dois', value: 'ambos', icon: 'people-outline' },
 ];
-
-import { useUserProfile } from '@/context/UserProfileContext';
 
 export default function EditProfileScreen() {
     const router = useRouter();
-    const { mandatory } = useLocalSearchParams<{ mandatory: string }>();
+    const { width } = useWindowDimensions();
+    const { mandatory } = useLocalSearchParams<{ mandatory?: string }>();
     const { refetchProfile } = useUserProfile();
-    const [loading, setLoading] = useState(false);
+    const horizontalPadding = width < 375 ? 16 : width >= 414 ? 24 : 20;
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [userId, setUserId] = useState<string | null>(null);
-
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [occupation, setOccupation] = useState('');
     const [lookingFor, setLookingFor] = useState('');
@@ -54,7 +46,7 @@ export default function EditProfileScreen() {
     const [phoneNumber, setPhoneNumber] = useState('');
 
     useEffect(() => {
-        getProfile();
+        void getProfile();
     }, []);
 
     async function getProfile() {
@@ -68,31 +60,24 @@ export default function EditProfileScreen() {
 
             setUserId(session.user.id);
             setFullName(session.user.user_metadata.full_name || '');
-
             const { data, error, status } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
 
-            if (error && status !== 406) {
-                throw error;
-            }
-
+            if (error && status !== 406) throw error;
             if (data) {
+                setFullName(data.full_name || session.user.user_metadata.full_name || '');
                 setOccupation(data.occupation || '');
                 setLookingFor(data.looking_for || '');
                 setBio(data.bio || '');
                 setAvatarUrl(data.avatar_url || null);
                 setCity(data.city || '');
                 setNeighborhood(data.neighborhood || '');
-                if (data.languages && data.languages.length > 0) {
-                    setLanguages(data.languages.join(', '));
-                }
+                setLanguages(Array.isArray(data.languages) ? data.languages.join(', ') : '');
                 setPhoneNumber(data.phone_number || '');
-                if (data.dietary_restrictions && data.dietary_restrictions.length > 0) {
-                    setDietaryRestriction(data.dietary_restrictions.join(', ')); // Changed to join for multi support
-                }
+                setDietaryRestriction(Array.isArray(data.dietary_restrictions) ? data.dietary_restrictions.join(', ') : '');
             }
         } catch (error: any) {
             Alert.alert('Erro ao carregar perfil', error.message);
@@ -107,32 +92,22 @@ export default function EditProfileScreen() {
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.5,
-            base64: true,
         });
-
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            uploadAvatar(result.assets[0]);
-        }
+        if (!result.canceled && result.assets.length > 0) await uploadAvatar(result.assets[0]);
     };
 
     const uploadAvatar = async (asset: ImagePicker.ImagePickerAsset) => {
         if (!userId) return;
         try {
             setSaving(true);
-            const arrayBuffer = await fetch(asset.uri).then(res => res.arrayBuffer());
-            const fileExt = asset.uri.split('.').pop();
-            const fileName = `avatar-${Date.now()}.${fileExt}`;
-            const filePath = `${userId}/${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, arrayBuffer, {
-                    contentType: asset.mimeType,
-                    upsert: true,
-                });
-
+            const arrayBuffer = await fetch(asset.uri).then((response) => response.arrayBuffer());
+            const fileExt = asset.uri.split('.').pop() || 'jpg';
+            const filePath = `${userId}/avatar-${Date.now()}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, arrayBuffer, {
+                contentType: asset.mimeType || 'image/jpeg',
+                upsert: true,
+            });
             if (uploadError) throw uploadError;
-
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
             setAvatarUrl(publicUrl);
         } catch (error: any) {
@@ -140,42 +115,37 @@ export default function EditProfileScreen() {
         } finally {
             setSaving(false);
         }
-    }
+    };
 
     const saveProfile = async () => {
-        if (!userId) return;
-        if (!occupation || !lookingFor || !city || !neighborhood) {
-            Alert.alert('Atenção', 'Por favor preencha os campos obrigatórios (Ocupação, O que procura, Cidade e Bairro).');
+        if (!userId || saving) return;
+        if (!fullName.trim() || !occupation.trim() || !lookingFor || !city.trim() || !neighborhood.trim()) {
+            Alert.alert('Revise os dados', 'Preencha nome, ocupação, objetivo, cidade e bairro para continuar.');
             return;
         }
 
         try {
             setSaving(true);
-            const updates = {
+            const { error } = await supabase.from('profiles').upsert({
                 id: userId,
-                full_name: fullName,
-                occupation,
+                full_name: fullName.trim(),
+                occupation: occupation.trim(),
                 looking_for: lookingFor,
-                bio,
-                city,
-                neighborhood,
-                languages: languages.split(',').map(s => s.trim()).filter(s => s.length > 0),
-                phone_number: phoneNumber,
-                dietary_restrictions: dietaryRestriction ? dietaryRestriction.split(',').map(s => s.trim()).filter(s => s.length > 0) : [],
+                bio: bio.trim(),
+                city: city.trim(),
+                neighborhood: neighborhood.trim(),
+                languages: splitList(languages),
+                phone_number: phoneNumber.trim(),
+                dietary_restrictions: splitList(dietaryRestriction),
                 avatar_url: avatarUrl,
                 updated_at: new Date(),
-            };
-
-            const { error } = await supabase
-                .from('profiles')
-                .upsert(updates);
-
+            });
             if (error) throw error;
 
-            Alert.alert('Sucesso', 'Perfil atualizado!');
             await refetchProfile();
-            // Always navigate to profile tab after saving
-            router.replace('/(tabs)/profile');
+            Alert.alert('Perfil atualizado', 'Suas informações foram salvas com sucesso.', [
+                { text: 'OK', onPress: () => router.replace('/(tabs)/profile') },
+            ]);
         } catch (error: any) {
             Alert.alert('Erro ao salvar', error.message);
         } finally {
@@ -185,281 +155,139 @@ export default function EditProfileScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, styles.center]}>
+            <SafeAreaView className="flex-1 items-center justify-center bg-[#FFF8F3]">
                 <ActivityIndicator size="large" color="#FF8C42" />
-            </View>
+                <Text className="mt-3 text-sm text-typography-500">Carregando seu perfil...</Text>
+            </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
+        <SafeAreaView className="flex-1 bg-[#FFF8F3]" edges={['top', 'bottom']}>
+            <Box className="min-h-[64px] flex-row items-center border-b border-outline-100 bg-white px-2">
                 {mandatory === 'true' ? (
-                    <View style={{ width: 60 }} />
+                    <Box className="h-12 w-12" />
                 ) : (
-                    <TouchableOpacity onPress={() => router.back()}>
-                        <Text style={styles.backButtonText}>{'< Voltar'}</Text>
-                    </TouchableOpacity>
+                    <WellcomeIconButton icon="chevron-back" onPress={() => router.back()} accessibilityLabel="Voltar" />
                 )}
-                <Text style={styles.title}>Editar Perfil</Text>
-                <View style={{ width: 60 }} />
-            </View>
+                <Box className="flex-1 items-center px-2">
+                    <Text className="text-[17px] font-bold text-typography-900">Editar perfil</Text>
+                    <Text className="mt-0.5 text-[11px] text-typography-400">Mantenha seus dados atualizados</Text>
+                </Box>
+                <Box className="h-12 w-12" />
+            </Box>
 
             <KeyboardAwareScrollView
-                enableOnAndroid={true}
-                extraScrollHeight={40}
-                extraHeight={120}
-                enableResetScrollToCoords={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.content}
                 style={{ flex: 1 }}
+                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingTop: 20, paddingBottom: 36 }}
+                extraHeight={80}
+                extraScrollHeight={24}
+                keyboardShouldPersistTaps="handled"
             >
-                    <View style={styles.avatarContainer}>
-                        <TouchableOpacity onPress={pickImage} style={styles.avatarButton}>
-                            {avatarUrl ? (
-                                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-                            ) : (
-                                <View style={styles.avatarPlaceholder}>
-                                    <Ionicons name="camera-outline" size={32} color="#999" />
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        <Text style={styles.avatarHint}>Toque para alterar a foto</Text>
-                    </View>
-
-                    <View style={styles.form}>
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Com o que você trabalha? (Obrigatório)</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Ex: Contador(a), Professor(a)"
-                                placeholderTextColor="#666"
-                                value={occupation}
-                                onChangeText={setOccupation}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>O que você procura na Wellcome? (Obrigatório)</Text>
-                            <View style={styles.optionsRow}>
-                                {lookingForOptions.map((opt) => (
-                                    <TouchableOpacity
-                                        key={opt.value}
-                                        style={[
-                                            styles.optionButton,
-                                            lookingFor === opt.value && styles.optionButtonSelected
-                                        ]}
-                                        onPress={() => setLookingFor(opt.value)}
-                                    >
-                                        <Text style={[
-                                            styles.optionText,
-                                            lookingFor === opt.value && styles.optionTextSelected
-                                        ]}>{opt.label}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                <Box className="mb-5 items-center rounded-3xl border border-outline-100 bg-white px-5 py-6">
+                    <TouchableOpacity
+                        onPress={() => void pickImage()}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Alterar foto de perfil"
+                        className="relative"
+                    >
+                        {avatarUrl ? (
+                            <Image source={{ uri: avatarUrl }} style={{ width: 104, height: 104, borderRadius: 52 }} contentFit="cover" />
+                        ) : (
+                            <View className="h-[104px] w-[104px] items-center justify-center rounded-full bg-primary-50">
+                                <AppIcon name="person-outline" size={42} color="#C45D22" />
                             </View>
+                        )}
+                        <View className="absolute -bottom-1 -right-1 h-11 w-11 items-center justify-center rounded-full border-[3px] border-white bg-primary-500">
+                            {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <AppIcon name="camera-outline" size={20} color="#FFFFFF" />}
                         </View>
+                    </TouchableOpacity>
+                    <Text className="mt-4 text-base font-bold text-typography-900">Sua apresentação</Text>
+                    <Text className="mt-1 text-center text-sm leading-5 text-typography-500">
+                        Uma foto nítida e informações completas ajudam a criar confiança na comunidade.
+                    </Text>
+                </Box>
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Cidade (Obrigatório)</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Sua cidade"
-                                placeholderTextColor="#666"
-                                value={city}
-                                onChangeText={setCity}
-                            />
-                        </View>
+                <ProfileSection icon="person-outline" title="Informações principais">
+                    <ProfileInput label="Nome completo" hint="Obrigatório" placeholder="Como você quer ser chamado" value={fullName} onChangeText={setFullName} autoCapitalize="words" autoComplete="name" textContentType="name" />
+                    <ProfileInput label="Ocupação" hint="Obrigatório" placeholder="Ex.: Contador(a), Professor(a)" value={occupation} onChangeText={setOccupation} autoCapitalize="sentences" />
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Bairro (Obrigatório)</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Seu bairro"
-                                placeholderTextColor="#666"
-                                value={neighborhood}
-                                onChangeText={setNeighborhood}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Quais idiomas você fala?</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Português, Inglês, Espanhol..."
-                                placeholderTextColor="#666"
-                                value={languages}
-                                onChangeText={setLanguages}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>WhatsApp / Telefone</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="(11) 99999-9999"
-                                placeholderTextColor="#666"
-                                value={phoneNumber}
-                                onChangeText={setPhoneNumber}
-                                keyboardType="phone-pad"
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Tem alguma restrição alimentar?</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Selecione ou digite"
-                                placeholderTextColor="#666"
-                                value={dietaryRestriction}
-                                onChangeText={setDietaryRestriction}
-                            />
-                        </View>
-
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Conte um pouco sobre você</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
-                                placeholder="Dica: Fale sobre seus hobbies, coisas que você gosta..."
-                                placeholderTextColor="#666"
-                                multiline
-                                numberOfLines={4}
-                                value={bio}
-                                onChangeText={setBio}
-                                textAlignVertical="top"
-                            />
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.saveButton}
-                            onPress={saveProfile}
-                            disabled={saving}
-                        >
-                            {saving ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.saveButtonText}>Salvar Alterações</Text>
-                            )}
-                        </TouchableOpacity>
+                    <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-typography-600">O que você procura na Wellcome?</Text>
+                    <View className="flex-row flex-wrap gap-2">
+                        {lookingForOptions.map((option) => {
+                            const selected = lookingFor === option.value;
+                            return (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    onPress={() => setLookingFor(option.value)}
+                                    accessibilityRole="radio"
+                                    accessibilityState={{ checked: selected }}
+                                    className={`min-h-11 flex-row items-center rounded-full border px-4 ${selected ? 'border-primary-500 bg-primary-50' : 'border-outline-200 bg-white'}`}
+                                >
+                                    <AppIcon name={option.icon} size={18} color={selected ? '#C45D22' : '#6B7280'} />
+                                    <Text className={`ml-2 text-sm font-semibold ${selected ? 'text-primary-700' : 'text-typography-600'}`}>{option.label}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
+                </ProfileSection>
+
+                <ProfileSection icon="location-outline" title="Localização">
+                    <View className="flex-row gap-3">
+                        <Box className="flex-1">
+                            <ProfileInput label="Cidade" hint="Obrigatório" placeholder="Sua cidade" value={city} onChangeText={setCity} autoCapitalize="words" />
+                        </Box>
+                        <Box className="flex-1">
+                            <ProfileInput label="Bairro" hint="Obrigatório" placeholder="Seu bairro" value={neighborhood} onChangeText={setNeighborhood} autoCapitalize="words" />
+                        </Box>
+                    </View>
+                </ProfileSection>
+
+                <ProfileSection icon="message" title="Sobre você">
+                    <ProfileInput label="Idiomas" hint="Separe por vírgulas" placeholder="Português, inglês, espanhol..." value={languages} onChangeText={setLanguages} autoCapitalize="sentences" />
+                    <ProfileInput label="WhatsApp / telefone" placeholder="(11) 99999-9999" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
+                    <ProfileInput label="Restrições alimentares" hint="Separe por vírgulas" placeholder="Ex.: lactose, amendoim" value={dietaryRestriction} onChangeText={setDietaryRestriction} autoCapitalize="sentences" />
+                    <ProfileInput label="Biografia" hint={`${bio.length}/500`} placeholder="Conte sobre seus interesses, experiências e o que torna um encontro especial para você." value={bio} onChangeText={setBio} multiline maxLength={500} />
+                </ProfileSection>
+
+                <WellcomeButton label="Salvar alterações" icon="checkmark" loading={saving} disabled={saving} onPress={() => void saveProfile()} />
             </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    center: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backButtonText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    content: {
-        padding: 24,
-    },
-    avatarContainer: {
-        alignItems: 'center',
-        marginBottom: 32,
-    },
-    avatarButton: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#F5F5F5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-        marginBottom: 8,
-    },
-    avatarPlaceholder: {
-        width: '100%',
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarImage: {
-        width: '100%',
-        height: '100%',
-    },
-    avatarHint: {
-        fontSize: 12,
-        color: '#999',
-    },
-    form: {
-        gap: 20,
-    },
-    inputGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 14,
-        color: '#999',
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        color: '#333',
-    },
-    textArea: {
-        minHeight: 100,
-    },
-    optionsRow: {
-        flexDirection: 'row',
-        gap: 8,
-        flexWrap: 'wrap',
-    },
-    optionButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        backgroundColor: '#fff',
-    },
-    optionButtonSelected: {
-        backgroundColor: '#FF8C42',
-        borderColor: '#FF8C42',
-    },
-    optionText: {
-        color: '#666',
-    },
-    optionTextSelected: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    saveButton: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    saveButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-});
+function ProfileSection({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
+    return (
+        <Box className="mb-5 rounded-3xl border border-outline-100 bg-white p-4">
+            <Box className="mb-4 flex-row items-center">
+                <Box className="h-10 w-10 items-center justify-center rounded-full bg-primary-50">
+                    <AppIcon name={icon} size={20} color="#C45D22" />
+                </Box>
+                <Text className="ml-3 text-base font-bold text-typography-900">{title}</Text>
+            </Box>
+            {children}
+        </Box>
+    );
+}
+
+type ProfileInputProps = React.ComponentProps<typeof TextInput> & { label: string; hint?: string };
+
+function ProfileInput({ label, hint, multiline, style, ...props }: ProfileInputProps) {
+    return (
+        <WellcomeField label={label} hint={hint}>
+            <TextInput
+                {...props}
+                multiline={multiline}
+                placeholderTextColor="#9CA3AF"
+                textAlignVertical={multiline ? 'top' : 'center'}
+                className={`px-4 text-base text-[#1A1A1A] ${multiline ? 'min-h-[112px] py-3' : 'min-h-12 py-3'}`}
+                style={style}
+            />
+        </WellcomeField>
+    );
+}
+
+function splitList(value: string) {
+    return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
