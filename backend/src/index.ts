@@ -64,6 +64,7 @@ import { UserController } from './presentation/http/controllers/UserController';
 import { WithdrawalController } from './presentation/http/controllers/WithdrawalController';
 import { ForbiddenRequestError, getAuthenticatedUserContext, getAuthenticatedUserId } from './presentation/http/helpers/auth';
 import { getMinimumWithdrawalAmount, getProcessingFeePayer } from './domain/services/PaymentEconomics';
+import { eventListResponseSchema } from './presentation/http/schemas/EventResponseSchemas';
 
 
 const fastify = Fastify({
@@ -569,32 +570,7 @@ const start = async () => {
                     }
                 },
                 response: {
-                    200: {
-                        description: 'List of events',
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'string' },
-                                title: { type: 'string' },
-                                description: { type: 'string' },
-                                price: { type: 'number' },
-                                location: { type: 'string' },
-                                eventDate: { type: 'string' },
-                                coverImageUrl: { type: 'string', nullable: true },
-                                host: {
-                                    type: 'object',
-                                    properties: {
-                                        id: { type: 'string' },
-                                        fullName: { type: 'string', nullable: true },
-                                        username: { type: 'string', nullable: true },
-                                        avatarUrl: { type: 'string', nullable: true },
-                                        isSuperhost: { type: 'boolean' }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    200: eventListResponseSchema,
                 }
             }
         }, (req, reply) => eventController.list(req, reply));

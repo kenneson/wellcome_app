@@ -22,25 +22,30 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.primary,
-        tabBarInactiveTintColor: '#CDCDE0',
-        tabBarShowLabel: false,
+        tabBarActiveTintColor: '#B94F1C',
+        tabBarInactiveTintColor: '#7A8290',
+        tabBarShowLabel: true,
         tabBarHideOnKeyboard: true,
         headerShown: false,
         tabBarStyle: {
           backgroundColor: Colors.light.background,
-          height: Dimensions.tabBar.height + insets.bottom,
+          height: Dimensions.tabBar.height + 8 + insets.bottom,
           borderTopWidth: 1,
           borderTopColor: Colors.light.border,
-          paddingBottom: insets.bottom + Spacing.xs,
+          paddingBottom: insets.bottom + 2,
           paddingTop: Spacing.xs,
           elevation: 0,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          marginTop: 1,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Início',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons 
               size={Dimensions.icon.xlarge} 
@@ -50,6 +55,23 @@ export default function TabLayout() {
             />
           ),
           tabBarAccessibilityLabel: 'Ir para página inicial',
+          tabBarButton: (props) => <TabButton {...props} />,
+        }}
+      />
+      <Tabs.Screen
+        name="host-events"
+        options={{
+          title: 'Eventos',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              size={Dimensions.icon.xlarge}
+              name="calendar"
+              variant={focused ? 'Bold' : 'Linear'}
+              color={color}
+              accessibilityLabel="Eventos"
+            />
+          ),
+          tabBarAccessibilityLabel: 'Gerenciar meus eventos',
           tabBarButton: (props) => <TabButton {...props} />,
         }}
       />

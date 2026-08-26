@@ -1,4 +1,5 @@
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
+import { EventPublishedModal } from '@/components/ui/EventPublishedModal';
 import { WellcomeBottomBar, WellcomeButton } from '@/components/ui/wellcome';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { SelectionCard } from '@/components/ui/SelectionCard';
@@ -26,6 +27,7 @@ export default function EventCreateReview() {
     const [newQuestion, setNewQuestion] = useState('');
     const [isRequired, setIsRequired] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [publishedEvent, setPublishedEvent] = useState<{ id: string; title: string } | null>(null);
 
     useEffect(() => setCurrentStep(4), [setCurrentStep]);
 
@@ -52,6 +54,18 @@ export default function EventCreateReview() {
         } as any);
     };
 
+    const goToFeed = () => {
+        setPublishedEvent(null);
+        router.replace('/(tabs)');
+    };
+
+    const viewPublishedEvent = () => {
+        if (!publishedEvent) return;
+        const eventId = publishedEvent.id;
+        setPublishedEvent(null);
+        router.replace(`/events/${eventId}` as any);
+    };
+
     const handlePublish = async () => {
         if (submitting) return;
         const localErrors = validateCompleteEvent(creation.data);
@@ -67,7 +81,7 @@ export default function EventCreateReview() {
         setSubmitting(true);
         try {
             const event = await creation.publishDraft();
-            router.replace(`/events/${event.id}` as any);
+            setPublishedEvent({ id: event.id, title: event.title });
         } catch (error: any) {
             const apiError = error as EventDraftApiError;
             setErrors(apiError.fieldErrors ?? {});
@@ -194,6 +208,13 @@ export default function EventCreateReview() {
                     onPress={() => void handlePublish()}
                 />
             </WellcomeBottomBar>
+
+            <EventPublishedModal
+                visible={publishedEvent !== null}
+                eventTitle={publishedEvent?.title}
+                onGoToFeed={goToFeed}
+                onViewEvent={viewPublishedEvent}
+            />
         </SafeAreaView>
     );
 }

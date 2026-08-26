@@ -236,13 +236,13 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity style={styles.manageEventsCard} onPress={() => router.push('/profile/my-events')}>
+                <TouchableOpacity style={styles.manageEventsCard} onPress={() => router.push('/host-events' as any)}>
                     <View style={styles.manageIconContainer}>
                         <Ionicons name="calendar" size={24} color="#FF8C42" />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.manageTitle}>Meus Eventos Criados</Text>
-                        <Text style={styles.manageSubtitle}>Gerenciar, editar ou cancelar</Text>
+                        <Text style={styles.manageTitle}>Central de Eventos</Text>
+                        <Text style={styles.manageSubtitle}>Inscrições, ocupação, rascunhos e edição</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#ccc" />
                 </TouchableOpacity>

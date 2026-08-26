@@ -97,7 +97,7 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                     <MenuItem
                         icon="calendar"
                         label="Meus Eventos"
-                        onPress={() => handleNavigation('/profile/my-events')}
+                        onPress={() => handleNavigation('/host-events')}
                     />
                     <MenuItem
                         icon="plus.circle"
