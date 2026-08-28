@@ -67,17 +67,17 @@ export function SideMenu({ visible, onClose, user }: SideMenuProps) {
                 <View style={styles.header}>
                     <View style={styles.userInfo}>
                         <Image
-                            source={{ uri: getOptimizedImageUrl(user?.avatar_url, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
+                            source={{ uri: getOptimizedImageUrl(user?.avatarUrl ?? user?.avatar_url, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
                             style={styles.avatar}
                             contentFit="cover"
                             cachePolicy="memory-disk"
                         />
                         <View style={styles.userText}>
                             <Text style={styles.userName} numberOfLines={1}>
-                                {user?.full_name || 'Usuario'}
+                                {user?.fullName ?? user?.full_name ?? 'Usuário'}
                             </Text>
                             <Text style={styles.userRole}>
-                                {user?.current_occupation || 'Membro'}
+                                {user?.occupation ?? user?.current_occupation ?? 'Membro'}
                             </Text>
                         </View>
                     </View>

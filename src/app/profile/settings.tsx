@@ -1,3 +1,4 @@
+import { userService } from '@/services/api/UserService';
 import { API_URL } from '@/shared/config/api';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
@@ -61,12 +62,8 @@ export default function SettingsScreen() {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error('Sessão expirada.');
 
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('expo_push_token')
-                .eq('id', session.user.id)
-                .single();
-            if (!profile?.expo_push_token) {
+            const profile = await userService.getProfile(session.user.id);
+            if (!profile.expoPushToken) {
                 throw new Error('Token de notificação não encontrado. Verifique as permissões.');
             }
 
@@ -77,7 +74,7 @@ export default function SettingsScreen() {
                     Authorization: `Bearer ${session.access_token}`,
                 },
                 body: JSON.stringify({
-                    token: profile.expo_push_token,
+                    token: profile.expoPushToken,
                     title: 'Olá!',
                     body: 'Esta é uma notificação de teste do Wellcome.',
                     data: { test: true },

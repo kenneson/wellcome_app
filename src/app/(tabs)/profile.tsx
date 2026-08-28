@@ -36,46 +36,7 @@ export default function ProfileScreen() {
 
     const { data: profile, isLoading, refetch } = useQuery({
         queryKey: ['profile', session?.user?.id],
-        queryFn: async () => {
-            try {
-                // Try backend API first
-                const result = await userService.getProfile(session!.user!.id);
-                console.log('Profile from backend:', result);
-                return result;
-            } catch (e) {
-                console.log('Backend failed, falling back to Supabase:', e);
-                // Fallback to direct Supabase query
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session!.user!.id)
-                    .single();
-
-                if (error) throw error;
-                console.log('Profile from Supabase:', data);
-
-                // Map snake_case to camelCase
-                return {
-                    id: data.id,
-                    fullName: data.full_name,
-                    username: data.username,
-                    avatarUrl: data.avatar_url,
-                    bio: data.bio,
-                    occupation: data.occupation,
-                    lookingFor: data.looking_for,
-                    city: data.city,
-                    neighborhood: data.neighborhood,
-                    languages: data.languages || [],
-                    dietaryRestrictions: data.dietary_restrictions || [],
-                    events: [],
-                    bookings: [],
-                    walletBalance: data.wallet_balance ?? 0,
-                    pendingWalletBalance: data.pending_wallet_balance ?? 0,
-                    pixKey: data.pix_key ?? null,
-                    pixKeyType: data.pix_key_type ?? null,
-                };
-            }
-        },
+        queryFn: () => userService.getProfile(session!.user!.id),
         enabled: !!session?.user?.id,
     });
 

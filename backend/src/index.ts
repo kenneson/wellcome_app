@@ -1095,6 +1095,11 @@ const start = async () => {
                             languages: { type: 'array', items: { type: 'string' } },
                             dietaryRestrictions: { type: 'array', items: { type: 'string' } },
                             avatarUrl: { type: 'string', nullable: true },
+                            phoneNumber: { type: 'string', nullable: true },
+                            expoPushToken: { type: 'string', nullable: true },
+                            birthDecade: { type: 'string', nullable: true },
+                            pets: { type: 'string', nullable: true },
+                            kycStatus: { type: 'string', nullable: true },
                             walletBalance: { type: 'number' },
                             pendingWalletBalance: { type: 'number' },
                             pixKey: { type: 'string', nullable: true },
@@ -1129,15 +1134,21 @@ const start = async () => {
                     properties: {
                         full_name: { type: 'string' },
                         occupation: { type: 'string' },
-                        bio: { type: 'string' },
-                        looking_for: { type: 'string' },
+                        bio: { type: 'string', nullable: true },
+                        looking_for: { type: 'string', nullable: true },
                         city: { type: 'string' },
                         neighborhood: { type: 'string' },
                         languages: { type: 'array', items: { type: 'string' } },
                         dietary_restrictions: { type: 'array', items: { type: 'string' } },
-                        avatar_url: { type: 'string' },
-                        pix_key: { type: 'string' },
-                        pix_key_type: { type: 'string' }
+                        avatar_url: { type: 'string', nullable: true },
+                        username: { type: 'string' },
+                        website: { type: 'string', nullable: true },
+                        phone_number: { type: 'string', nullable: true },
+                        expo_push_token: { type: 'string', nullable: true },
+                        birth_decade: { type: 'string', nullable: true },
+                        pets: { type: 'string', nullable: true },
+                        pix_key: { type: 'string', nullable: true },
+                        pix_key_type: { type: 'string', nullable: true }
                     }
                 },
                 response: {
@@ -1146,10 +1157,22 @@ const start = async () => {
                         type: 'object',
                         properties: {
                             id: { type: 'string' },
-                            email: { type: 'string' },
-                            name: { type: 'string' },
+                            fullName: { type: 'string', nullable: true },
+                            username: { type: 'string', nullable: true },
                             avatarUrl: { type: 'string', nullable: true },
-                            occupation: { type: 'string', nullable: true }
+                            occupation: { type: 'string', nullable: true },
+                            bio: { type: 'string', nullable: true },
+                            lookingFor: { type: 'string', nullable: true },
+                            city: { type: 'string', nullable: true },
+                            neighborhood: { type: 'string', nullable: true },
+                            languages: { type: 'array', items: { type: 'string' } },
+                            dietaryRestrictions: { type: 'array', items: { type: 'string' } },
+                            phoneNumber: { type: 'string', nullable: true },
+                            expoPushToken: { type: 'string', nullable: true },
+                            birthDecade: { type: 'string', nullable: true },
+                            pets: { type: 'string', nullable: true },
+                            pixKey: { type: 'string', nullable: true },
+                            pixKeyType: { type: 'string', nullable: true }
                         }
                     }
                 }

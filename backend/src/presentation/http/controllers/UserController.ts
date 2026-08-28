@@ -53,10 +53,14 @@ export class UserController {
                 languages: body.languages,
                 dietaryRestrictions: body.dietary_restrictions,
                 avatarUrl: body.avatar_url,
+                phoneNumber: body.phone_number,
+                expoPushToken: body.expo_push_token,
                 username: body.username,
                 website: body.website,
+                birthDecade: body.birth_decade,
+                pets: body.pets,
                 pixKey: body.pix_key,
-                pixKeyType: body.pix_key_type
+                pixKeyType: body.pix_key_type,
             };
 
             const user = await this.updateUserProfileUseCase.execute(id, updateData);

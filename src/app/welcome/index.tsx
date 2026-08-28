@@ -1,4 +1,5 @@
 import { useUserProfile } from '@/context/UserProfileContext';
+import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Image } from 'expo-image';
@@ -131,28 +132,16 @@ export default function WelcomeScreen() {
                 return;
             }
 
-            // Use UPSERT to create or update the profile
-            const { error } = await supabase
-                .from('profiles')
-                .upsert({
-                    id: session.user.id,
-                    full_name: formData.full_name.trim(),
-                    username: formData.username.trim(),
-                    avatar_url: googleData.avatarUrl,
-                    bio: formData.bio.trim() || null,
-                    occupation: formData.occupation.trim(),
-                    looking_for: formData.looking_for.trim() || null,
-                    city: formData.city.trim(),
-                    neighborhood: formData.neighborhood.trim(),
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'id'
-                });
-
-            if (error) {
-                console.error('Error saving profile:', error);
-                throw error;
-            }
+            await userService.updateProfile(session.user.id, {
+                full_name: formData.full_name.trim(),
+                username: formData.username.trim(),
+                avatar_url: googleData.avatarUrl || null,
+                bio: formData.bio.trim() || null,
+                occupation: formData.occupation.trim(),
+                looking_for: formData.looking_for.trim() || null,
+                city: formData.city.trim(),
+                neighborhood: formData.neighborhood.trim(),
+            });
 
             await refetchProfile();
             // Layout will automatically redirect to (tabs) once isProfileComplete becomes true

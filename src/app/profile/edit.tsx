@@ -2,6 +2,7 @@ import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView
 import { AppIcon } from '@/components/ui/icon';
 import { WellcomeButton, WellcomeField, WellcomeIconButton } from '@/components/ui/wellcome';
 import { useUserProfile } from '@/context/UserProfileContext';
+import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { Box } from '@/shared/ui/box';
 import { Text } from '@/shared/ui/text';
@@ -59,26 +60,17 @@ export default function EditProfileScreen() {
             }
 
             setUserId(session.user.id);
-            setFullName(session.user.user_metadata.full_name || '');
-            const { data, error, status } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-
-            if (error && status !== 406) throw error;
-            if (data) {
-                setFullName(data.full_name || session.user.user_metadata.full_name || '');
-                setOccupation(data.occupation || '');
-                setLookingFor(data.looking_for || '');
-                setBio(data.bio || '');
-                setAvatarUrl(data.avatar_url || null);
-                setCity(data.city || '');
-                setNeighborhood(data.neighborhood || '');
-                setLanguages(Array.isArray(data.languages) ? data.languages.join(', ') : '');
-                setPhoneNumber(data.phone_number || '');
-                setDietaryRestriction(Array.isArray(data.dietary_restrictions) ? data.dietary_restrictions.join(', ') : '');
-            }
+            const profile = await userService.getProfile(session.user.id);
+            setFullName(profile.fullName || session.user.user_metadata.full_name || '');
+            setOccupation(profile.occupation || '');
+            setLookingFor(profile.lookingFor || '');
+            setBio(profile.bio || '');
+            setAvatarUrl(profile.avatarUrl || null);
+            setCity(profile.city || '');
+            setNeighborhood(profile.neighborhood || '');
+            setLanguages(Array.isArray(profile.languages) ? profile.languages.join(', ') : '');
+            setPhoneNumber(profile.phoneNumber || '');
+            setDietaryRestriction(Array.isArray(profile.dietaryRestrictions) ? profile.dietaryRestrictions.join(', ') : '');
         } catch (error: any) {
             Alert.alert('Erro ao carregar perfil', error.message);
         } finally {
@@ -126,7 +118,7 @@ export default function EditProfileScreen() {
 
         try {
             setSaving(true);
-            const { error } = await supabase.from('profiles').update({
+            await userService.updateProfile(userId, {
                 full_name: fullName.trim(),
                 occupation: occupation.trim(),
                 looking_for: lookingFor,
@@ -137,12 +129,7 @@ export default function EditProfileScreen() {
                 phone_number: phoneNumber.trim(),
                 dietary_restrictions: splitList(dietaryRestriction),
                 avatar_url: avatarUrl,
-                updated_at: new Date().toISOString(),
-            })
-                .eq('id', userId)
-                .select('id')
-                .single();
-            if (error) throw error;
+            });
 
             await refetchProfile();
             Alert.alert('Perfil atualizado', 'Suas informações foram salvas com sucesso.', [

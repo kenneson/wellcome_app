@@ -2,6 +2,7 @@ import { UserRepository } from '../../domain/repositories/UserRepository';
 import { User } from '../../domain/entities/User';
 import { prisma } from '../database/prismaClient';
 import { KycStatus, RegistrationStatus, WithdrawalStatus } from '@prisma/client';
+import { mapUserProfileUpdate } from './mappers/UserProfileUpdateMapper';
 
 export class PrismaUserRepository implements UserRepository {
     async findById(id: string): Promise<User | null> {
@@ -30,20 +31,11 @@ export class PrismaUserRepository implements UserRepository {
     }
 
     async update(id: string, data: Partial<User>): Promise<User> {
-        const user = await prisma.user.update({
+        const profileData = mapUserProfileUpdate(data);
+        const user = await prisma.user.upsert({
             where: { id },
-            data: {
-                fullName: data.fullName,
-                avatarUrl: data.avatarUrl,
-                occupation: data.occupation,
-                bio: data.bio,
-                lookingFor: data.lookingFor,
-                dietaryRestrictions: data.dietaryRestrictions,
-                username: data.username,
-                website: data.website,
-                pixKey: data.pixKey,
-                pixKeyType: data.pixKeyType
-            },
+            update: profileData,
+            create: { id, ...profileData },
             include: {
                 events: true,
                 bookings: true

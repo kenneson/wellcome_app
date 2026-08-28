@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
+import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { useRouter } from 'expo-router';
 
@@ -124,17 +125,8 @@ export function usePushNotifications(id: string | undefined) {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
-            console.log('Saving push token to profile...', token);
-
-            // Using 'profiles' table as defined in Supabase schema
-            const { error } = await supabase
-                .from('profiles')
-                .update({ expo_push_token: token })
-                .eq('id', session.user.id);
-
-            if (error) console.error('Error saving push token to DB:', error);
-            else console.log('Push token saved successfully.');
-
+            await userService.updateProfile(session.user.id, { expo_push_token: token });
+            console.log('Push token saved successfully.');
         } catch (e) {
             console.error('Failed to save push token:', e);
         }

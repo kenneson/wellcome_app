@@ -13,6 +13,11 @@ export interface UserProfile {
     neighborhood: string | null;
     dietaryRestrictions: string[];
     languages: string[];
+    phoneNumber?: string | null;
+    expoPushToken?: string | null;
+    kycStatus?: string | null;
+    birthDecade?: string | null;
+    pets?: string | null;
     events: any[];
     bookings: any[];
     averageRating?: number;

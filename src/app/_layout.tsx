@@ -8,6 +8,7 @@ import './global.css';
 
 
 import { AppLoadingScreen } from '@/components/ui/AppLoadingScreen';
+import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,28 +78,19 @@ export default function RootLayout() {
 
     try {
       console.log('Checking profile for user:', session.user.id);
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('full_name, occupation, looking_for, city, neighborhood, kyc_status')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
-      if (error) {
+      const profile = await userService.getProfile(session.user.id).catch((error) => {
         console.error('Error fetching profile:', error);
-        setIsProfileComplete(false);
-        setKycStatus(null);
-      } else if (!profile) {
-        // No profile row exists - treat as incomplete
-        console.log('No profile found for user');
+        return null;
+      });
+      if (!profile) {
         setIsProfileComplete(false);
         setKycStatus(null);
       } else {
         console.log('Profile data:', profile);
-        // full_name, occupation, city, neighborhood are REQUIRED
-        const complete = !!(profile.full_name && profile.occupation && profile.city && profile.neighborhood);
+        const complete = !!(profile.fullName && profile.occupation && profile.city && profile.neighborhood);
         console.log('Is profile complete?', complete);
         setIsProfileComplete(complete);
-        setKycStatus(profile.kyc_status as KycStatus || 'NOT_SUBMITTED');
+        setKycStatus(profile.kycStatus as KycStatus || 'NOT_SUBMITTED');
       }
     } catch (e) {
       console.error('Exception checking profile:', e);

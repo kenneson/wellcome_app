@@ -5,6 +5,7 @@ import { QuickStats } from '@/components/ui/QuickStats';
 import { SideMenu } from '@/components/ui/SideMenu';
 import { useBlockedIds } from '@/hooks/useBlockedIds';
 import { eventService } from '@/services/api/EventService';
+import { userService } from '@/services/api/UserService';
 import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
@@ -58,11 +59,7 @@ export default function HomeScreen() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return;
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
+    const profile = await userService.getProfile(session.user.id);
     setCurrentUser(profile);
   }
 
