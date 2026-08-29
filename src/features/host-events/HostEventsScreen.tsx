@@ -75,7 +75,6 @@ const palette = {
     canvas: '#F7F7F8',
     surface: Colors.light.card,
     primary: Colors.light.primary,
-    primaryDark: '#B94F1C',
     primarySoft: '#FFF1E8',
     text: '#1C2430',
     muted: '#697386',
@@ -83,7 +82,7 @@ const palette = {
     border: '#E7E9ED',
     success: '#237A4B',
     successSoft: '#EAF7F0',
-    warning: '#A84A17',
+    warning: Colors.light.primary,
     warningSoft: '#FFF4E8',
     danger: '#B42318',
 };
@@ -553,7 +552,7 @@ function MetricCard({ label, value, icon, selected, onPress }: MetricCardProps) 
             accessibilityLabel={`${label}: ${value}`}
         >
             <View style={[styles.metricIcon, selected && styles.metricIconSelected]}>
-                <AppIcon name={icon} size={18} color={selected ? palette.primaryDark : palette.muted} />
+                <AppIcon name={icon} size={18} color={selected ? palette.primary : palette.muted} />
             </View>
             <Text style={styles.metricValue}>{value}</Text>
             <Text style={styles.metricLabel} numberOfLines={1}>{label}</Text>
@@ -818,7 +817,7 @@ const styles = StyleSheet.create({
         backgroundColor: palette.surface,
     },
     titleGroup: { flex: 1, paddingRight: Spacing.md },
-    eyebrow: { fontSize: 10, lineHeight: 14, letterSpacing: 1.2, fontWeight: '800', color: palette.primaryDark },
+    eyebrow: { fontSize: 10, lineHeight: 14, letterSpacing: 1.2, fontWeight: '800', color: palette.primary },
     screenTitle: { marginTop: 1, fontSize: 28, lineHeight: 34, fontWeight: '800', color: palette.text },
     topActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     iconButton: {
@@ -837,7 +836,7 @@ const styles = StyleSheet.create({
         gap: 6,
         paddingHorizontal: Spacing.lg,
         borderRadius: BorderRadius.full,
-        backgroundColor: palette.primaryDark,
+        backgroundColor: palette.primary,
     },
     createButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
     listContent: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, paddingBottom: Spacing.xxxl },
@@ -861,8 +860,8 @@ const styles = StyleSheet.create({
     },
     attentionCopy: { flex: 1, paddingHorizontal: Spacing.md },
     attentionKicker: { fontSize: 10, lineHeight: 14, letterSpacing: 0.9, fontWeight: '800', color: palette.warning },
-    attentionTitle: { marginTop: 2, fontSize: 16, lineHeight: 21, fontWeight: '800', color: '#653114' },
-    attentionDescription: { marginTop: 3, fontSize: 12, lineHeight: 17, color: '#7C4A2D' },
+    attentionTitle: { marginTop: 2, fontSize: 16, lineHeight: 21, fontWeight: '800', color: palette.text },
+    attentionDescription: { marginTop: 3, fontSize: 12, lineHeight: 17, color: palette.muted },
     attentionArrow: { width: 32, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
     allGoodCard: {
         minHeight: 82,
@@ -968,7 +967,7 @@ const styles = StyleSheet.create({
     eventTitle: { marginTop: 5, fontSize: 17, lineHeight: 21, fontWeight: '800', color: palette.text },
     metadataLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
     metadataText: { flex: 1, fontSize: 11, lineHeight: 15, color: palette.muted },
-    eventPrice: { marginTop: 7, fontSize: 13, lineHeight: 17, fontWeight: '800', color: palette.primaryDark },
+    eventPrice: { marginTop: 7, fontSize: 13, lineHeight: 17, fontWeight: '800', color: palette.primary },
     priceSuffix: { fontSize: 10, fontWeight: '500', color: palette.muted },
     capacityBlock: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
     capacityHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 },
@@ -988,8 +987,8 @@ const styles = StyleSheet.create({
     },
     pendingActionIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFE1CC' },
     pendingActionCopy: { flex: 1, paddingHorizontal: Spacing.md },
-    pendingActionTitle: { fontSize: 13, lineHeight: 17, fontWeight: '800', color: '#713713' },
-    pendingActionDescription: { marginTop: 2, fontSize: 11, lineHeight: 15, color: '#895132' },
+    pendingActionTitle: { fontSize: 13, lineHeight: 17, fontWeight: '800', color: palette.text },
+    pendingActionDescription: { marginTop: 2, fontSize: 11, lineHeight: 15, color: palette.muted },
     locationWarning: {
         minHeight: 56,
         flexDirection: 'row',
@@ -1004,7 +1003,7 @@ const styles = StyleSheet.create({
     locationWarningText: { flex: 1, fontSize: 12, lineHeight: 16, fontWeight: '700', color: '#7A4308' },
     eventActions: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 6, padding: Spacing.md, borderTopWidth: 1, borderTopColor: palette.border },
     cardAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 10, borderRadius: BorderRadius.md, backgroundColor: '#F3F4F6' },
-    cardActionPrimary: { flex: 1, backgroundColor: palette.primaryDark },
+    cardActionPrimary: { flex: 1, backgroundColor: palette.primary },
     cardActionText: { fontSize: 12, fontWeight: '800', color: palette.text },
     cardActionPrimaryText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
     deleteAction: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.md, backgroundColor: '#FFF0EE' },
@@ -1029,7 +1028,7 @@ const styles = StyleSheet.create({
     draftProgressTrack: { height: 5, overflow: 'hidden', marginTop: 6, borderRadius: 3, backgroundColor: '#E9E2DC' },
     draftProgressFill: { height: '100%', borderRadius: 3, backgroundColor: palette.primary },
     draftActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.lg },
-    continueButton: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, borderRadius: BorderRadius.md, backgroundColor: palette.primaryDark },
+    continueButton: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, borderRadius: BorderRadius.md, backgroundColor: palette.primary },
     continueButtonText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
     deleteDraftButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.md, backgroundColor: '#FFF0EE' },
     loadingState: { minHeight: 260, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxl },
@@ -1039,6 +1038,6 @@ const styles = StyleSheet.create({
     emptyIcon: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center', borderRadius: 36, backgroundColor: palette.primarySoft },
     emptyTitle: { marginTop: Spacing.lg, textAlign: 'center', fontSize: 18, lineHeight: 23, fontWeight: '800', color: palette.text },
     emptyDescription: { marginTop: Spacing.sm, maxWidth: 290, textAlign: 'center', fontSize: 13, lineHeight: 19, color: palette.muted },
-    emptyButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xl, paddingHorizontal: Spacing.xl, borderRadius: BorderRadius.full, backgroundColor: palette.primaryDark },
+    emptyButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xl, paddingHorizontal: Spacing.xl, borderRadius: BorderRadius.full, backgroundColor: palette.primary },
     emptyButtonText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 });
