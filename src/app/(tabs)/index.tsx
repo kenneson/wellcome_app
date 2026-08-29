@@ -11,8 +11,8 @@ import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Image } from 'expo-image';
 import * as Location from 'expo-location';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -50,18 +50,27 @@ export default function HomeScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const profile = await userService.getProfile(session.user.id);
+      setCurrentUser(profile);
+    } catch (error) {
+      console.error('[HomeScreen] Falha ao carregar perfil atual', error);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchCurrentUser();
+    }, [fetchCurrentUser])
+  );
+
   useEffect(() => {
-    void fetchCurrentUser();
     void initializeFeed();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchCurrentUser() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
-
-    const profile = await userService.getProfile(session.user.id);
-    setCurrentUser(profile);
-  }
 
   async function initializeFeed() {
     await getLocation(DEFAULT_FILTERS);
@@ -344,7 +353,16 @@ export default function HomeScreen() {
           accessibilityLabel="Ir para perfil"
           style={styles.headerButton}
         >
-          <Ionicons name="person-circle-outline" size={30} color="#FFF" />
+          {currentUser?.avatarUrl ? (
+            <Image
+              source={{ uri: currentUser.avatarUrl }}
+              style={styles.headerAvatar}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : (
+            <Ionicons name="person-circle-outline" size={30} color="#FFF" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -512,6 +530,14 @@ const styles = StyleSheet.create({
     minHeight: Dimensions.touchTarget.min,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+    backgroundColor: '#F3F4F6',
   },
   logoImage: {
     width: Dimensions.logo.width,
