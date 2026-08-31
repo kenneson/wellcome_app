@@ -35,6 +35,7 @@ import { UpdateUserProfileUseCase } from './application/use-cases/UpdateUserProf
 import './env';
 import { AsaasPaymentService } from './infrastructure/external/AsaasPaymentService';
 import { GeoapifyLocationService } from './infrastructure/external/GeoapifyLocationService';
+import { SupabaseAccountDeletionService } from './infrastructure/external/SupabaseAccountDeletionService';
 import { PrismaBillingRepository } from './infrastructure/repositories/PrismaBillingRepository';
 import { PrismaChatRepository } from './infrastructure/repositories/PrismaChatRepository';
 import { PrismaEventDraftRepository } from './infrastructure/repositories/PrismaEventDraftRepository';
@@ -185,6 +186,7 @@ const start = async () => {
         const eventDraftRepository = new PrismaEventDraftRepository();
         const eventQuestionRepository = new PrismaEventQuestionRepository();
         const userRepository = new PrismaUserRepository();
+        const accountDeletionGateway = new SupabaseAccountDeletionService();
         const { notificationService } = require('./application/services/NotificationService'); // Import service
         const notificationRepository = new PrismaNotificationRepository();
         const moderationRepository = new PrismaModerationRepository();
@@ -298,7 +300,7 @@ const start = async () => {
 
         const getUserProfileUseCase = new GetUserProfileUseCase(userRepository, paymentRepository);
         const updateUserProfileUseCase = new UpdateUserProfileUseCase(userRepository);
-        const deleteUserAccountUseCase = new DeleteUserAccountUseCase(userRepository);
+        const deleteUserAccountUseCase = new DeleteUserAccountUseCase(userRepository, accountDeletionGateway);
 
         const loginUseCase = new LoginUseCase();
         const registerUseCase = new RegisterUseCase();
@@ -385,11 +387,13 @@ const start = async () => {
                 tags: ['Auth'],
                 body: {
                     type: 'object',
-                    required: ['email', 'password', 'fullName'],
+                    required: ['email', 'password', 'fullName', 'acceptedTerms'],
                     properties: {
                         email: { type: 'string' },
                         password: { type: 'string' },
-                        fullName: { type: 'string' }
+                        fullName: { type: 'string' },
+                        phoneNumber: { type: 'string' },
+                        acceptedTerms: { type: 'boolean', const: true }
                     }
                 },
                 response: {

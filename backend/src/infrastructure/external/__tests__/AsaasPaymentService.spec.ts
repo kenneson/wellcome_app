@@ -3,6 +3,7 @@ import { AsaasPaymentService } from '../AsaasPaymentService';
 describe('AsaasPaymentService', () => {
     const originalApiKey = process.env.ASAAS_API_KEY;
     const originalBaseUrl = process.env.ASAAS_BASE_URL;
+    const originalNodeEnv = process.env.NODE_ENV;
     const fetchMock = jest.fn();
 
     beforeEach(() => {
@@ -16,6 +17,19 @@ describe('AsaasPaymentService', () => {
 
         if (originalBaseUrl === undefined) delete process.env.ASAAS_BASE_URL;
         else process.env.ASAAS_BASE_URL = originalBaseUrl;
+
+        if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = originalNodeEnv;
+    });
+
+    it('requires an explicit base URL in production', () => {
+        process.env.NODE_ENV = 'production';
+        delete process.env.ASAAS_BASE_URL;
+
+        expect(() => new AsaasPaymentService()).toThrow(
+            'ASAAS_BASE_URL deve ser configurada explicitamente em producao'
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('rejects production API keys when the sandbox URL is configured', async () => {

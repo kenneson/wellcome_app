@@ -11,6 +11,10 @@
 - The QR scanner hook flow was refactored so lint no longer fails on conditional hooks.
 - The reusable button and checkbox components now expose display names, fixing the previous lint errors.
 - Backend account deletion was added with authenticated deletion, blockers, and profile anonymization.
+- Account deletion now removes user-owned Storage files and deletes the Supabase Auth identity with the server-side admin API.
+- Signup now requires explicit acceptance of the Terms of Use and Privacy Policy for e-mail and Google registration.
+- The landing project now includes a public account-deletion instructions page.
+- Production no longer silently falls back to the Asaas sandbox URL.
 - Paid moderated events now require host approval before payment.
 - Host funds stay retained until 24 hours after the event and refunds preserve financial history.
 - KYC no longer blocks participants; paid hosting and withdrawals still require manual approval.
@@ -18,9 +22,8 @@
 
 ## Still required before submission
 
-- Publish a production Privacy Policy URL.
-- Publish Terms of Service, especially because the app handles payments, KYC, and event hosting.
-- Create a public web URL for Google Play account deletion support.
+- Deploy the landing project and confirm the production URLs for Privacy Policy, Terms of Service, and account deletion.
+- Apply the pending Supabase migrations in production before validating account deletion.
 - Add Sign in with Apple if Google login remains available in iOS as a first-party sign-in option.
 - Prepare reviewer access notes for Apple and Google, including a test account if login is required.
 - Fill in App Privacy Nutrition Labels (Apple) and Data Safety (Google Play).
@@ -31,7 +34,14 @@
   - `EXPO_PUBLIC_API_URL`
   - `EXPO_PUBLIC_SUPABASE_URL`
   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- Confirm backend production environment variables are configured and rotated safely.
+- Confirm backend production environment variables are configured and rotated safely:
+  - `NODE_ENV=production`
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `ASAAS_BASE_URL=https://api.asaas.com/v3`
+  - `ASAAS_API_KEY`
+  - `ASAAS_WEBHOOK_TOKEN`
 - Validate push notifications, KYC upload, image upload, PIX payment, and account deletion on physical devices.
 - Produce final store assets:
   - app description

@@ -1,4 +1,5 @@
 import { UserRepository } from '../../domain/repositories/UserRepository';
+import { AccountDeletionGateway } from '../../domain/services/AccountDeletionGateway';
 
 export class DeleteUserAccountBlockedError extends Error {
     constructor(public readonly blockers: string[]) {
@@ -8,7 +9,10 @@ export class DeleteUserAccountBlockedError extends Error {
 }
 
 export class DeleteUserAccountUseCase {
-    constructor(private readonly userRepository: UserRepository) { }
+    constructor(
+        private readonly userRepository: UserRepository,
+        private readonly accountDeletionGateway: AccountDeletionGateway
+    ) { }
 
     async execute(userId: string): Promise<void> {
         const user = await this.userRepository.findById(userId);
@@ -23,6 +27,8 @@ export class DeleteUserAccountUseCase {
             throw new DeleteUserAccountBlockedError(blockers);
         }
 
+        await this.accountDeletionGateway.deleteOwnedStorageObjects(userId);
         await this.userRepository.deleteAccount(userId);
+        await this.accountDeletionGateway.deleteAuthUser(userId);
     }
 }

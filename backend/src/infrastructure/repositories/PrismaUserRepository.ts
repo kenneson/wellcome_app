@@ -240,9 +240,6 @@ export class PrismaUserRepository implements UserRepository {
                 }
             });
 
-            await tx.users.delete({
-                where: { id: userId }
-            });
         });
     }
 }

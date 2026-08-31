@@ -17,6 +17,8 @@ import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView
 
 WebBrowser.maybeCompleteAuthSession();
 
+const LEGAL_TERMS_VERSION = '2026-08-23';
+
 export default function RegisterScreen() {
     const router = useRouter();
     const [name, setName] = useState('');
@@ -27,8 +29,14 @@ export default function RegisterScreen() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     async function signUpWithEmail() {
+        if (!acceptedTerms) {
+            Alert.alert('Aceite necessário', 'Leia e aceite os Termos de Uso e a Política de Privacidade para continuar.');
+            return;
+        }
+
         if (password !== confirmPassword) {
             Alert.alert('Erro', 'As senhas não coincidem.');
             return;
@@ -36,7 +44,7 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            const data = await authService.register(email, password, name, phoneNumber);
+            const data = await authService.register(email, password, name, phoneNumber, acceptedTerms);
 
             if (data?.session) {
                 const { error } = await supabase.auth.setSession({
@@ -59,6 +67,12 @@ export default function RegisterScreen() {
     }
 
     async function signInWithGoogle() {
+        if (!acceptedTerms) {
+            Alert.alert('Aceite necessário', 'Leia e aceite os Termos de Uso e a Política de Privacidade para continuar.');
+            return;
+        }
+
+        setLoading(true);
         try {
             const redirectUri = makeRedirectUri({
                 scheme: 'wellcome',
@@ -89,11 +103,21 @@ export default function RegisterScreen() {
                             refresh_token: refreshToken,
                         });
                         if (error) throw error;
+
+                        const { error: metadataError } = await supabase.auth.updateUser({
+                            data: {
+                                terms_accepted_at: new Date().toISOString(),
+                                terms_version: LEGAL_TERMS_VERSION,
+                            },
+                        });
+                        if (metadataError) throw metadataError;
                     }
                 }
             }
         } catch (error: any) {
             Alert.alert('Error', error.message);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -118,7 +142,7 @@ export default function RegisterScreen() {
                 <View style={styles.titleContainer}>
                     <Text style={styles.mainTitle}>Seja bem-vindo(a) à WellCome!</Text>
                     <Text style={styles.subtitle}>
-                        Junte-se a uma comunidade amigável e compartilhe bons momentos e boa comida lorem ipsum
+                        Crie ou participe de experiências gastronômicas e compartilhe bons momentos à mesa.
                     </Text>
                 </View>
 
@@ -201,10 +225,42 @@ export default function RegisterScreen() {
                         </View>
                     </View>
 
+                    <View style={styles.termsContainer}>
+                        <TouchableOpacity
+                            style={styles.checkboxTouchTarget}
+                            onPress={() => setAcceptedTerms((current) => !current)}
+                            accessibilityRole="checkbox"
+                            accessibilityLabel="Aceito os Termos de Uso e a Política de Privacidade"
+                            accessibilityState={{ checked: acceptedTerms }}
+                        >
+                            <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                                {acceptedTerms && <Ionicons name="checkmark" size={18} color="#fff" />}
+                            </View>
+                        </TouchableOpacity>
+                        <View style={styles.termsCopy}>
+                            <Text style={styles.termsText}>Li e aceito os documentos obrigatórios:</Text>
+                            <View style={styles.termsLinks}>
+                                <TouchableOpacity
+                                    style={styles.termsLinkTouchTarget}
+                                    onPress={() => router.push('/legal/terms' as any)}
+                                >
+                                    <Text style={styles.termsLink}>Termos de Uso</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.termsText}> e </Text>
+                                <TouchableOpacity
+                                    style={styles.termsLinkTouchTarget}
+                                    onPress={() => router.push('/legal/privacy' as any)}
+                                >
+                                    <Text style={styles.termsLink}>Política de Privacidade</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
                     <TouchableOpacity
-                        style={styles.registerButton}
+                        style={[styles.registerButton, (!acceptedTerms || loading) && styles.buttonDisabled]}
                         onPress={signUpWithEmail}
-                        disabled={loading}
+                        disabled={loading || !acceptedTerms}
                     >
                         <Text style={styles.registerButtonText}>
                             {loading ? 'Criando...' : 'Criar cadastro'}
@@ -217,7 +273,11 @@ export default function RegisterScreen() {
                         <View style={styles.dividerLine} />
                     </View>
 
-                    <TouchableOpacity style={styles.socialButton} onPress={signInWithGoogle}>
+                    <TouchableOpacity
+                        style={[styles.socialButton, (!acceptedTerms || loading) && styles.buttonDisabled]}
+                        onPress={signInWithGoogle}
+                        disabled={loading || !acceptedTerms}
+                    >
                         <FontAwesome name="google" size={24} color="#DB4437" />
                         <Text style={styles.socialButtonText}>Cadastrar com Google</Text>
                     </TouchableOpacity>
@@ -338,6 +398,60 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
+    },
+    buttonDisabled: {
+        opacity: 0.45,
+        elevation: 0,
+        shadowOpacity: 0,
+    },
+    termsContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 20,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderWidth: 1.5,
+        borderColor: '#B9B9B9',
+        borderRadius: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxTouchTarget: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 4,
+    },
+    checkboxChecked: {
+        borderColor: '#FF8C42',
+        backgroundColor: '#FF8C42',
+    },
+    termsCopy: {
+        flex: 1,
+    },
+    termsLinks: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+    },
+    termsLinkTouchTarget: {
+        minHeight: 44,
+        justifyContent: 'center',
+    },
+    termsText: {
+        color: '#666',
+        fontSize: 13,
+        lineHeight: 19,
+    },
+    termsLink: {
+        color: '#C95F1D',
+        fontSize: 13,
+        fontWeight: '700',
+        lineHeight: 19,
+        textDecorationLine: 'underline',
     },
     registerButtonText: {
         color: '#fff',

@@ -30,11 +30,18 @@ export class AuthController {
             password: z.string().min(6),
             fullName: z.string(),
             phoneNumber: z.string().optional(),
+            acceptedTerms: z.literal(true),
         });
 
         try {
-            const { email, password, fullName, phoneNumber } = registerSchema.parse(req.body);
-            const data = await this.registerUseCase.execute(email, password, fullName, phoneNumber || '');
+            const { email, password, fullName, phoneNumber, acceptedTerms } = registerSchema.parse(req.body);
+            const data = await this.registerUseCase.execute(
+                email,
+                password,
+                fullName,
+                phoneNumber || '',
+                acceptedTerms
+            );
             return reply.code(201).send(data);
         } catch (error: any) {
             return reply.code(400).send({ message: error.message });

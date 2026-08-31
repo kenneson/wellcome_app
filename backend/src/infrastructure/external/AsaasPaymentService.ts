@@ -28,10 +28,16 @@ interface AsaasListResponse<T> {
     hasMore?: boolean;
 }
 
+function resolveAsaasBaseUrl(): string {
+    const configuredUrl = process.env.ASAAS_BASE_URL?.trim();
+    if (!configuredUrl && process.env.NODE_ENV === 'production') {
+        throw new PaymentGatewayError('ASAAS_BASE_URL deve ser configurada explicitamente em producao');
+    }
+    return (configuredUrl || 'https://api-sandbox.asaas.com/v3').replace(/\/$/, '');
+}
+
 export class AsaasPaymentService implements PaymentGateway, PayoutGateway {
-    private readonly baseUrl = (
-        process.env.ASAAS_BASE_URL || 'https://api-sandbox.asaas.com/v3'
-    ).replace(/\/$/, '');
+    private readonly baseUrl = resolveAsaasBaseUrl();
 
     async createCheckout(input: CreateCheckoutInput): Promise<CheckoutResult> {
         const bookingId = encodeURIComponent(input.externalReference);
