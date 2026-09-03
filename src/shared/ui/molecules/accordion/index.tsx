@@ -24,8 +24,7 @@ import {
   performAndroidHapticsAsync,
 } from "expo-haptics";
 
-const AnimatedBlurView =
-  Animated.createAnimatedComponent<BlurViewProps>(BlurView);
+const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 const AccordionContext = createContext<AccordionContextType | null>(null);
 const AccordionItemContext = createContext<{
   value: string;
@@ -318,7 +317,7 @@ const AccordionContent = ({ children }: AccordionContentProps) => {
     });
   }, [isOpen]);
 
-  const animatedBlurProps = useAnimatedProps(() => ({
+  const animatedBlurProps = useAnimatedProps<BlurViewProps>(() => ({
     intensity: blurIntensity.value,
   }));
 

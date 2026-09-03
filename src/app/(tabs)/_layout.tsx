@@ -50,7 +50,7 @@ export default function TabLayout() {
             <Ionicons 
               size={Dimensions.icon.xlarge} 
               name={focused ? 'home' : 'home-outline'} 
-              color={color}
+              color={color as string}
               accessibilityLabel="Início"
             />
           ),
@@ -67,7 +67,7 @@ export default function TabLayout() {
               size={Dimensions.icon.xlarge}
               name="calendar"
               variant={focused ? 'Bold' : 'Linear'}
-              color={color}
+              color={color as string}
               accessibilityLabel="Eventos"
             />
           ),
@@ -83,7 +83,7 @@ export default function TabLayout() {
             <Ionicons 
               size={Dimensions.icon.xlarge} 
               name={focused ? 'person' : 'person-outline'} 
-              color={color}
+              color={color as string}
               accessibilityLabel="Perfil"
             />
           ),

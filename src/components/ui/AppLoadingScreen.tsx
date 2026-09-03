@@ -7,7 +7,7 @@ const wellcomeLogo = require('../../../assets/images/logo.png');
 export function AppLoadingScreen() {
   return (
     <View style={styles.container} accessibilityLabel="Carregando Wellcome">
-      <StatusBar style="dark" backgroundColor="#FFF8F3" />
+      <StatusBar style="dark" />
       <View style={styles.brand}>
         <Image
           source={wellcomeLogo}

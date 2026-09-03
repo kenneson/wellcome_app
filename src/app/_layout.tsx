@@ -1,4 +1,4 @@
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { Session } from '@supabase/supabase-js';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -169,7 +169,7 @@ export default function RootLayout() {
             <View style={{ flex: 1, backgroundColor: '#FF8C42' }}>
             {!isEventDetails && (
               <>
-                <StatusBar style="light" backgroundColor="#FF8C42" />
+                <StatusBar style="light" />
                 <View style={{ height: insets.top, backgroundColor: '#FF8C42', width: '100%', position: 'absolute', top: 0, zIndex: 1000, pointerEvents: 'none' }} />
               </>
             )}
