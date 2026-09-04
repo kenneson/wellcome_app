@@ -4,7 +4,9 @@ ENV CI=1
 ENV EXPO_NO_TELEMETRY=1
 
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci --legacy-peer-deps \
+    && rm -rf node_modules/@shopify/react-native-skia/libs/macos \
+    && npm cache clean --force
 COPY . .
 
 EXPOSE 8081
