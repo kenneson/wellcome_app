@@ -3,6 +3,7 @@ import { Event } from '@/entities/event/types';
 import { ReviewForm } from '@/features/reviews/ReviewForm';
 import { ReviewList } from '@/features/reviews/ReviewList';
 import { eventService } from '@/services/api/EventService';
+import { registrationFlow, canPayRegistration } from '@/shared/lib/registrationFlow';
 import { registrationService } from '@/services/api/RegistrationService';
 import { chatService } from '@/services/api/ChatService';
 import { reviewService } from '@/services/api/ReviewService';
@@ -74,9 +75,9 @@ export default function EventDetailsScreen() {
         return event.reviews.some(r => r.userId === currentUserId);
     }, [event, currentUserId]);
 
-    const fetchEventDetails = React.useCallback(async () => {
+    const fetchEventDetails = React.useCallback(async (quiet = false) => {
         try {
-            setLoading(true);
+            if (!quiet) setLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             const userId = session?.user?.id;
             setCurrentUserId(userId || null);
@@ -115,6 +116,8 @@ export default function EventDetailsScreen() {
 
     useFocusEffect(React.useCallback(() => {
         if (id) void fetchEventDetails();
+        const timer = setInterval(() => { if (id) void fetchEventDetails(true); }, 15_000);
+        return () => clearInterval(timer);
     }, [fetchEventDetails, id]));
 
     async function handleJoin() {
@@ -267,8 +270,7 @@ export default function EventDetailsScreen() {
         myBookingStatus === 'EXPIRED'
         || (myPaymentDueAt && new Date(myPaymentDueAt).getTime() <= Date.now() && !paymentConfirmed)
     );
-    const canPayForCurrentStatus = myBookingStatus === 'APPROVED'
-        || (myBookingStatus === 'PENDING' && !requiresHostApproval);
+    const canPayForCurrentStatus = canPayRegistration({ status: myBookingStatus, paymentStatus: myPaymentStatus, paymentDueAt: myPaymentDueAt });
     const canContinuePayment = !isHost
         && isParticipant
         && isPaidEvent
@@ -279,95 +281,15 @@ export default function EventDetailsScreen() {
     const canViewTicket = isParticipant
         && myBookingStatus === 'APPROVED'
         && (!isPaidEvent || paymentConfirmed);
-    const participantFlowStatus = !isHost && isParticipant ? (() => {
-        if (myBookingStatus === 'REJECTED') {
-            return {
-                icon: 'close-circle-outline',
-                title: 'Solicitação não aprovada',
-                description: paymentConfirmed
-                    ? 'O reembolso do pagamento foi solicitado.'
-                    : 'O anfitrião não aceitou esta solicitação.',
-                containerClass: 'border-red-200 bg-red-50',
-                iconColor: '#B91C1C',
-                titleClass: 'text-red-800',
-            };
-        }
-        if (myBookingStatus === 'APPROVED' && (!isPaidEvent || paymentConfirmed)) {
-            return {
-                icon: 'checkmark-circle-outline',
-                title: 'Participação confirmada',
-                description: 'Aprovação e pagamento concluídos. Seu ingresso está disponível.',
-                containerClass: 'border-green-200 bg-green-50',
-                iconColor: '#15803D',
-                titleClass: 'text-green-800',
-            };
-        }
-        if (paymentWindowExpired) {
-            return {
-                icon: 'alert-circle-outline',
-                title: 'Prazo de pagamento encerrado',
-                description: 'O prazo desta aprovação terminou. Solicite uma nova vaga para participar.',
-                containerClass: 'border-red-200 bg-red-50',
-                iconColor: '#B91C1C',
-                titleClass: 'text-red-800',
-            };
-        }
-        if (myBookingStatus === 'WAITLIST') {
-            return {
-                icon: 'people-outline',
-                title: 'Na lista de espera',
-                description: 'Sua posição está registrada. Avisaremos quando uma vaga for liberada; você não precisa pagar agora.',
-                containerClass: 'border-blue-200 bg-blue-50',
-                iconColor: '#1D4ED8',
-                titleClass: 'text-blue-800',
-            };
-        }
-        if (myBookingStatus === 'APPROVED' && isPaidEvent && !paymentConfirmed) {
-            return {
-                icon: 'card-outline',
-                title: 'Aprovado pelo anfitrião',
-                description: myPaymentDueAt
-                    ? `Conclua o pagamento até ${new Date(myPaymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} para liberar seu ingresso.`
-                    : 'Falta apenas concluir o pagamento para liberar seu ingresso.',
-                containerClass: 'border-blue-200 bg-blue-50',
-                iconColor: '#1D4ED8',
-                titleClass: 'text-blue-800',
-            };
-        }
-        if (myBookingStatus === 'PENDING' && paymentConfirmed && requiresHostApproval) {
-            return {
-                icon: 'time-outline',
-                title: 'Pagamento confirmado · aprovação pendente',
-                description: 'O anfitrião ainda precisa aceitar sua solicitação. Se ela for recusada, o valor será reembolsado.',
-                containerClass: 'border-orange-200 bg-orange-50',
-                iconColor: '#C45D22',
-                titleClass: 'text-[#9A4819]',
-            };
-        }
-        if (myBookingStatus === 'PENDING' && requiresHostApproval) {
-            return {
-                icon: 'hourglass-outline',
-                title: 'Aprovação pendente',
-                description: isPaidEvent
-                    ? 'O anfitrião analisa sua solicitação primeiro. Se aprovada, você terá até 24 horas para pagar.'
-                    : 'O anfitrião ainda precisa aceitar sua solicitação.',
-                containerClass: 'border-orange-200 bg-orange-50',
-                iconColor: '#C45D22',
-                titleClass: 'text-[#9A4819]',
-            };
-        }
-        if (myBookingStatus === 'PENDING' && isPaidEvent) {
-            return {
-                icon: 'card-outline',
-                title: 'Pagamento pendente',
-                description: 'Conclua o pagamento para confirmar sua participação.',
-                containerClass: 'border-blue-200 bg-blue-50',
-                iconColor: '#1D4ED8',
-                titleClass: 'text-blue-800',
-            };
-        }
-        return null;
-    })() : null;
+    const flow = registrationFlow({ status: myBookingStatus, paymentStatus: myPaymentStatus, paymentDueAt: myPaymentDueAt }, isPaidEvent, requiresHostApproval);
+    const participantFlowStatus = !isHost && isParticipant ? {
+        icon: canViewTicket ? 'checkmark-circle-outline' : 'information-circle-outline',
+        title: flow.label,
+        description: flow.description,
+        containerClass: canViewTicket ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50',
+        iconColor: canViewTicket ? '#15803D' : '#C45D22',
+        titleClass: canViewTicket ? 'text-green-800' : 'text-[#9A4819]',
+    } : null;
     const pendingRegistrationCount = event.pendingRegistrationCount ?? 0;
     const confirmedRegistrationCount = event.confirmedRegistrationCount ?? 0;
     const registrationsTargetTab = pendingRegistrationCount > 0 ? 'pending' : 'confirmed';

@@ -138,7 +138,7 @@ describe('HandleAsaasWebhookUseCase', () => {
             netAmount: 90,
             approveBookingOnPayment: true,
         }));
-        expect(notifications.execute).toHaveBeenCalledTimes(1);
+        expect(notifications.execute).toHaveBeenCalledTimes(2);
         expect(webhookRepository.markProcessed).toHaveBeenCalledWith('evt-1');
     });
 
@@ -274,6 +274,27 @@ describe('HandleAsaasWebhookUseCase', () => {
             providerStatus: 'CREDIT_CARD_CAPTURE_REFUSED',
         });
         expect(paymentRepository.confirmAndHoldHostFunds).not.toHaveBeenCalled();
+    });
+
+    it('records a refund in progress without marking it as completed', async () => {
+        const result = await useCase.execute({
+            id: 'evt-refund-progress',
+            event: 'PAYMENT_REFUND_IN_PROGRESS',
+            payment: {
+                id: 'pay-1',
+                status: 'REFUND_IN_PROGRESS',
+                billingType: 'PIX',
+            },
+        });
+
+        expect(result).toEqual({ duplicate: false, action: 'payment_refund_in_progress' });
+        expect(paymentRepository.updateProviderPayment).toHaveBeenCalledWith({
+            paymentId: 'payment-1',
+            providerPaymentId: 'pay-1',
+            paymentMethod: 'PIX',
+            providerStatus: 'REFUND_IN_PROGRESS',
+        });
+        expect(paymentRepository.applyRefund).not.toHaveBeenCalled();
     });
 
     it('links an early transfer webhook using externalReference', async () => {

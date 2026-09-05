@@ -24,8 +24,8 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
             {
                 title: 'Participação e aprovação',
                 paragraphs: [
-                    'Em eventos com aprovação, o anfitrião decide primeiro. Somente depois da aprovação o participante recebe o prazo informado no aplicativo para pagar. A vaga só fica confirmada quando todas as etapas exigidas forem concluídas.',
-                    'Se o pagamento não for concluído no prazo, a inscrição expira, deixa de ocupar vaga e a próxima pessoa da lista de espera pode ser promovida.',
+                    'Em eventos pagos com aprovação, o participante paga primeiro. Após a confirmação do pagamento, a vaga fica reservada enquanto o anfitrião analisa a inscrição. A aprovação conclui a inscrição e libera o ingresso.',
+                    'Se o anfitrião recusar a participação, o valor pago será estornado integralmente. Se o pagamento não for concluído no prazo, a inscrição expira e a próxima pessoa da lista de espera pode ser promovida.',
                 ],
             },
             {

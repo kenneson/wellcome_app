@@ -47,7 +47,7 @@ describe('PrismaEventRepository.findAll', () => {
                         status: true,
                         paymentDueAt: true,
                         capacityHeldAt: true,
-                        payment: { select: { status: true } },
+                        payment: { select: { status: true, providerStatus: true } },
                     },
                 },
             },

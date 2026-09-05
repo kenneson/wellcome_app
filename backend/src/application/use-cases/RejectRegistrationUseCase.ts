@@ -6,6 +6,7 @@ import { SendNotificationUseCase } from './SendNotificationUseCase';
 import { NotificationType } from '../../domain/value-objects/NotificationType';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { ChatService } from '../services/ChatService';
+import { RegistrationRefundService } from '../services/RegistrationRefundService';
 
 export class RejectRegistrationUseCase {
     constructor(
@@ -13,7 +14,8 @@ export class RejectRegistrationUseCase {
         private sendNotificationUseCase: SendNotificationUseCase,
         private paymentRepository: PaymentRepository,
         private paymentGateway: PaymentGateway,
-        private chatService?: ChatService
+        private chatService?: ChatService,
+        private refundService?: RegistrationRefundService
     ) { }
 
     async execute(registrationId: string, hostId: string, reason: string): Promise<EventRegistration> {
@@ -23,7 +25,7 @@ export class RejectRegistrationUseCase {
             throw new Error('Registration not found');
         }
 
-        if (registration.event && registration.event.hostId !== hostId) {
+        if (!registration.event || registration.event.hostId !== hostId) {
             throw new Error('Unauthorized: You are not the host of this event');
         }
 
@@ -32,30 +34,27 @@ export class RejectRegistrationUseCase {
         }
 
         const payment = await this.paymentRepository.findByBookingId(registrationId);
-        if (
-            payment
-            && [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status)
-        ) {
-            if (!payment.providerPaymentId) {
-                throw new Error('Cannot reject a paid registration without provider payment reference');
-            }
+        const updatedRegistration = this.eventRegistrationRepository.rejectWithGuard
+            ? await this.eventRegistrationRepository.rejectWithGuard(registrationId, hostId, reason)
+            : await this.eventRegistrationRepository.updateStatus(registrationId, 'REJECTED', reason, hostId);
+        await this.eventRegistrationRepository.reconcileEventCapacity?.(registration.eventId);
 
-            await this.paymentGateway.refundPayment(
-                payment.providerPaymentId,
-                Number(Math.max(0, payment.valor - Number(payment.refundedAmount || 0)).toFixed(2)),
-                reason || 'Inscricao recusada pelo anfitriao'
+        if (payment && [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status)) {
+            // Rejection is durable before contacting the provider. The worker retries failures.
+            if (!this.refundService) throw new Error('Automatic refund service unavailable');
+            await this.refundService.execute(payment.id).catch((error) =>
+                console.error('Rejection saved; automatic refund pending', { paymentId: payment.id, error })
             );
         } else if (payment?.status === PaymentStatus.PENDING) {
-            await this.cancelPendingProviderPayment(payment);
+            await this.cancelPendingProviderPayment(payment).catch((error) =>
+                console.error('Rejection saved; provider cancellation pending', { paymentId: payment.id, error })
+            );
         }
-
-        const updatedRegistration = await this.eventRegistrationRepository.updateStatus(registrationId, 'REJECTED', reason, hostId);
-        await this.eventRegistrationRepository.reconcileEventCapacity?.(registration.eventId);
 
         if (updatedRegistration.user) {
             const eventTitle = updatedRegistration.event?.title || 'Evento';
             const refundMessage = payment && [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED].includes(payment.status)
-                ? ' O estorno do pagamento foi solicitado.'
+? ' A vaga foi liberada e a devolução integral está em processamento.'
                 : '';
 
             await this.sendNotificationUseCase.execute(
@@ -71,7 +70,7 @@ export class RejectRegistrationUseCase {
         await this.chatService?.recordRegistrationRejected(registrationId, reason).catch((error) =>
             console.error('Failed to record rejection in chat', error)
         );
-        return updatedRegistration;
+        return await this.eventRegistrationRepository.findById(registrationId) || updatedRegistration;
     }
 
     private async cancelPendingProviderPayment(payment: { providerPaymentId?: string; checkoutUrl?: string; txid: string }): Promise<void> {

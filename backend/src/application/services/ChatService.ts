@@ -126,10 +126,7 @@ export class ChatService {
         const context = await this.getAutomationContext(bookingId);
         if (!context) return;
         const { booking, conversation, event } = context;
-        const paid = this.isPaymentConfirmed(booking.paymentStatus);
-        const body = event.price > 0 && !paid
-            ? 'Inscrição aprovada. O participante deve concluir o pagamento dentro do prazo para confirmar a vaga.'
-            : 'Inscrição aprovada e presença confirmada.';
+        const body = 'Inscrição aprovada e presença confirmada.';
         await this.systemMessage(conversation.id, body, 'REGISTRATION_APPROVED', `booking:${booking.id}:approved`);
         if (this.isConfirmed(booking.status, booking.paymentStatus, event.price)) {
             await this.releaseAddress(conversation.id, booking.id, event.location);
@@ -165,7 +162,9 @@ export class ChatService {
         if (!context) return;
         await this.systemMessage(
             context.conversation.id,
-            'Pagamento confirmado. A vaga está garantida.',
+            context.booking.status === 'APPROVED'
+                ? 'Pagamento confirmado. Inscrição concluída e ingresso disponível.'
+                : 'Pagamento confirmado. Vaga reservada, aguardando aprovação do anfitrião. Em caso de recusa, o valor será devolvido integralmente.',
             'PAYMENT_CONFIRMED',
             `booking:${bookingId}:payment-confirmed`
         );

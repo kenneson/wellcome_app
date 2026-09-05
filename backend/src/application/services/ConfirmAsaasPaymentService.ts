@@ -69,19 +69,33 @@ export class ConfirmAsaasPaymentService {
             fundsAvailableAt: calculateHostFundsAvailableAt(event),
         });
 
-        if (confirmed && event.host) {
+        const currentEvent = confirmed ? await this.eventRepository.findById(payment.eventId) : null;
+        const booking = currentEvent?.bookings?.find((item) => item.id === payment.bookingId);
+        const awaitingApproval = !this.shouldApproveBookingOnPayment(event) && booking?.status !== 'APPROVED';
+        const ended = booking && ['REJECTED', 'CANCELLED', 'EXPIRED'].includes(booking.status);
+        if (confirmed && event.host && !ended) {
             await this.sendNotificationUseCase.execute(
-                event.host.id,
-                event.host.expoPushToken || null,
-                'Pagamento confirmado',
-                `Um participante confirmou o pagamento para "${event.title}".`,
-                NotificationType.NEW_REGISTRATION_CONFIRMED,
+                event.host.id, event.host.expoPushToken || null,
+                awaitingApproval ? 'Pagamento confirmado · aprovação pendente' : 'Inscrição confirmada',
+                awaitingApproval
+                    ? `Um participante pagou e reservou uma vaga em "${event.title}". Aprove ou recuse a participação. A recusa gera estorno integral.`
+                    : `Um participante confirmou o pagamento para "${event.title}".`,
+                awaitingApproval ? NotificationType.NEW_REGISTRATION_PENDING : NotificationType.NEW_REGISTRATION_CONFIRMED,
                 { eventId: event.id }
             );
         }
-        if (confirmed) await this.chatService?.recordPaymentConfirmed(payment.bookingId).catch((error) =>
-            console.error('Failed to record payment confirmation in chat', error)
-        );
+        if (confirmed) {
+            await this.sendNotificationUseCase.execute(
+                payment.userId, null, ended ? 'Pagamento recebido · estorno pendente' : 'Pagamento confirmado',
+                ended ? 'Sua inscrição está encerrada. O valor pago será devolvido integralmente.'
+                    : awaitingApproval ? 'Sua vaga está reservada e aguarda aprovação do anfitrião. Se recusada, você receberá estorno integral.'
+                    : 'Pagamento confirmado e ingresso disponível.',
+                NotificationType.NEW_REGISTRATION_CONFIRMED, { eventId: event.id }
+            );
+            if (!ended) await this.chatService?.recordPaymentConfirmed(payment.bookingId).catch((error) =>
+                console.error('Failed to record payment confirmation in chat', error)
+            );
+        }
         return confirmed;
     }
 

@@ -98,18 +98,16 @@ export default function JoinEventScreen() {
             if (registration.status === 'WAITLIST') {
                 Alert.alert(
                     'Você entrou na lista de espera',
-                    'Avisaremos quando uma vaga for liberada. O pagamento só será solicitado depois da promoção e, quando exigida, da aprovação do anfitrião.',
+                    'Avisaremos quando uma vaga for liberada. Depois, você paga para reservar a vaga e aguarda a aprovação do anfitrião, quando exigida.',
                     [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
                 );
                 return;
             }
 
-            if (registration.status === 'PENDING' && requiresHostApproval) {
+            if (registration.status === 'PENDING' && requiresHostApproval && eventPrice <= 0) {
                 Alert.alert(
                     'Solicitação enviada',
-                    eventPrice > 0
-                        ? 'O anfitrião analisa primeiro. Se aprovada, você receberá um prazo para pagar.'
-                        : 'O anfitrião analisará sua solicitação. Avisaremos quando houver uma resposta.',
+                    'O anfitrião analisará sua solicitação. Avisaremos quando houver uma resposta.',
                     [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
                 );
                 return;
@@ -187,6 +185,16 @@ export default function JoinEventScreen() {
                             : 'Confirme sua solicitação abaixo.'}
                     </Text>
 
+                    {Number(event.price) > 0 && (
+                        <View style={{ padding: 16, borderRadius: 12, backgroundColor: '#FFF4E8', marginBottom: 20 }}>
+                            <Text style={{ fontWeight: '700', color: '#9A4819', marginBottom: 8 }}>Pagamento na inscrição</Text>
+                            <Text style={{ color: '#65442E', lineHeight: 22 }}>
+                                {event.requiresApproval || event.accessType === 'OPEN_WITH_APPROVAL'
+                                    ? 'Você paga primeiro. Após a confirmação do pagamento, sua vaga fica reservada enquanto o anfitrião analisa a inscrição. O ingresso é liberado com a aprovação. Em caso de recusa, o valor pago será devolvido integralmente.'
+                                    : 'Conclua o pagamento para confirmar sua participação e receber o ingresso.'}
+                            </Text>
+                        </View>
+                    )}
                     {event.questions?.map((q: any) => (
                         <View key={q.id} style={styles.questionContainer}>
                             <Text style={styles.questionLabel}>
@@ -215,7 +223,7 @@ export default function JoinEventScreen() {
                     {submitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.buttonText}>Enviar Solicitação</Text>
+                        <Text style={styles.buttonText}>{Number(event.price) > 0 ? 'Inscrever-se e pagar' : 'Enviar solicitação'}</Text>
                     )}
                 </TouchableOpacity>
             </View>

@@ -151,7 +151,7 @@ describe('Transparent payment use cases', () => {
         expect(result).toEqual(expect.objectContaining({ paid: false, environment: 'sandbox' }));
     });
 
-    it('blocks Pix before approval without synchronizing or creating an Asaas customer', async () => {
+    it('allows Pix before approval and prepares the charge immediately', async () => {
         eventRepository.findById.mockResolvedValue({
             id: 'event-1',
             title: 'Evento moderado',
@@ -177,11 +177,10 @@ describe('Transparent payment use cases', () => {
 
         await expect(useCase.execute({
             bookingId: 'booking-1', eventId: 'event-1', userId: 'user-1',
-        })).rejects.toThrow('Registration must be approved before payment');
+        })).resolves.toEqual(expect.objectContaining({ paid: false, status: 'PENDING' }));
 
-        expect(billingRepository.findProfileByUserId).not.toHaveBeenCalled();
-        expect(paymentGateway.createCustomer).not.toHaveBeenCalled();
-        expect(paymentGateway.createPayment).not.toHaveBeenCalled();
+        expect(billingRepository.findProfileByUserId).toHaveBeenCalled();
+        expect(paymentGateway.getPixQrCode).toHaveBeenCalledWith('pay-1');
     });
 
     it('shows Pix as awaiting settlement during a cautionary confirmation', async () => {

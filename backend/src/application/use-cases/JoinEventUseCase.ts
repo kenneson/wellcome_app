@@ -48,6 +48,8 @@ export class JoinEventUseCase {
         const existingForEvent = existingRegistrations.find(r => r.eventId === data.eventId);
 
         if (existingForEvent) {
+            // Never cascade-delete financial history or an in-flight refund when retrying a join.
+            if (existingForEvent.paymentStatus) return existingForEvent;
             if (
                 existingForEvent.status === RegistrationStatus.REJECTED ||
                 existingForEvent.status === RegistrationStatus.CANCELLED ||
@@ -76,7 +78,7 @@ export class JoinEventUseCase {
 
             let initialStatus = RegistrationStatus.PENDING;
             if (isFull && event.allowWaitlist) initialStatus = RegistrationStatus.WAITLIST;
-            else if (Number(event.price) <= 0 && event.accessType === EventAccessType.OPEN) {
+            else if (Number(event.price) <= 0 && event.accessType === EventAccessType.OPEN && !eventRequiresHostApproval(event)) {
                 initialStatus = RegistrationStatus.APPROVED;
             }
 
@@ -87,7 +89,6 @@ export class JoinEventUseCase {
                 paymentDueAt:
                     Number(event.price) > 0
                     && initialStatus === RegistrationStatus.PENDING
-                    && !eventRequiresHostApproval(event)
                         ? calculateRegistrationPaymentDueAt(event)
                         : null,
                 answers: data.answers,
@@ -97,7 +98,7 @@ export class JoinEventUseCase {
         const initialStatus = registration.status;
 
         // Notify host about the candidate. Paid events still require host approval before final confirmation.
-        if (event.host) {
+        if (event.host && Number(event.price) <= 0 && initialStatus !== RegistrationStatus.WAITLIST) {
             const isPending = initialStatus === RegistrationStatus.PENDING;
             const notificationTitle = isPending ? 'Solicitação de inscrição!' : 'Nova inscrição confirmada!';
             const notificationBody = isPending

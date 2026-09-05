@@ -1,3 +1,4 @@
+import { registrationFlow } from '@/shared/lib/registrationFlow';
 import { eventService } from '@/services/api/EventService';
 import { BillingWallet, PixPaymentResult, paymentService } from '@/services/api/PaymentService';
 import { registrationService } from '@/services/api/RegistrationService';
@@ -32,6 +33,7 @@ export default function PaymentScreen() {
     const [processing, setProcessing] = useState(false);
     const [checking, setChecking] = useState(false);
     const [paid, setPaid] = useState(false);
+    const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
     const [requiresHostApproval, setRequiresHostApproval] = useState(false);
     const [bookingApproved, setBookingApproved] = useState(false);
     const [bookingExpired, setBookingExpired] = useState(false);
@@ -53,6 +55,7 @@ export default function PaymentScreen() {
                     (booking) => booking.id === String(bookingId)
                 );
                 setBookingApproved(currentBooking?.status === 'APPROVED');
+                setBookingStatus(currentBooking?.status || null);
             } catch {
                 // Payment confirmation is still valid if refreshing the approval status fails.
             }
@@ -65,6 +68,8 @@ export default function PaymentScreen() {
         if (showFeedback) setChecking(true);
         try {
             const result = await registrationService.checkPayment(String(bookingId));
+            setPaymentStatus(result.status);
+            setPaid(Boolean(result.paid));
             if (result.paid) {
                 stopPolling();
                 await confirmPaymentAndRefreshApproval();
@@ -251,14 +256,15 @@ export default function PaymentScreen() {
         );
     }
 
-    if (requiresHostApproval && !bookingApproved && !paid) {
+    if (!bookingStatus || ['REJECTED', 'CANCELLED'].includes(bookingStatus) || ['REFUNDED', 'CHARGEBACK'].includes(paymentStatus || '')) {
+        const flow = registrationFlow({ status: bookingStatus, paymentStatus }, amount > 0, requiresHostApproval);
         return (
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.centered}>
                     <Ionicons name="hourglass-outline" size={72} color="#C45D22" />
-                    <Text style={styles.successTitle}>Aguardando aprovação</Text>
+                    <Text style={styles.successTitle}>{bookingStatus ? flow.label : "Inscrição indisponível"}</Text>
                     <Text style={styles.successSubtitle}>
-                        O pagamento será liberado somente depois que o anfitrião aprovar sua solicitação.
+                        {bookingStatus ? flow.description : "Volte ao evento para iniciar uma inscrição."}
                     </Text>
                     <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
                         <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
@@ -275,7 +281,7 @@ export default function PaymentScreen() {
                     <Ionicons name="alert-circle-outline" size={72} color="#B91C1C" />
                     <Text style={styles.successTitle}>Prazo de pagamento encerrado</Text>
                     <Text style={styles.successSubtitle}>
-                        Esta aprovação venceu. Volte ao evento para consultar ou solicitar uma nova vaga.
+                        {paid ? "Sua inscrição expirou. O pagamento recebido será devolvido integralmente." : "O prazo desta inscrição terminou. Volte ao evento para consultar sua situação."}
                     </Text>
                     <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
                         <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
@@ -293,7 +299,7 @@ export default function PaymentScreen() {
                     <Text style={styles.successTitle}>Pagamento confirmado</Text>
                     <Text style={styles.successSubtitle}>
                         {requiresHostApproval && !bookingApproved
-                            ? 'Seu pagamento foi recebido. Sua participação ainda aguarda a aprovação do anfitrião.'
+                            ? 'Seu pagamento foi recebido e a vaga está reservada. Aguarde a aprovação do anfitrião para receber o ingresso.'
                             : 'Pagamento e aprovação concluídos. Sua participação no evento está confirmada.'}
                     </Text>
                     {requiresHostApproval && !bookingApproved && (
@@ -343,15 +349,15 @@ export default function PaymentScreen() {
                             <Text style={styles.approvalNoticeTitle}>Este evento exige aprovação</Text>
                         </View>
                         <Text style={styles.approvalNoticeText}>
-                            Sua solicitação já foi aprovada. Conclua o pagamento dentro do prazo para confirmar a vaga e liberar o ingresso.
+                            O pagamento acontece agora. Após a confirmação, sua vaga fica reservada enquanto o anfitrião analisa sua inscrição.
                         </Text>
                         <View style={styles.approvalSteps}>
-                            <Text style={styles.approvalStep}>1  Aprovação do anfitrião concluída</Text>
-                            <Text style={styles.approvalStep}>2  Faça o pagamento em até 24 horas</Text>
-                            <Text style={styles.approvalStep}>3  Receba seu ingresso</Text>
+                            <Text style={styles.approvalStep}>1  Faça o pagamento</Text>
+                            <Text style={styles.approvalStep}>2  Vaga reservada · aguarde a aprovação</Text>
+                            <Text style={styles.approvalStep}>3  Após a aprovação, receba seu ingresso</Text>
                         </View>
                         <Text style={styles.approvalRefundText}>
-                            O valor do anfitrião fica retido até 24 horas após o evento.
+                            Se o anfitrião recusar, o valor pago será devolvido integralmente pelo meio de pagamento.
                         </Text>
                     </View>
                 )}

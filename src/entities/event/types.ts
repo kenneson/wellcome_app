@@ -118,5 +118,6 @@ export interface EventRegistration {
     reviewedAt?: string | null;
     rejectionReason?: string | null;
     paymentDueAt?: string | null;
+    paymentProviderStatus?: string | null;
     paymentStatus?: 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'CHARGEBACK' | null;
 }

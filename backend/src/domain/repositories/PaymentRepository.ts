@@ -1,6 +1,8 @@
 import { Payment } from '../entities/Payment';
 
 export interface PaymentRepository {
+    listRefundCandidates?(): Promise<Payment[]>;
+    withRegistrationRefundLock?<T>(paymentId: string, action: (payment: Payment) => Promise<T>): Promise<T | null>;
     create(data: {
         bookingId: string;
         eventId: string;

@@ -203,7 +203,7 @@ export default function WalletScreen() {
                         <Text style={[styles.sectionTitle, { color: '#1565C0' }]}>Como funciona?</Text>
                     </View>
                     {[
-                        { icon: 'checkmark-circle-outline', text: 'Quando um convidado aprovado paga o ingresso, o valor líquido aparece como saldo retido.' },
+                        { icon: 'checkmark-circle-outline', text: 'Quando o pagamento é confirmado e você aprova o participante, o valor líquido aparece como saldo retido.' },
                         { icon: 'time-outline', text: 'O saldo fica retido até 24 horas após o fim do evento para cobrir cancelamentos e reembolsos.' },
                         { icon: 'cash-outline', text: `Depois da liberação, valores a partir de R$ ${minimumWithdrawalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} podem ser sacados.` },
                     ].map((item, i) => (

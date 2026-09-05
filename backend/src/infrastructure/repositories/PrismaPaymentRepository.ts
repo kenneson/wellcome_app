@@ -3,8 +3,37 @@ import { PaymentRepository } from '../../domain/repositories/PaymentRepository';
 import { isProviderSettlementStatus } from '../../domain/services/PaymentStatusPolicy';
 import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { prisma } from '../database/prismaClient';
+import { registrationHoldsCapacity } from '../../domain/services/RegistrationPaymentPolicy';
 
 export class PrismaPaymentRepository implements PaymentRepository {
+    async listRefundCandidates(): Promise<Payment[]> {
+        const rows = await prisma.payment.findMany({
+            where: {
+                provider: 'ASAAS',
+                providerPaymentId: { not: null },
+                status: { in: [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED] },
+                booking: { status: { in: ['REJECTED', 'CANCELLED', 'EXPIRED'] } },
+            },
+            orderBy: { updatedAt: 'asc' },
+            take: 50,
+        });
+        return rows.map((row) => this.toDomain(row));
+    }
+
+    async withRegistrationRefundLock<T>(paymentId: string, action: (payment: Payment) => Promise<T>): Promise<T | null> {
+        // Serialize requests across processes. On uncertain responses the next attempt
+        // consults the provider first, including its pending refunds.
+        return prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`select id from public.payments where id = cast(${paymentId} as uuid) for update`;
+            const row = await tx.payment.findUnique({ where: { id: paymentId }, include: { booking: true } });
+            if (!row || !['REJECTED', 'CANCELLED', 'EXPIRED'].includes(row.booking.status)
+                || !['CONFIRMED', 'PARTIALLY_REFUNDED'].includes(row.status)) return null;
+            const result = await action(this.toDomain(row));
+            await tx.payment.update({ where: { id: paymentId }, data: { providerStatus: 'REFUND_REQUESTED' } });
+            return result;
+        }, { maxWait: 5000, timeout: 30000 });
+    }
+
     async create(data: {
         bookingId: string;
         eventId: string;
@@ -272,10 +301,13 @@ export class PrismaPaymentRepository implements PaymentRepository {
         fundsAvailableAt: Date;
     }): Promise<boolean> {
         return prisma.$transaction(async (tx) => {
+            const original = await tx.payment.findUnique({ where: { id: data.paymentId } });
+            if (!original) return false;
+            await tx.$queryRaw`select id from public.events where id = cast(${original.eventId} as uuid) for update`;
             const updated = await tx.payment.updateMany({
                 where: {
                     id: data.paymentId,
-                    status: PaymentStatus.PENDING,
+                    status: { in: [PaymentStatus.PENDING, PaymentStatus.EXPIRED] },
                 },
                 data: {
                     status: PaymentStatus.CONFIRMED,
@@ -293,22 +325,34 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 return false;
             }
 
-            if (data.approveBookingOnPayment) {
-                await tx.booking.updateMany({
-                    where: {
-                        id: data.bookingId,
-                        status: 'PENDING',
-                    },
-                    data: { status: 'APPROVED' },
-                });
-            }
-
             const booking = await tx.booking.findUnique({
                 where: { id: data.bookingId },
-                select: { status: true },
+                include: { event: { include: { bookings: { include: { payment: true } } } } },
             });
 
-            if (booking?.status === 'APPROVED') {
+            let approved = booking?.status === 'APPROVED';
+            if (booking && ['PENDING', 'APPROVED'].includes(booking.status)) {
+                const event = booking.event;
+                const occupied = event.bookings.filter((other) => other.id !== booking.id
+                    && registrationHoldsCapacity(event as any, { ...other, paymentStatus: other.payment?.status } as any)).length;
+                const full = Boolean(event.maxGuests && occupied >= event.maxGuests);
+                if (full || event.eventDate <= new Date()) {
+                    await tx.booking.update({ where: { id: booking.id }, data: {
+                        status: 'EXPIRED', capacityHeldAt: null, paymentDueAt: null,
+                        rejectionReason: 'Pagamento recebido sem vaga disponível. Estorno automático pendente.',
+                    } });
+                    approved = false;
+                } else {
+                    approved = approved || Boolean(data.approveBookingOnPayment);
+                    await tx.booking.update({ where: { id: booking.id }, data: {
+                        status: approved ? 'APPROVED' : 'PENDING',
+                        capacityHeldAt: approved ? null : new Date(),
+                        paymentDueAt: null,
+                    } });
+                }
+            }
+
+            if (approved) {
                 await this.holdHostFundsInTransaction(
                     tx,
                     data.paymentId,
@@ -548,7 +592,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 where: { id: data.paymentId },
             });
 
-            if (!payment || !payment.netAmount || Number(payment.valor) <= 0) {
+            if (!payment || Number(payment.valor) <= 0) {
                 return false;
             }
 
@@ -567,12 +611,6 @@ export class PrismaPaymentRepository implements PaymentRepository {
             const nextStatus = isFullRefund ? data.targetStatus : PaymentStatus.PARTIALLY_REFUNDED;
 
             if (nextRefundedAmount <= previousRefundedAmount) {
-                if (payment.status !== nextStatus) {
-                    await tx.payment.update({
-                        where: { id: payment.id },
-                        data: { status: nextStatus, providerStatus: data.providerStatus },
-                    });
-                }
                 return false;
             }
 
@@ -639,9 +677,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
             }
 
             if (isFullRefund) {
-                await tx.booking.update({
-                    where: { id: payment.bookingId },
-                    data: { status: 'CANCELLED' },
+                await tx.booking.updateMany({
+                    where: { id: payment.bookingId, status: { notIn: ['REJECTED', 'CANCELLED', 'EXPIRED'] } },
+                    data: { status: 'CANCELLED', capacityHeldAt: null, paymentDueAt: null },
                 });
             }
 

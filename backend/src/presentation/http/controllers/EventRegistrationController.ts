@@ -90,6 +90,9 @@ export class EventRegistrationController {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ message: error.message });
             }
+            if (error instanceof Error && ['Aguarde a confirmação do pagamento para aprovar a inscrição', 'A inscrição não está aguardando aprovação'].includes(error.message)) {
+                return reply.code(409).send({ message: error.message });
+            }
             if (error instanceof Error && error.message === 'Event is full') {
                 return reply.code(409).send({ message: error.message });
             }
@@ -135,6 +138,9 @@ export class EventRegistrationController {
                 return reply.code(403).send({ valid: false, message: 'Voce nao e o anfitriao deste evento' });
             }
 
+            if (Number(registration.event?.price) > 0 && !['CONFIRMED', 'PARTIALLY_REFUNDED'].includes(registration.paymentStatus || '')) {
+                return reply.code(400).send({ valid: false, message: 'Pagamento não confirmado ou estornado' });
+            }
             if (registration.status !== 'APPROVED') {
                 return reply.code(400).send({ valid: false, message: `Inscricao com status: ${registration.status}` });
             }

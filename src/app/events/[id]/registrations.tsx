@@ -1,3 +1,4 @@
+import { registrationFlow } from '@/shared/lib/registrationFlow';
 import { RegistrationStatus } from '@/entities/event/types';
 import { eventService } from '@/services/api/EventService';
 import { registrationService } from '@/services/api/RegistrationService';
@@ -19,16 +20,16 @@ export default function EventRegistrationsScreen() {
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'confirmed' | 'pending'>(
+    const [activeTab, setActiveTab] = useState<'confirmed' | 'pending' | 'closed'>(
         requestedTab === 'pending' ? 'pending' : 'confirmed'
     );
     const [searchQuery, setSearchQuery] = useState('');
 
     // Helper to open links
 
-    const fetchData = React.useCallback(async () => {
+    const fetchData = React.useCallback(async (quiet = false) => {
         try {
-            setLoading(true);
+            if (!quiet) setLoading(true);
             const [registrationsData, eventData] = await Promise.all([
                 registrationService.getRegistrations(id as string),
                 eventService.getEventById(id as string)
@@ -61,6 +62,8 @@ export default function EventRegistrationsScreen() {
 
     useFocusEffect(React.useCallback(() => {
         if (id) void fetchData();
+        const timer = setInterval(() => { if (id) void fetchData(true); }, 15_000);
+        return () => clearInterval(timer);
     }, [fetchData, id]));
 
     async function handleOpenChat(guestId: string) {
@@ -75,18 +78,14 @@ export default function EventRegistrationsScreen() {
     async function handleApprove(registrationId: string) {
         setProcessingId(registrationId);
         try {
-            const registration = registrations.find(r => r.id === registrationId);
-            const paymentConfirmed = registration?.paymentStatus === 'CONFIRMED'
-                || registration?.paymentStatus === 'PARTIALLY_REFUNDED';
+
             const updatedRegistration = await registrationService.approveRegistration(registrationId);
             setRegistrations(prev => prev.map(r =>
                 r.id === registrationId ? { ...r, ...updatedRegistration } : r
             ));
             Alert.alert(
                 'Inscrição aprovada',
-                Number(event?.price || 0) > 0 && !paymentConfirmed
-                    ? 'O participante foi aprovado e terá até 24 horas para pagar. A vaga será confirmada após o pagamento.'
-                    : 'A participação está confirmada. Valores pagos ficam retidos até 24 horas após o evento.'
+                'A participação está confirmada e o ingresso foi liberado. Valores pagos ficam retidos até 24 horas após o evento.'
             );
         } catch (error: any) {
             Alert.alert(
@@ -103,11 +102,11 @@ export default function EventRegistrationsScreen() {
     async function handleReject(registrationId: string) {
         setProcessingId(registrationId);
         try {
-            await registrationService.rejectRegistration(registrationId);
+            const updated = await registrationService.rejectRegistration(registrationId);
             setRegistrations(prev => prev.map(r =>
-                r.id === registrationId ? { ...r, status: RegistrationStatus.REJECTED } : r
+                r.id === registrationId ? { ...r, ...updated } : r
             ));
-            Alert.alert('Sucesso', 'Inscrição rejeitada.');
+            Alert.alert('Inscrição recusada', registrationFlow(updated, Number(event?.price) > 0, true).description);
         } catch (error) {
             Alert.alert('Erro', 'Falha ao rejeitar inscrição.');
         } finally {
@@ -132,7 +131,7 @@ export default function EventRegistrationsScreen() {
         && !isPaymentConfirmed(registration)
         && (
             registration.status === RegistrationStatus.APPROVED
-            || (registration.status === RegistrationStatus.PENDING && !requiresHostApproval)
+            || registration.status === RegistrationStatus.PENDING
         );
     const isPaymentExpired = (registration: any) =>
         registration.status === RegistrationStatus.EXPIRED
@@ -142,17 +141,10 @@ export default function EventRegistrationsScreen() {
             && new Date(registration.paymentDueAt).getTime() <= Date.now()
         );
     const isAwaitingHostApproval = (registration: any) =>
-        registration.status === RegistrationStatus.PENDING && requiresHostApproval;
+        registration.status === RegistrationStatus.PENDING && requiresHostApproval && (!isPaidEvent || isPaymentConfirmed(registration));
     const isWaitlisted = (registration: any) =>
         registration.status === RegistrationStatus.WAITLIST;
-    const getStatusLabel = (registration: any) => {
-        if (isFinalConfirmed(registration)) return 'CONFIRMADO';
-        if (isPaymentExpired(registration)) return 'PRAZO VENCIDO';
-        if (isAwaitingPayment(registration)) return 'PGTO PENDENTE';
-        if (isWaitlisted(registration)) return 'LISTA DE ESPERA';
-        if (isAwaitingHostApproval(registration) && isPaymentConfirmed(registration)) return 'PAGO · APROVAR';
-        return 'AGUARDA APROVAÇÃO';
-    };
+    const getStatusLabel = (registration: any) => registrationFlow(registration, isPaidEvent, requiresHostApproval).label;
     const getStatusTone = (registration: any) => {
         if (isFinalConfirmed(registration)) {
             return { badge: styles.statusConfirmed, text: styles.textConfirmed };
@@ -165,37 +157,12 @@ export default function EventRegistrationsScreen() {
         }
         return { badge: styles.statusPending, text: styles.textPending };
     };
-    const getStatusExplanation = (registration: any) => {
-        if (isFinalConfirmed(registration)) {
-            return isPaidEvent
-                ? 'Aprovação e pagamento concluídos. O participante tem acesso ao ingresso.'
-                : 'Participante aprovado e confirmado no evento.';
-        }
-        if (isPaymentExpired(registration)) {
-            return 'O prazo de pagamento venceu. Esta aprovação não ocupa mais uma vaga; você pode cancelá-la.';
-        }
-        if (isAwaitingPayment(registration)) {
-            if (requiresHostApproval) {
-                return registration.paymentDueAt
-                    ? `Você aprovou esta pessoa. O pagamento deve ser feito até ${new Date(registration.paymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}.`
-                    : 'Você aprovou esta pessoa. Falta o pagamento para confirmar a vaga.';
-            }
-            return registration.paymentDueAt
-                ? `Inscrição imediata: o participante deve pagar até ${new Date(registration.paymentDueAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} para confirmar a vaga.`
-                : 'Inscrição imediata: falta o participante concluir o pagamento para confirmar a vaga.';
-        }
-        if (isWaitlisted(registration)) {
-            return 'Esta pessoa está na lista de espera e pode ser aprovada quando houver uma vaga.';
-        }
-        if (isPaymentConfirmed(registration)) {
-            return 'Pagamento recebido. Aprove para confirmar a vaga e liberar o saldo do evento.';
-        }
-        return isPaidEvent
-            ? 'Aguardando sua decisão. O pagamento só será liberado depois da aprovação.'
-            : 'Esta pessoa aguarda sua aprovação para participar.';
-    };
-
-    let filteredRegistrations = activeTab === 'confirmed'
+    const getStatusExplanation = (registration: any) => registrationFlow(registration, isPaidEvent, requiresHostApproval).description;
+    const isClosed = (registration: any) => ['REJECTED', 'CANCELLED', 'EXPIRED'].includes(registration.status)
+        || ['REFUNDED', 'CHARGEBACK'].includes(registration.paymentStatus);
+    let filteredRegistrations = activeTab === 'closed'
+        ? registrations.filter(isClosed)
+        : activeTab === 'confirmed'
         ? registrations.filter(r => isFinalConfirmed(r))
         : registrations.filter(r =>
             r.status === RegistrationStatus.PENDING || isWaitlisted(r) || isAwaitingPayment(r)
@@ -217,7 +184,7 @@ export default function EventRegistrationsScreen() {
         confirmedCount,
         pendingCount,
         revenue: event ? confirmedCount * Number(event.price || 0) : 0,
-        occupancy: event ? `${confirmedCount} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0',
+        occupancy: event ? `${registrations.filter(r => isFinalConfirmed(r) || (r.status === 'PENDING' && isPaymentConfirmed(r))).length} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0',
     };
 
     const renderItem = ({ item }: { item: any }) => (
@@ -329,10 +296,11 @@ export default function EventRegistrationsScreen() {
             )}
 
             <View style={styles.actions}>
-                {!isEventPast && (
+                {!isEventPast && !isClosed(item) && (
                     <TouchableOpacity 
                         style={styles.secondaryButton}
-                        onPress={() => handleReject(item.id)}
+                        disabled={processingId === item.id}
+                        onPress={() => Alert.alert('Recusar inscrição?', isPaymentConfirmed(item) ? 'A vaga será liberada e o valor pago será devolvido integralmente ao participante.' : 'A inscrição será recusada.', [{ text: 'Voltar', style: 'cancel' }, { text: 'Recusar', style: 'destructive', onPress: () => void handleReject(item.id) }])}
                     >
                         <Ionicons 
                             name="close-circle-outline"
@@ -353,12 +321,10 @@ export default function EventRegistrationsScreen() {
                     <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Chat</Text>
                 </TouchableOpacity>
 
-                {!isEventPast && (
-                    (item.status === RegistrationStatus.PENDING && requiresHostApproval)
-                    || item.status === RegistrationStatus.WAITLIST
-                ) && (
+                {!isEventPast && isAwaitingHostApproval(item) && (
                     <TouchableOpacity 
                         style={styles.primaryButton}
+                        disabled={processingId === item.id}
                         onPress={() => handleApprove(item.id)}
                     >
                         <Text style={styles.primaryButtonText}>Aprovar</Text>
@@ -449,18 +415,27 @@ export default function EventRegistrationsScreen() {
                             Pendentes ({stats.pendingCount})
                         </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
+                        onPress={() => setActiveTab('closed')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: activeTab === 'closed' }}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
+                            Encerrados ({registrations.filter(isClosed).length})
+                        </Text>
+                    </TouchableOpacity>
                 </View>
-
                 <View style={styles.flowInfo}>
                     <Ionicons name="information-circle-outline" size={21} color="#9A4819" />
                     <View style={styles.flowInfoText}>
                         <Text style={styles.flowInfoTitle}>
-                            {requiresHostApproval ? 'Fluxo: aprovação antes do pagamento' : 'Fluxo: inscrição imediata'}
+                            {requiresHostApproval ? 'Fluxo: pagamento antes da aprovação' : 'Fluxo: inscrição imediata'}
                         </Text>
                         <Text style={styles.flowInfoDescription}>
                             {requiresHostApproval
                                 ? isPaidEvent
-                                    ? 'Primeiro você aprova a solicitação. Depois, o participante paga em até 24 horas para confirmar a vaga.'
+                                    ? 'O participante paga primeiro e a vaga fica reservada. Você aprova para liberar o ingresso ou recusa para iniciar o estorno integral.'
                                     : 'A vaga fica confirmada quando você aprovar a solicitação.'
                                 : isPaidEvent
                                     ? 'Este evento tem inscrição imediata. A vaga fica confirmada automaticamente quando o pagamento for recebido.'

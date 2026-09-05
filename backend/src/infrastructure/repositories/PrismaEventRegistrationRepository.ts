@@ -12,6 +12,27 @@ import {
 import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRegistrationRepository implements EventRegistrationRepository {
+    async rejectWithGuard(registrationId: string, hostId: string, reason: string): Promise<EventRegistration> {
+        return prisma.$transaction(async (tx) => {
+            const original = await tx.booking.findUnique({ where: { id: registrationId } });
+            if (!original) throw new Error('Registration not found');
+            await tx.$queryRaw`select id from public.events where id = cast(${original.eventId} as uuid) for update`;
+            const event = await tx.event.findUnique({ where: { id: original.eventId } });
+            if (event?.hostId !== hostId) throw new Error('Unauthorized: You are not the host of this event');
+            const current = await tx.booking.findUnique({ where: { id: registrationId }, include: { guest: true, event: true, payment: true } });
+            if (!current) throw new Error('Registration not found');
+            if (current.status === 'REJECTED') return this.mapToDomain(current);
+            if (!['PENDING', 'APPROVED', 'WAITLIST'].includes(current.status)) throw new Error('Inscrição encerrada');
+            if (event.eventDate <= new Date()) throw new Error('Cannot change registration status for past events');
+            const updated = await tx.booking.update({
+                where: { id: registrationId },
+                data: { status: 'REJECTED', rejectionReason: reason, reviewedBy: hostId, reviewedAt: new Date(), capacityHeldAt: null, paymentDueAt: null },
+                include: { guest: true, event: true, payment: true },
+            });
+            return this.mapToDomain(updated);
+        });
+    }
+
     async reconcileEventCapacity(eventId: string, now = new Date()): Promise<CapacityReconciliationAction[]> {
         const rows = await prisma.$queryRaw<Array<{
             action: string;
@@ -65,14 +86,12 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             let status = RegistrationStatus.PENDING;
             if (isFull) {
                 status = RegistrationStatus.WAITLIST;
-            } else if (Number(event.price || 0) <= 0 && event.accessType === EventAccessType.OPEN) {
+            } else if (Number(event.price || 0) <= 0 && event.accessType === EventAccessType.OPEN && !event.requiresApproval) {
                 status = RegistrationStatus.APPROVED;
             }
 
             const paymentDueAt = Number(event.price || 0) > 0
                 && status === RegistrationStatus.PENDING
-                && event.accessType === EventAccessType.OPEN
-                && !event.requiresApproval
                 ? calculateRegistrationPaymentDueAt({ eventDate: event.eventDate } as any, now)
                 : null;
 
@@ -117,6 +136,13 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             });
             if (!event) throw new Error('Event not found');
             if (event.hostId !== hostId) throw new Error('Unauthorized: You are not the host of this event');
+            const candidate = event.bookings.find((current) => current.id === registrationId);
+            if (!candidate || candidate.status !== RegistrationStatus.PENDING) {
+                throw new Error('A inscrição não está aguardando aprovação');
+            }
+            if (Number(event.price) > 0 && !['CONFIRMED', 'PARTIALLY_REFUNDED'].includes(candidate.payment?.status || '')) {
+                throw new Error('Aguarde a confirmação do pagamento para aprovar a inscrição');
+            }
 
             const occupiedSpots = event.bookings.filter((current) =>
                 current.id !== registrationId && registrationHoldsCapacity(
@@ -203,7 +229,8 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
 
     async findByUserId(userId: string): Promise<EventRegistration[]> {
         const bookings = await prisma.booking.findMany({
-            where: { userId: userId }
+            where: { userId: userId },
+            include: { payment: true },
         });
         return bookings.map(b => this.mapToDomain(b));
     }
@@ -304,6 +331,7 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 price: prismaBooking.event.price
             } as any : undefined,
             paymentStatus: prismaBooking.payment?.status,
+            paymentProviderStatus: prismaBooking.payment?.providerStatus,
             answers: prismaBooking.answers ? prismaBooking.answers.map((a: any) => ({
                 questionId: a.questionId,
                 question: a.question?.question || '',

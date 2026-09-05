@@ -114,6 +114,9 @@ export class HandleAsaasWebhookUseCase {
             case 'PAYMENT_REFUNDED':
                 await this.applyPaymentRefund(payload, 'REFUNDED');
                 return 'payment_refunded';
+            case 'PAYMENT_REFUND_IN_PROGRESS':
+                await this.recordRefundProgress(payload);
+                return 'payment_refund_in_progress';
             case 'PAYMENT_PARTIALLY_REFUNDED':
                 await this.applyPaymentRefund(payload, 'PARTIALLY_REFUNDED');
                 return 'payment_partially_refunded';
@@ -205,6 +208,20 @@ export class HandleAsaasWebhookUseCase {
             providerPaymentId,
             paymentMethod: payload.payment?.billingType || payment.paymentMethod || 'CREDIT_CARD',
             providerStatus: payload.payment?.status || payload.event,
+        });
+    }
+
+    private async recordRefundProgress(payload: AsaasWebhookPayload): Promise<void> {
+        const providerPaymentId = payload.payment?.id;
+        if (!providerPaymentId) throw new Error('Payment ID ausente no webhook');
+        const payment = await this.paymentRepository.findByProviderPaymentId(providerPaymentId);
+        if (!payment) return;
+
+        await this.paymentRepository.updateProviderPayment({
+            paymentId: payment.id,
+            providerPaymentId,
+            paymentMethod: payload.payment?.billingType || payment.paymentMethod || 'PIX',
+            providerStatus: payload.payment?.status || 'REFUND_IN_PROGRESS',
         });
     }
 

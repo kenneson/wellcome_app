@@ -13,6 +13,7 @@ export interface EventRegistration {
     rejectionReason?: string;
     paymentDueAt?: Date;
     capacityHeldAt?: Date;
+    paymentProviderStatus?: string;
 
     // Decision data
     attendedBefore: boolean;

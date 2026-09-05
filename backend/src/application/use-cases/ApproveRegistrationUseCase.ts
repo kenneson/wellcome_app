@@ -7,7 +7,6 @@ import { PaymentStatus } from '../../domain/value-objects/PaymentStatus';
 import { calculateHostFundsAvailableAt } from '../../domain/services/HostFundsAvailabilityPolicy';
 import { EventRepository } from '../../domain/repositories/EventRepository';
 import {
-    calculateRegistrationPaymentDueAt,
     registrationHoldsCapacity,
 } from '../../domain/services/RegistrationPaymentPolicy';
 import { ChatService } from '../services/ChatService';
@@ -44,6 +43,9 @@ export class ApproveRegistrationUseCase {
         if (registration.status === 'APPROVED') {
             return registration;
         }
+        if (registration.status !== 'PENDING') {
+            throw new Error('A inscrição não está aguardando aprovação');
+        }
 
         if (!this.eventRegistrationRepository.approveWithCapacityGuard) {
             const occupiedSpots = (event.bookings ?? []).filter((booking) =>
@@ -58,9 +60,10 @@ export class ApproveRegistrationUseCase {
         const isPaidEvent = Number(event.price || 0) > 0 || Boolean(payment);
         const paymentConfirmed = payment?.status === PaymentStatus.CONFIRMED
             || payment?.status === PaymentStatus.PARTIALLY_REFUNDED;
-        const paymentDueAt = isPaidEvent && !paymentConfirmed
-            ? calculateRegistrationPaymentDueAt(event)
-            : null;
+        if (isPaidEvent && !paymentConfirmed) {
+            throw new Error('Aguarde a confirmação do pagamento para aprovar a inscrição');
+        }
+        const paymentDueAt = null;
 
         const updatedRegistration = this.eventRegistrationRepository.approveWithCapacityGuard
             ? await this.eventRegistrationRepository.approveWithCapacityGuard(
@@ -89,12 +92,8 @@ export class ApproveRegistrationUseCase {
 
         if (updatedRegistration.user) {
             const eventTitle = event.title || 'Evento';
-            const title = paymentConfirmed || !isPaidEvent
-                ? 'Inscricao aprovada!'
-                : 'Inscricao aprovada, pagamento pendente';
-            const body = paymentConfirmed || !isPaidEvent
-                ? `Sua presenca em "${eventTitle}" foi confirmada.`
-                : `Sua inscricao em "${eventTitle}" foi aprovada. Conclua o pagamento em ate 24 horas para confirmar sua presenca.`;
+            const title = 'Inscricao aprovada!';
+            const body = `Sua presenca em "${eventTitle}" foi confirmada.`;
 
             await this.sendNotificationUseCase.execute(
                 updatedRegistration.user.id,

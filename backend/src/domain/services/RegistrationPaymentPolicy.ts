@@ -6,13 +6,6 @@ import { RegistrationStatus } from '../value-objects/RegistrationStatus';
 
 export const DEFAULT_REGISTRATION_PAYMENT_TTL_HOURS = 24;
 
-export class RegistrationApprovalRequiredError extends Error {
-    constructor() {
-        super('Registration must be approved before payment');
-        this.name = 'RegistrationApprovalRequiredError';
-    }
-}
-
 export class RegistrationPaymentWindowExpiredError extends Error {
     constructor() {
         super('Registration payment window expired');
@@ -65,9 +58,6 @@ export function assertRegistrationCanPay(
     ) {
         throw new RegistrationNotEligibleForPaymentError();
     }
-    if (eventRequiresHostApproval(event) && registration.status !== RegistrationStatus.APPROVED) {
-        throw new RegistrationApprovalRequiredError();
-    }
     if (registration.paymentDueAt && new Date(registration.paymentDueAt).getTime() <= now.getTime()) {
         throw new RegistrationPaymentWindowExpiredError();
     }
@@ -92,10 +82,13 @@ export function registrationHoldsCapacity(
     return (
         registration.status === RegistrationStatus.PENDING &&
         (
+            registration.paymentStatus === PaymentStatus.CONFIRMED
+            || registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED
+            ||
             Boolean(registration.capacityHeldAt)
             || (
                 Number(event.price) > 0
-                && !eventRequiresHostApproval(event)
+                && Boolean(registration.paymentDueAt)
                 && !pendingPaymentExpired
             )
         )

@@ -149,7 +149,7 @@ describe('CreatePaymentCheckoutUseCase', () => {
         expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
     });
 
-    it('does not create a checkout before host approval in a moderated event', async () => {
+    it('creates a checkout before host approval in a moderated event', async () => {
         eventRepository.findById.mockResolvedValue({
             id: 'event-1',
             title: 'Jantar moderado',
@@ -168,10 +168,10 @@ describe('CreatePaymentCheckoutUseCase', () => {
             bookingId: 'booking-1',
             eventId: 'event-1',
             userId: 'user-1',
-        })).rejects.toThrow('Registration must be approved before payment');
+        })).resolves.toEqual(expect.objectContaining({ status: 'PENDING' }));
 
-        expect(paymentRepository.findByBookingId).not.toHaveBeenCalled();
-        expect(paymentGateway.createCheckout).not.toHaveBeenCalled();
+        expect(paymentRepository.findByBookingId).toHaveBeenCalled();
+        expect(paymentGateway.createCheckout).toHaveBeenCalledTimes(1);
     });
 
     it('does not create a checkout after the approval payment window expires', async () => {

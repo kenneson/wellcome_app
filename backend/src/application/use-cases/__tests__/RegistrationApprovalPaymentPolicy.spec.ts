@@ -97,28 +97,13 @@ describe('registration payment approval policy', () => {
         });
     });
 
-    it('keeps host credit locked when approval happens before payment confirmation', async () => {
+    it('does not approve or release funds before payment confirmation', async () => {
         const registrations = registrationRepository();
-        const payments = paymentRepository({
-            id: 'payment-1',
-            status: PaymentStatus.PENDING,
-        });
-        const useCase = new ApproveRegistrationUseCase(
-            registrations as any,
-            { execute: jest.fn() } as any,
-            payments as any,
-            eventRepository() as any
-        );
-
-        await useCase.execute('booking-1', 'host-1');
-
-        expect(registrations.updateStatus).toHaveBeenCalledWith(
-            'booking-1',
-            'APPROVED',
-            undefined,
-            'host-1',
-            expect.any(Date)
-        );
+        const payments = paymentRepository({ id: 'payment-1', status: PaymentStatus.PENDING });
+        const useCase = new ApproveRegistrationUseCase(registrations as any,
+            { execute: jest.fn() } as any, payments as any, eventRepository() as any);
+        await expect(useCase.execute('booking-1', 'host-1')).rejects.toThrow('Aguarde a confirmação do pagamento');
+        expect(registrations.updateStatus).not.toHaveBeenCalled();
         expect(payments.holdHostFunds).not.toHaveBeenCalled();
     });
 
@@ -145,30 +130,29 @@ describe('registration payment approval policy', () => {
         expect(registrations.updateStatus).not.toHaveBeenCalled();
     });
 
-    it('requests an Asaas refund before rejecting an already paid registration', async () => {
+    it('persists rejection before requesting the full refund', async () => {
         const registrations = registrationRepository();
         registrations.updateStatus.mockResolvedValue({ ...registration, status: 'REJECTED' });
-        const payments = paymentRepository({
-            id: 'payment-1',
-            providerPaymentId: 'pay-1',
-            status: PaymentStatus.CONFIRMED,
-            valor: 100,
-        });
-        const gateway = {
-            refundPayment: jest.fn().mockResolvedValue({ id: 'pay-1', status: 'REFUND_REQUESTED' }),
-            deletePayment: jest.fn(),
-            cancelCheckout: jest.fn(),
-        };
-        const useCase = new RejectRegistrationUseCase(
-            registrations as any,
-            { execute: jest.fn() } as any,
-            payments as any,
-            gateway as any
-        );
-
+        const payments = paymentRepository({ id: 'payment-1', providerPaymentId: 'pay-1', status: PaymentStatus.CONFIRMED, valor: 100 });
+        const refunds = { execute: jest.fn().mockResolvedValue(undefined) };
+        const useCase = new RejectRegistrationUseCase(registrations as any,
+            { execute: jest.fn() } as any, payments as any, {} as any, undefined, refunds as any);
         await useCase.execute('booking-1', 'host-1', 'Sem vaga');
-
-        expect(gateway.refundPayment).toHaveBeenCalledWith('pay-1', 100, 'Sem vaga');
+        expect(refunds.execute).toHaveBeenCalledWith('payment-1');
         expect(registrations.updateStatus).toHaveBeenCalledWith('booking-1', 'REJECTED', 'Sem vaga', 'host-1');
+        expect(registrations.updateStatus.mock.invocationCallOrder[0]).toBeLessThan(refunds.execute.mock.invocationCallOrder[0]);
+    });
+
+    it('keeps rejection saved when the provider is temporarily unavailable', async () => {
+        const registrations = registrationRepository();
+        registrations.updateStatus.mockResolvedValue({ ...registration, status: 'REJECTED' });
+        const payments = paymentRepository({ id: 'payment-1', status: PaymentStatus.CONFIRMED });
+        const refunds = { execute: jest.fn().mockRejectedValue(new Error('Asaas unavailable')) };
+        const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const useCase = new RejectRegistrationUseCase(registrations as any,
+            { execute: jest.fn() } as any, payments as any, {} as any, undefined, refunds as any);
+        await expect(useCase.execute('booking-1', 'host-1', 'Recusado')).resolves.toBeDefined();
+        expect(registrations.updateStatus).toHaveBeenCalledWith('booking-1', 'REJECTED', 'Recusado', 'host-1');
+        log.mockRestore();
     });
 });

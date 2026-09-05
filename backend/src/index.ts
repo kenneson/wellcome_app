@@ -2,6 +2,7 @@ import fastifyCors from '@fastify/cors';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { ChatService } from './application/services/ChatService';
+import { RegistrationRefundService } from './application/services/RegistrationRefundService';
 import Fastify from 'fastify';
 import { AddPaymentCardUseCase } from './application/use-cases/AddPaymentCardUseCase';
 import { ApproveRegistrationUseCase } from './application/use-cases/ApproveRegistrationUseCase';
@@ -200,6 +201,18 @@ const start = async () => {
         const withdrawalRepository = new PrismaWithdrawalRequestRepository();
         const webhookEventRepository = new PrismaWebhookEventRepository();
         const asaasPaymentService = new AsaasPaymentService();
+        const registrationRefundService = new RegistrationRefundService(paymentRepository, asaasPaymentService, eventRepository);
+        let refundRun: Promise<void> | null = null;
+        const reconcileRegistrationRefunds = () => {
+            if (refundRun) return;
+            refundRun = registrationRefundService.reconcile()
+                .catch((error) => fastify.log.error({ err: error }, 'Registration refund reconciliation failed'))
+                .finally(() => { refundRun = null; });
+        };
+        const refundTimer = setInterval(reconcileRegistrationRefunds, 60_000);
+        refundTimer.unref();
+        fastify.addHook('onClose', async () => { clearInterval(refundTimer); await refundRun; });
+        reconcileRegistrationRefunds();
         const geoapifyLocationService = new GeoapifyLocationService();
 
         // Use Cases
@@ -243,7 +256,7 @@ const start = async () => {
             eventRepository,
             chatService
         );
-        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository, asaasPaymentService, chatService);
+        const rejectRegistrationUseCase = new RejectRegistrationUseCase(eventRegistrationRepository, sendNotificationUseCase, paymentRepository, asaasPaymentService, chatService, registrationRefundService);
 
         const createPaymentCheckoutUseCase = new CreatePaymentCheckoutUseCase(
             asaasPaymentService,

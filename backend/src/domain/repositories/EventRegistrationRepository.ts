@@ -8,6 +8,7 @@ export interface CapacityReconciliationAction {
 }
 
 export interface EventRegistrationRepository {
+    rejectWithGuard?(registrationId: string, hostId: string, reason: string): Promise<EventRegistration>;
     create(data: CreateRegistrationDTO): Promise<EventRegistration>;
     findByEventId(eventId: string): Promise<EventRegistration[]>;
     findByEventIdWithUser(eventId: string): Promise<EventRegistration[]>;

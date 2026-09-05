@@ -96,7 +96,7 @@ export class PrismaEventRepository implements EventRepository {
                         status: true,
                         paymentDueAt: true,
                         capacityHeldAt: true,
-                        payment: { select: { status: true } },
+                        payment: { select: { status: true, providerStatus: true } },
                     },
                 },
             }
@@ -128,7 +128,7 @@ export class PrismaEventRepository implements EventRepository {
         const event = await prisma.event.findUnique({
             where: { id },
             include: {
-                bookings: { include: { payment: { select: { status: true } } } },
+                bookings: { include: { payment: { select: { status: true, providerStatus: true } } } },
                 host: true,
                 dishes: { orderBy: { order: 'asc' } },
                 reviews: {
@@ -148,7 +148,7 @@ export class PrismaEventRepository implements EventRepository {
         const event = await prisma.event.findUnique({
             where: { creationKey },
             include: {
-                bookings: { include: { payment: { select: { status: true } } } },
+                bookings: { include: { payment: { select: { status: true, providerStatus: true } } } },
                 host: true,
                 dishes: { orderBy: { order: 'asc' } },
                 questions: { orderBy: { order: 'asc' } },
@@ -317,6 +317,7 @@ export class PrismaEventRepository implements EventRepository {
                 createdAt: b.createdAt,
                 updatedAt: b.updatedAt,
                 paymentStatus: b.payment?.status,
+                paymentProviderStatus: b.payment?.providerStatus,
             })) : [],
             dishes: prismaEvent.dishes ? prismaEvent.dishes.map((d: any) => ({
                 id: d.id,

@@ -265,6 +265,7 @@ export class EventController {
                 rejectionReason: booking.rejectionReason,
                 paymentDueAt: booking.paymentDueAt,
                 paymentStatus: booking.paymentStatus ?? null,
+                paymentProviderStatus: booking.paymentProviderStatus ?? null,
             })),
             participantCount: event.bookings?.filter((booking: any) =>
                 registrationHoldsCapacity(event, booking)
