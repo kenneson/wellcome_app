@@ -1,14 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
+import type * as NotificationsModule from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { useRouter } from 'expo-router';
 
+// Since SDK 53, merely importing expo-notifications throws in Expo Go on Android,
+// so load it only where it works (development/production builds, iOS Expo Go).
+const pushUnsupported = Platform.OS === 'android'
+    && Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Notifications: typeof NotificationsModule | null = pushUnsupported ? null : require('expo-notifications');
+
 // Configure notification behavior
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowAlert: true,
         shouldPlaySound: true,
@@ -19,6 +26,7 @@ Notifications.setNotificationHandler({
 });
 
 async function registerForPushNotificationsAsync() {
+    if (!Notifications) return null;
     if (Platform.OS === 'android') {
         Notifications.setNotificationChannelAsync('default', {
             name: 'default',
@@ -86,11 +94,12 @@ async function registerForPushNotificationsAsync() {
 export function usePushNotifications(id: string | undefined) {
     const router = useRouter();
     const [expoPushToken, setExpoPushToken] = useState<string | undefined>('');
-    const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
-    const notificationListener = useRef<Notifications.EventSubscription | undefined>(undefined);
-    const responseListener = useRef<Notifications.EventSubscription | undefined>(undefined);
+    const [notification, setNotification] = useState<NotificationsModule.Notification | undefined>(undefined);
+    const notificationListener = useRef<NotificationsModule.EventSubscription | undefined>(undefined);
+    const responseListener = useRef<NotificationsModule.EventSubscription | undefined>(undefined);
 
     useEffect(() => {
+        if (!Notifications) return;
         registerForPushNotificationsAsync().then(token => {
             if (token) {
                 setExpoPushToken(token);
