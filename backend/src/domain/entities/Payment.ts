@@ -26,6 +26,10 @@ export interface Payment {
     netAmount?: number;
     refundedAmount?: number;
     refundedNetAmount?: number;
+    /** Cumulative gross refund target; absent means a full refund. */
+    refundTargetAmount?: number;
+    refundReason?: string;
+    refundCompletedAt?: Date;
     fundsHeldAt?: Date;
     fundsAvailableAt?: Date;
     fundsReleasedAt?: Date;

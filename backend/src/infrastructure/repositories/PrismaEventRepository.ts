@@ -1,5 +1,6 @@
 import { CreateEventDTO, Event, UpdateEventDTO } from '../../domain/entities/Event';
-import { EventFilters, EventRepository } from '../../domain/repositories/EventRepository';
+import { EventFilters, EventRepository, HostCancellationResult } from '../../domain/repositories/EventRepository';
+import { hostCancellationFee } from '../../domain/services/CancellationPolicy';
 import { isEventInCity } from '../../domain/services/EventCity';
 import { filterAndSortEventsByProximity } from '../../domain/services/EventProximity';
 import { prisma } from '../database/prismaClient';
@@ -78,6 +79,7 @@ export class PrismaEventRepository implements EventRepository {
         // Coarse database filter. The use case also applies the registration cutoff.
         const now = new Date();
         where.eventDate = { gt: now };
+        where.cancelledAt = null;
 
         if (filters?.priceMin !== undefined) where.price = { ...where.price, gte: filters.priceMin };
         if (filters?.priceMax !== undefined) where.price = { ...where.price, lte: filters.priceMax };
@@ -243,6 +245,67 @@ export class PrismaEventRepository implements EventRepository {
         });
     }
 
+    async cancelByHost(eventId: string, hostId: string, reason: string): Promise<HostCancellationResult> {
+        return prisma.$transaction(async (tx) => {
+            await tx.$queryRaw`select id from public.events where id = cast(${eventId} as uuid) for update`;
+            const event = await tx.event.findUnique({
+                where: { id: eventId },
+                include: { bookings: { include: { payment: true, guest: true } } },
+            });
+            if (!event) throw new Error('Event not found');
+            if (event.hostId !== hostId) throw new Error('Only the host can delete this event');
+            const empty: HostCancellationResult = { refundPaymentIds: [], pendingPayments: [], notifyUsers: [], feeTotal: 0 };
+            if (event.cancelledAt) return empty;
+            if (event.eventDate <= new Date()) throw new Error('Cannot cancel past events');
+
+            const active = event.bookings.filter((b) => ['PENDING', 'APPROVED', 'WAITLIST'].includes(b.status));
+            const paid = active.map((b) => b.payment)
+                .filter((p): p is NonNullable<typeof p> => Boolean(p && ['CONFIRMED', 'PARTIALLY_REFUNDED'].includes(p.status)));
+            const feeTotal = Number(paid.reduce((sum, p) => sum + hostCancellationFee({
+                processorFee: p.processorFee === null ? null : Number(p.processorFee),
+                paymentMethod: p.paymentMethod,
+            }), 0).toFixed(2));
+            const now = new Date();
+
+            await tx.booking.updateMany({
+                where: { id: { in: active.map((b) => b.id) } },
+                data: { status: 'CANCELLED', cancellationSource: 'HOST', capacityHeldAt: null, paymentDueAt: null },
+            });
+            for (const payment of paid) {
+                await tx.payment.update({
+                    where: { id: payment.id },
+                    data: { refundTargetAmount: payment.valor, refundReason: 'Evento cancelado pelo anfitriao. Devolucao integral.' },
+                });
+            }
+            await tx.event.update({
+                where: { id: eventId },
+                data: { cancelledAt: now, cancellationReason: reason, cancellationFeeTotal: feeTotal, cancellationPaymentCount: paid.length },
+            });
+            if (feeTotal > 0) {
+                // May leave the available balance negative; future credits settle it.
+                await tx.user.update({ where: { id: hostId }, data: { walletBalance: { decrement: feeTotal } } });
+                await tx.walletTransaction.create({
+                    data: {
+                        userId: hostId,
+                        amount: -feeTotal,
+                        type: 'DEBIT_EVENT_CANCELLATION_FEE',
+                        description: `Taxa de cancelamento do evento (${paid.length} pagamento(s) reembolsado(s))`,
+                        referenceId: `event-cancellation:${eventId}`,
+                    },
+                });
+            }
+
+            return {
+                refundPaymentIds: paid.map((p) => p.id),
+                pendingPayments: active.map((b) => b.payment)
+                    .filter((p): p is NonNullable<typeof p> => p?.status === 'PENDING')
+                    .map((p) => ({ id: p.id, txid: p.txid, providerPaymentId: p.providerPaymentId ?? undefined, checkoutUrl: p.checkoutUrl ?? undefined })),
+                notifyUsers: active.map((b) => ({ id: b.userId, expoPushToken: b.guest?.expoPushToken ?? null })),
+                feeTotal,
+            };
+        }, { maxWait: 5000, timeout: 30000 });
+    }
+
     async delete(id: string): Promise<void> {
         await prisma.eventDish.deleteMany({ where: { eventId: id } });
         await prisma.eventReview.deleteMany({ where: { eventId: id } });
@@ -284,6 +347,7 @@ export class PrismaEventRepository implements EventRepository {
             autoApproveMinRating: prismaEvent.autoApproveMinRating?.toNumber() || null,
             createdAt: prismaEvent.createdAt,
             updatedAt: prismaEvent.updatedAt ?? prismaEvent.updated_at,
+            cancelledAt: prismaEvent.cancelledAt ?? null,
             host: prismaEvent.host ? {
                 id: prismaEvent.host.id,
                 fullName: prismaEvent.host.fullName,

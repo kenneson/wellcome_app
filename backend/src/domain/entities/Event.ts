@@ -26,6 +26,7 @@ export interface Event {
     dietaryOptions: string[];
     isServedInSequence?: boolean;
     creationKey?: string | null;
+    cancelledAt?: Date | null;
     hostId: string;
     host?: import('./User').User;
     bookings?: import('./EventRegistration').EventRegistration[];
@@ -44,7 +45,7 @@ export interface Event {
     updatedAt: Date;
 }
 
-export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'questions' | 'dishes' | 'reviews' | 'distanceKm'> & {
+export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'cancelledAt' | 'questions' | 'dishes' | 'reviews' | 'distanceKm'> & {
     questions?: {
         question: string;
         questionType: string;
@@ -60,7 +61,7 @@ export type CreateEventDTO = Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'que
     }[];
 };
 
-export type UpdateEventDTO = Partial<Omit<Event, 'id' | 'hostId' | 'createdAt' | 'updatedAt' | 'host' | 'bookings' | 'questions' | 'dishes' | 'reviews' | 'distanceKm'>> & {
+export type UpdateEventDTO = Partial<Omit<Event, 'id' | 'hostId' | 'createdAt' | 'updatedAt' | 'cancelledAt' | 'host' | 'bookings' | 'questions' | 'dishes' | 'reviews' | 'distanceKm'>> & {
     questions?: {
         question: string;
         questionType: string;

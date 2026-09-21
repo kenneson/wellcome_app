@@ -46,6 +46,7 @@ export default function MyEventsScreen() {
                     event_participants(status)
                 `)
                 .eq('host_id', session.user.id)
+                .is('cancelled_at', null)
                 .order('event_date', { ascending: false });
 
             if (error) throw error;
@@ -83,7 +84,7 @@ export default function MyEventsScreen() {
     async function handleDelete(id: string) {
         Alert.alert(
             'Confirmar exclusão',
-            'Tem certeza que deseja cancelar este evento? Essa ação não pode ser desfeita.',
+            'Tem certeza que deseja cancelar este evento? Quem pagou recebe a devolução integral, e a taxa do meio de pagamento de cada Pix/boleto reembolsado é debitada do seu saldo.',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {

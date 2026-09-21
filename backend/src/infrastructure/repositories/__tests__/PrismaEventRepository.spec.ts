@@ -33,6 +33,7 @@ describe('PrismaEventRepository.findAll', () => {
         expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
             where: {
                 eventDate: { gt: expect.any(Date) },
+                cancelledAt: null,
                 price: { gte: 20, lte: 80 },
                 eventType: 'DINNER',
                 cuisineTypes: { hasSome: ['Brasileira', 'Italiana'] },

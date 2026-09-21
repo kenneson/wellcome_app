@@ -238,7 +238,12 @@ const start = async () => {
         );
         const listEventsUseCase = new ListEventsUseCase(eventRepository);
         const updateEventUseCase = new UpdateEventUseCase(eventRepository, eventQuestionRepository, userRepository);
-        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository, chatService);
+        const deleteEventUseCase = new DeleteEventUseCase(eventRepository, eventRegistrationRepository, chatService, {
+            payments: paymentRepository,
+            gateway: asaasPaymentService,
+            refunds: registrationRefundService,
+            notifications: sendNotificationUseCase,
+        });
         
         const joinEventUseCase = new JoinEventUseCase(eventRegistrationRepository, eventRepository, sendNotificationUseCase, chatService);
         const cancelEventRegistrationUseCase = new CancelEventRegistrationUseCase(
@@ -247,7 +252,8 @@ const start = async () => {
             sendNotificationUseCase,
             paymentRepository,
             asaasPaymentService,
-            chatService
+            chatService,
+            registrationRefundService
         );
         const approveRegistrationUseCase = new ApproveRegistrationUseCase(
             eventRegistrationRepository,

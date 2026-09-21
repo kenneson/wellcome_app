@@ -13,7 +13,16 @@ export interface EventFilters {
     excludeHostId?: string;
 }
 
+export interface HostCancellationResult {
+    refundPaymentIds: string[];
+    pendingPayments: { id: string; txid: string; providerPaymentId?: string; checkoutUrl?: string }[];
+    notifyUsers: { id: string; expoPushToken: string | null }[];
+    feeTotal: number;
+}
+
 export interface EventRepository {
+    /** Atomically cancels the event and its active bookings, queues full refunds and debits the host fee. */
+    cancelByHost?(eventId: string, hostId: string, reason: string): Promise<HostCancellationResult>;
     create(data: CreateEventDTO): Promise<Event>;
     findAll(filters?: EventFilters): Promise<Event[]>;
     findById(id: string): Promise<Event | null>;

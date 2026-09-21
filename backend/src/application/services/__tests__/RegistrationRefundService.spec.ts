@@ -41,6 +41,20 @@ describe('automatic registration refunds', () => {
         await service.execute(payment.id);
         expect(gateway.refundPayment).toHaveBeenCalledWith('pay-1', 70, expect.any(String));
     });
+    it('refunds only up to the policy target of a late participant cancellation', async () => {
+        payments.withRegistrationRefundLock.mockImplementation(async (_id, action) =>
+            action({ ...payment, refundTargetAmount: 50, refundReason: 'Multa de 50%' }));
+        await service.execute(payment.id);
+        expect(gateway.refundPayment).toHaveBeenCalledWith('pay-1', 50, 'Multa de 50%');
+    });
+    it('does not refund beyond a target that is already reached', async () => {
+        payments.withRegistrationRefundLock.mockImplementation(async (_id, action) =>
+            action({ ...payment, refundTargetAmount: 50 }));
+        gateway.getPayment.mockResolvedValue({ ...paid, refunds: [{ status: 'DONE', value: 50 }] });
+        await service.execute(payment.id);
+        expect(gateway.refundPayment).not.toHaveBeenCalled();
+        expect(payments.applyRefund).toHaveBeenCalledWith(expect.objectContaining({ refundedAmount: 50, targetStatus: 'PARTIALLY_REFUNDED' }));
+    });
     it('skips registrations that are no longer refund candidates under the lock', async () => {
         payments.withRegistrationRefundLock.mockResolvedValue(null);
         await service.execute(payment.id);

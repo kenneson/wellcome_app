@@ -8,6 +8,12 @@ export interface CapacityReconciliationAction {
 }
 
 export interface EventRegistrationRepository {
+    /** Cancels the booking and, when paid, stores its refund target in the same write. */
+    cancelByParticipant?(registrationId: string, data: {
+        penaltyRate?: number;
+        refundTargetAmount?: number;
+        refundReason?: string;
+    }): Promise<void>;
     rejectWithGuard?(registrationId: string, hostId: string, reason: string): Promise<EventRegistration>;
     create(data: CreateRegistrationDTO): Promise<EventRegistration>;
     findByEventId(eventId: string): Promise<EventRegistration[]>;

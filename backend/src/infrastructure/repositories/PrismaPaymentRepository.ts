@@ -12,6 +12,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
                 provider: 'ASAAS',
                 providerPaymentId: { not: null },
                 status: { in: [PaymentStatus.CONFIRMED, PaymentStatus.PARTIALLY_REFUNDED] },
+                refundCompletedAt: null,
                 booking: { status: { in: ['REJECTED', 'CANCELLED', 'EXPIRED'] } },
             },
             orderBy: { updatedAt: 'asc' },
@@ -26,7 +27,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
         return prisma.$transaction(async (tx) => {
             await tx.$queryRaw`select id from public.payments where id = cast(${paymentId} as uuid) for update`;
             const row = await tx.payment.findUnique({ where: { id: paymentId }, include: { booking: true } });
-            if (!row || !['REJECTED', 'CANCELLED', 'EXPIRED'].includes(row.booking.status)
+            if (!row || row.refundCompletedAt || !['REJECTED', 'CANCELLED', 'EXPIRED'].includes(row.booking.status)
                 || !['CONFIRMED', 'PARTIALLY_REFUNDED'].includes(row.status)) return null;
             const result = await action(this.toDomain(row));
             await tx.payment.update({ where: { id: paymentId }, data: { providerStatus: 'REFUND_REQUESTED' } });
@@ -609,8 +610,14 @@ export class PrismaPaymentRepository implements PaymentRepository {
             const nextRefundedAmount = Math.min(grossValue, Math.max(0, data.refundedAmount));
             const isFullRefund = nextRefundedAmount >= grossValue;
             const nextStatus = isFullRefund ? data.targetStatus : PaymentStatus.PARTIALLY_REFUNDED;
+            const refundTarget = payment.refundTargetAmount != null ? Number(payment.refundTargetAmount) : grossValue;
+            const refundCompletedAt = payment.refundCompletedAt ?? new Date();
 
             if (nextRefundedAmount <= previousRefundedAmount) {
+                // The webhook may have applied this refund first; still close the refund queue entry.
+                if (!payment.refundCompletedAt && previousRefundedAmount >= refundTarget) {
+                    await tx.payment.update({ where: { id: payment.id }, data: { refundCompletedAt } });
+                }
                 return false;
             }
 
@@ -638,6 +645,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
                     refundedNetAmount: nextRefundedNetAmount,
                     refundedPlatformFee: nextRefundedPlatformFee,
                     refundedProcessorFee: processorFeeReturned,
+                    ...(nextRefundedAmount >= refundTarget ? { refundCompletedAt } : {}),
                     ...(isFullRefund && payment.fundsHeldAt && !payment.fundsReleasedAt
                         ? { fundsReleasedAt: new Date() }
                         : {}),
@@ -714,6 +722,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
             netAmount: raw.netAmount ? Number(raw.netAmount) : undefined,
             refundedAmount: raw.refundedAmount !== null ? Number(raw.refundedAmount) : undefined,
             refundedNetAmount: raw.refundedNetAmount !== null ? Number(raw.refundedNetAmount) : undefined,
+            refundTargetAmount: raw.refundTargetAmount != null ? Number(raw.refundTargetAmount) : undefined,
+            refundReason: raw.refundReason ?? undefined,
+            refundCompletedAt: raw.refundCompletedAt ?? undefined,
             fundsHeldAt: raw.fundsHeldAt ?? undefined,
             fundsAvailableAt: raw.fundsAvailableAt ?? undefined,
             fundsReleasedAt: raw.fundsReleasedAt ?? undefined,

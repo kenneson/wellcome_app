@@ -18,10 +18,11 @@ export class RegistrationRefundService {
             const done = (remote.refunds || []).filter((r) => r.status === 'DONE').reduce((sum, r) => sum + r.value, 0);
             const pending = remote.status === 'REFUND_REQUESTED' || remote.status === 'REFUND_IN_PROGRESS'
                 || (remote.refunds || []).some((r) => r.status === 'PENDING');
-            if (!pending && remote.status !== 'REFUNDED' && done < payment.valor) {
-                remote = await this.gateway.refundPayment(remote.id,
-                    Number((payment.valor - Math.max(done, payment.refundedAmount || 0)).toFixed(2)),
-                    'Inscrição encerrada. Devolução integral ao participante.');
+            const target = payment.refundTargetAmount ?? payment.valor;
+            const amount = Number((target - Math.max(done, payment.refundedAmount || 0)).toFixed(2));
+            if (!pending && remote.status !== 'REFUNDED' && amount > 0) {
+                remote = await this.gateway.refundPayment(remote.id, amount,
+                    payment.refundReason || 'Inscrição encerrada. Devolução integral ao participante.');
             }
             const refunded = remote.status === 'REFUNDED' ? payment.valor
                 : (remote.refunds || []).filter((r) => r.status === 'DONE').reduce((sum, r) => sum + r.value, 0);

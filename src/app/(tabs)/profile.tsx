@@ -48,11 +48,16 @@ export default function ProfileScreen() {
         }, [refetch, session?.user?.id])
     );
 
-    async function handleCancelBooking(eventId: string) {
+    async function handleCancelBooking(eventId: string, status: string, eventDate?: string) {
         if (processing) return;
+        // Mirrors backend CancellationPolicy: confirmed guests cancelling < 7 days before get 50% back.
+        const lateCancellation = status === 'APPROVED' && Boolean(eventDate)
+            && new Date(eventDate!).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
         Alert.alert(
-            'Cancelar Solicitação',
-            'Tem certeza que deseja cancelar sua solicitação de inscrição?',
+            'Cancelar inscrição',
+            lateCancellation
+                ? 'Faltam menos de 7 dias para o evento. Se você já pagou, será devolvido 50% do valor; os outros 50% ficam como multa de cancelamento.'
+                : 'Tem certeza que deseja cancelar? Se você já pagou, o valor será devolvido integralmente.',
             [
                 { text: 'Não', style: 'cancel' },
                 {
@@ -63,7 +68,7 @@ export default function ProfileScreen() {
                         try {
                             await registrationService.cancelBooking(eventId, session.user.id);
                             refetch(); // Refresh list
-                            Alert.alert('Sucesso', 'Solicitação cancelada.');
+                            Alert.alert('Sucesso', 'Inscrição cancelada.');
                         } catch {
                             Alert.alert('Erro', 'Não foi possível cancelar.');
                         } finally {
@@ -268,12 +273,12 @@ export default function ProfileScreen() {
                                     <Text style={styles.rateButtonText}>Avaliar</Text>
                                 </TouchableOpacity>
                             )}
-                            {activeTab === 'upcoming' && booking.status === 'pending' && (
+                            {activeTab === 'upcoming' && ['PENDING', 'APPROVED', 'WAITLIST'].includes(booking.status) && (
                                 <TouchableOpacity
                                     style={styles.cancelButton}
                                     onPress={(e) => {
                                         e.stopPropagation();
-                                        handleCancelBooking(booking.event?.id);
+                                        handleCancelBooking(booking.event?.id, booking.status, booking.event?.eventDate);
                                     }}
                                 >
                                     <Text style={styles.cancelButtonText}>Cancelar</Text>

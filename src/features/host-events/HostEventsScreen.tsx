@@ -163,6 +163,7 @@ export default function HostEventsScreen() {
                     event_participants(status)
                 `)
                 .eq('host_id', session.user.id)
+                .is('cancelled_at', null)
                 .order('event_date', { ascending: false });
 
             if (error) throw error;
@@ -249,7 +250,7 @@ export default function HostEventsScreen() {
     const handleDeleteEvent = useCallback((event: HostEvent) => {
         Alert.alert(
             'Cancelar evento?',
-            `O evento “${event.title}” será cancelado. Se houver vendas, as regras de reembolso serão aplicadas.`,
+            `O evento “${event.title}” será cancelado. Quem pagou recebe a devolução integral, e a taxa do meio de pagamento de cada Pix/boleto reembolsado é debitada do seu saldo.`,
             [
                 { text: 'Voltar', style: 'cancel' },
                 {
@@ -257,8 +258,11 @@ export default function HostEventsScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await eventService.deleteEvent(event.id);
+                            const result = await eventService.deleteEvent(event.id);
                             setEvents((current) => current.filter((item) => item.id !== event.id));
+                            if (result.cancellationFee > 0) {
+                                Alert.alert('Evento cancelado', `Taxa de cancelamento debitada: R$ ${result.cancellationFee.toFixed(2).replace('.', ',')}.`);
+                            }
                         } catch (error: any) {
                             Alert.alert('Não foi possível cancelar', error?.message || 'Tente novamente.');
                         }

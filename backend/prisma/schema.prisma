@@ -90,6 +90,10 @@ model Event {
   isServedInSequence    Boolean            @default(false) @map("is_served_in_sequence")
   creationKey           String?            @unique @map("creation_key")
   updated_at            DateTime           @default(now()) @db.Timestamptz(6)
+  cancelledAt           DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  cancellationReason    String?            @map("cancellation_reason")
+  cancellationFeeTotal  Decimal            @default(0) @map("cancellation_fee_total") @db.Decimal(10, 2)
+  cancellationPaymentCount Int              @default(0) @map("cancellation_payment_count")
   accessType            EventAccessType    @default(OPEN) @map("access_type")
   requiresApproval      Boolean            @default(false) @map("requires_approval")
   allowWaitlist         Boolean            @default(false) @map("allow_waitlist")
@@ -137,6 +141,8 @@ model Booking {
   rejectionReason String?              @map("rejection_reason")
   paymentDueAt    DateTime?            @map("payment_due_at") @db.Timestamptz(6)
   capacityHeldAt  DateTime?            @map("capacity_held_at") @db.Timestamptz(6)
+  cancellationSource String?            @map("cancellation_source")
+  cancellationPenaltyRate Decimal?      @map("cancellation_penalty_rate") @db.Decimal(5, 2)
   attendedBefore  Boolean              @default(false) @map("attended_before")
   noShowCount     Int                  @default(0) @map("no_show_count")
   event           Event                @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "event_participants_event_fkey")
@@ -385,6 +391,9 @@ model Payment {
   netAmount            Decimal?      @default(0) @map("net_amount") @db.Decimal(10, 2)
   refundedAmount       Decimal       @default(0) @map("refunded_amount") @db.Decimal(10, 2)
   refundedNetAmount    Decimal       @default(0) @map("refunded_net_amount") @db.Decimal(10, 2)
+  refundTargetAmount   Decimal?      @map("refund_target_amount") @db.Decimal(10, 2)
+  refundReason         String?       @map("refund_reason")
+  refundCompletedAt    DateTime?     @map("refund_completed_at") @db.Timestamptz(6)
   fundsHeldAt          DateTime?     @map("funds_held_at") @db.Timestamptz(6)
   fundsAvailableAt     DateTime?     @map("funds_available_at") @db.Timestamptz(6)
   fundsReleasedAt      DateTime?     @map("funds_released_at") @db.Timestamptz(6)
@@ -1067,6 +1076,7 @@ enum TransactionType {
   DEBIT_WITHDRAWAL
   REFUND_WITHDRAWAL_FAILED
   DEBIT_PAYMENT_REVERSAL
+  DEBIT_EVENT_CANCELLATION_FEE
 
   @@schema("public")
 }

@@ -2,10 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { CreateEventUseCase } from '../../../application/use-cases/CreateEventUseCase';
 import { ListEventsUseCase } from '../../../application/use-cases/ListEventsUseCase';
 import { UpdateEventUseCase } from '../../../application/use-cases/UpdateEventUseCase';
-import {
-    DeleteEventUseCase,
-    EventHasRegistrationHistoryError,
-} from '../../../application/use-cases/DeleteEventUseCase';
+import { DeleteEventUseCase } from '../../../application/use-cases/DeleteEventUseCase';
 import { z } from 'zod';
 
 import { EventAccessType } from '../../../domain/value-objects/EventAccessType';
@@ -317,20 +314,16 @@ export class EventController {
         const { id } = request.params as { id: string };
         try {
             const hostId = await getAuthenticatedUserId(request);
-            await this.deleteEventUseCase.execute(id, hostId);
-            return reply.code(204).send();
+            const result = await this.deleteEventUseCase.execute(id, hostId);
+            return reply.code(200).send(result);
         } catch (error) {
             if (error instanceof UnauthorizedRequestError) {
                 return reply.code(401).send({ code: 'UNAUTHORIZED', message: error.message, fieldErrors: {} });
             }
-            if (error instanceof EventHasRegistrationHistoryError) {
-                return reply.code(409).send({
-                    code: 'EVENT_HAS_REGISTRATION_HISTORY',
-                    message: error.message,
-                    fieldErrors: {},
-                });
-            }
             if (error instanceof Error) {
+                if (error.message === 'Cannot cancel past events') {
+                    return reply.code(409).send({ code: 'EVENT_ALREADY_HAPPENED', message: 'Eventos que ja aconteceram nao podem ser cancelados', fieldErrors: {} });
+                }
                 if (error.message === 'Event not found') {
                     return reply.code(404).send({ code: 'EVENT_NOT_FOUND', message: error.message, fieldErrors: {} });
                 }

@@ -12,6 +12,26 @@ import {
 import { prisma } from '../database/prismaClient';
 
 export class PrismaEventRegistrationRepository implements EventRegistrationRepository {
+    async cancelByParticipant(registrationId: string, data: {
+        penaltyRate?: number;
+        refundTargetAmount?: number;
+        refundReason?: string;
+    }): Promise<void> {
+        await prisma.booking.update({
+            where: { id: registrationId },
+            data: {
+                status: RegistrationStatus.CANCELLED,
+                capacityHeldAt: null,
+                paymentDueAt: null,
+                cancellationSource: 'PARTICIPANT',
+                cancellationPenaltyRate: data.penaltyRate ?? null,
+                ...(data.refundTargetAmount !== undefined ? {
+                    payment: { update: { refundTargetAmount: data.refundTargetAmount, refundReason: data.refundReason } },
+                } : {}),
+            },
+        });
+    }
+
     async rejectWithGuard(registrationId: string, hostId: string, reason: string): Promise<EventRegistration> {
         return prisma.$transaction(async (tx) => {
             const original = await tx.booking.findUnique({ where: { id: registrationId } });
@@ -64,6 +84,7 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
                 include: { bookings: { include: { payment: { select: { status: true } } } } },
             });
             if (!event) throw new Error('Event not found');
+            if (event.cancelledAt) throw new Error('Event cancelled');
 
             const mappedEvent = {
                 accessType: event.accessType as EventAccessType,
@@ -136,6 +157,7 @@ export class PrismaEventRegistrationRepository implements EventRegistrationRepos
             });
             if (!event) throw new Error('Event not found');
             if (event.hostId !== hostId) throw new Error('Unauthorized: You are not the host of this event');
+            if (event.cancelledAt) throw new Error('Event cancelled');
             const candidate = event.bookings.find((current) => current.id === registrationId);
             if (!candidate || candidate.status !== RegistrationStatus.PENDING) {
                 throw new Error('A inscrição não está aguardando aprovação');

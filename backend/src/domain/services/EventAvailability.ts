@@ -1,6 +1,7 @@
 type EventSchedule = {
     eventDate: Date | string;
     reservationDeadline?: Date | string | null;
+    cancelledAt?: Date | string | null;
 };
 
 export function getRegistrationCutoff(event: EventSchedule): Date {
@@ -14,6 +15,7 @@ export function getRegistrationCutoff(event: EventSchedule): Date {
 }
 
 export function isEventOpenForRegistration(event: EventSchedule, now = new Date()): boolean {
+    if (event.cancelledAt) return false;
     const cutoff = getRegistrationCutoff(event);
     return Number.isFinite(cutoff.getTime()) && cutoff > now;
 }

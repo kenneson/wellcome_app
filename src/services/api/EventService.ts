@@ -262,7 +262,7 @@ export class EventService {
         return await response.json();
     }
 
-    async deleteEvent(id: string): Promise<void> {
+    async deleteEvent(id: string): Promise<{ outcome: 'DELETED' | 'CANCELLED'; cancellationFee: number }> {
         const response = await fetch(`${API_URL}/events/${id}`, {
             method: 'DELETE',
             headers: await this.getAuthHeaders(),
@@ -272,6 +272,7 @@ export class EventService {
             const errorData = await response.json();
             throw new Error(errorData.message || 'Falha ao excluir evento');
         }
+        return response.json();
     }
 }
 

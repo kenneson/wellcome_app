@@ -1,4 +1,4 @@
-import { DeleteEventUseCase, EventHasRegistrationHistoryError } from '../DeleteEventUseCase';
+import { DeleteEventUseCase } from '../DeleteEventUseCase';
 import { EventRepository } from '../../../domain/repositories/EventRepository';
 import { EventRegistrationRepository } from '../../../domain/repositories/EventRegistrationRepository';
 import { Event } from '../../../domain/entities/Event';
@@ -125,25 +125,44 @@ describe('DeleteEventUseCase', () => {
         expect(mockEventRepository.delete).not.toHaveBeenCalled();
     });
 
-    it('should preserve an event that already has registration history', async () => {
+    it('cancels instead of deleting an event with registration history, refunding and notifying', async () => {
         const existingEvent = {
             id: 'event-123',
             hostId: 'host-123',
             title: 'Event',
         } as Event;
+        const cancelByHost = jest.fn().mockResolvedValue({
+            refundPaymentIds: ['payment-1'],
+            pendingPayments: [{ id: 'payment-2', txid: 'tx-2', providerPaymentId: 'asaas-2' }],
+            notifyUsers: [{ id: 'guest-1', expoPushToken: null }],
+            feeTotal: 1.99,
+        });
+        const cancellation = {
+            payments: { updateStatus: jest.fn() },
+            gateway: { deletePayment: jest.fn().mockResolvedValue(undefined), cancelCheckout: jest.fn() },
+            refunds: { execute: jest.fn().mockResolvedValue(undefined) },
+            notifications: { execute: jest.fn().mockResolvedValue(undefined) },
+        };
+        const useCase = new DeleteEventUseCase(
+            { ...mockEventRepository, cancelByHost } as any,
+            mockEventRegistrationRepository,
+            undefined,
+            cancellation as any
+        );
         mockEventRepository.findById.mockResolvedValue(existingEvent);
         mockEventRegistrationRepository.findByEventIdWithUser.mockResolvedValue([
-            {
-                id: 'booking-1',
-                eventId: 'event-123',
-                userId: 'guest-1',
-                status: 'CANCELLED',
-            } as any,
+            { id: 'booking-1', eventId: 'event-123', userId: 'guest-1', status: 'APPROVED' } as any,
         ]);
 
-        await expect(deleteEventUseCase.execute('event-123', 'host-123'))
-            .rejects.toBeInstanceOf(EventHasRegistrationHistoryError);
+        await expect(useCase.execute('event-123', 'host-123'))
+            .resolves.toEqual({ outcome: 'CANCELLED', cancellationFee: 1.99 });
 
         expect(mockEventRepository.delete).not.toHaveBeenCalled();
+        expect(cancelByHost).toHaveBeenCalledWith('event-123', 'host-123', expect.any(String));
+        expect(cancellation.refunds.execute).toHaveBeenCalledWith('payment-1');
+        expect(cancellation.gateway.deletePayment).toHaveBeenCalledWith('asaas-2');
+        expect(cancellation.payments.updateStatus).toHaveBeenCalledWith('payment-2', 'EXPIRED');
+        expect(cancellation.notifications.execute).toHaveBeenCalledWith(
+            'guest-1', null, 'Evento cancelado', expect.any(String), 'EVENT_CANCELED', { eventId: 'event-123' });
     });
 });

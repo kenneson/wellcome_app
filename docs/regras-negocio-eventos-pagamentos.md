@@ -69,11 +69,14 @@ margem Wellcome:    R$   8,00
 ## Cancelamento, recusa e reembolso
 
 - Inscricoes com historico financeiro nao sao apagadas; passam para `CANCELLED` ou `REJECTED`.
-- Se existe pagamento confirmado, o reembolso restante e solicitado ao Asaas antes de cancelar ou recusar localmente.
+- O cancelamento/recusa e salvo primeiro, com a meta de reembolso (`refund_target_amount`) no pagamento; o reembolso no Asaas e solicitado em seguida e um worker repete a cada minuto ate atingir a meta (`refund_completed_at`).
+- Cancelamento pelo participante aprovado: devolucao integral com 7 dias ou mais de antecedencia; 50% com menos de 7 dias. Inscricao ainda nao aprovada pelo anfitriao e sempre devolvida integralmente.
+- O valor retido pela multa fica dividido proporcionalmente entre anfitriao (liquido) e Wellcome (taxa).
+- Recusa pelo anfitriao, pagamento sem vaga e cancelamento do evento: devolucao integral.
 - Enquanto o valor esta retido, o reembolso reduz o saldo retido.
 - Depois da liberacao, o reembolso debita o saldo disponivel e cria uma transacao de reversao.
-- Se o provedor recusar a solicitacao de reembolso, o cancelamento local nao e concluido automaticamente.
-- Eventos com qualquer historico de inscricao nao podem ser excluidos fisicamente.
+- Eventos sem historico sao excluidos; eventos com historico sao cancelados (`cancelled_at`), saem do feed e nao aceitam novas inscricoes.
+- Ao cancelar um evento com vendas, o anfitriao e debitado da taxa do Asaas nao devolvida de cada pagamento reembolsado (Pix/boleto; a taxa de cartao volta no estorno integral) como `DEBIT_EVENT_CANCELLATION_FEE`. O saldo disponivel pode ficar negativo.
 
 ## Saques
 
@@ -111,7 +114,7 @@ MIN_WITHDRAWAL_AMOUNT=50
 
 ## Decisoes ainda necessarias antes da operacao publica
 
-- Politica juridica de cancelamento por antecedencia, taxa de cancelamento e no-show.
+- Revisao juridica da politica de cancelamento (7 dias / 50%) e regra de no-show.
 - Prazo prometido ao cliente para conclusao de reembolsos e suporte a disputas.
 - Responsabilidade tributaria e emissao de documentos fiscais para anfitriao e plataforma.
 - Tratamento operacional de chargeback depois que o anfitriao ja sacou.
