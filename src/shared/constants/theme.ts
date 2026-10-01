@@ -8,21 +8,23 @@ const tintColorDark = '#fff';
 
 export const Colors = {
     light: {
-        text: '#11181C',
+        text: '#281914',
         background: '#fff',
+        canvas: '#FFF8F3',
         tint: tintColorLight,
-        icon: '#687076',
-        tabIconDefault: '#687076',
+        icon: '#7A655B',
+        tabIconDefault: '#7A655B',
         tabIconSelected: tintColorLight,
         primary: '#FF8C42',
-        secondary: '#FFF3E0',
-        border: '#eee',
-        borderStrong: '#E0E0E0',
-        textSecondary: '#666',
-        textTertiary: '#999',
+        primaryDeep: '#C94E16',
+        secondary: '#FFEFE3',
+        border: '#EFE3DA',
+        borderStrong: '#E3D3C7',
+        textSecondary: '#5E4A41',
+        textTertiary: '#7A655B',
         card: '#fff',
         error: '#FF3B30',
-        success: '#4CAF50',
+        success: '#1F6D5D',
         warning: '#FFA500',
         overlay: 'rgba(0,0,0,0.5)',
     },
@@ -39,6 +41,8 @@ export const Colors = {
         borderStrong: '#48484A',
         textSecondary: '#AEAEB2',
         textTertiary: '#8E8E93',
+        canvas: '#151718',
+        primaryDeep: '#FF8C42',
         card: '#1C1C1E',
         error: '#FF453A',
         success: '#32D74B',
@@ -102,5 +106,54 @@ export const BorderRadius = {
     lg: 16,
     xl: 20,
     xxl: 24,
+    sheet: 28,
     full: 9999,
+};
+
+/**
+ * Wellcome brand tokens. Orange is reserved for actions and highlights;
+ * ink and paper carry the content so the brand color keeps its weight.
+ */
+export const Palette = {
+    orange: '#FF8C42',
+    orangeDeep: '#C94E16',
+    orangeDarker: '#9A3A0E',
+    orangeSoft: '#FFEFE3',
+    orangeOnBrand: '#FFF3EA',
+    ink: '#281914',
+    inkSoft: '#5E4A41',
+    muted: '#7A655B',
+    subtle: '#B9A69B',
+    paper: '#FFF8F3',
+    surface: '#FFFFFF',
+    track: '#F3E7DE',
+    line: '#EFE3DA',
+    lineSoft: '#F5ECE5',
+    blue: '#315E9E',
+    blueSoft: '#EAF0F9',
+    green: '#1F6D5D',
+    greenSoft: '#E6F2EF',
+    danger: '#B42318',
+    dangerLine: '#F3D0CC',
+    star: '#FFB547',
+    scrim: 'rgba(40,25,20,0.72)',
+    onBrandGlass: 'rgba(255,255,255,0.22)',
+};
+
+/** Single warm shadow used by floating surfaces. */
+export const Elevation = {
+    card: {
+        shadowColor: '#452314',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 3,
+    },
+    floating: {
+        shadowColor: '#C94E16',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 14,
+        elevation: 8,
+    },
 };

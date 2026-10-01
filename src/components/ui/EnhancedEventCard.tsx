@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
-import { Colors, Spacing, BorderRadius, Dimensions } from '@/shared/constants/theme';
+import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { formatPrice, formatEventDate, formatSpotsAvailable } from '@/utils/formatters';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
@@ -58,25 +58,32 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
   const taken = Math.min(maxGuests, Math.max(0, Number(rawTaken) || 0));
   const spotsLabel = formatSpotsAvailable(taken, maxGuests);
 
-  // Get first 3 tags (combine cuisine and vibe)
-  const allTags = [
-    ...(cuisineTypes || []),
-    ...(event.vibe || [])
-  ].slice(0, 3);
+  const tags = [...(cuisineTypes || []), ...(event.vibe || [])].slice(0, 2);
+  const remaining = Math.max(0, maxGuests - taken);
+  const soldOut = remaining === 0;
 
-  // Format time range
+  const start = eventDate ? new Date(eventDate) : null;
+  const hasStart = !!start && !Number.isNaN(start.getTime());
+  const day = hasStart ? String(start!.getDate()).padStart(2, '0') : '--';
+  const month = hasStart
+    ? start!.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase()
+    : '';
+
   const formatTimeRange = () => {
-    if (!eventDate) return '';
-    const date = new Date(eventDate);
-    const startTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
-    if (endTime) {
-      const endDate = new Date(endTime);
-      const endTimeStr = endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      return `${startTime} - ${endTimeStr}`;
-    }
-    return startTime;
+    if (!hasStart) return '';
+    const startTime = start!.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (!endTime) return startTime;
+    const endDate = new Date(endTime);
+    if (Number.isNaN(endDate.getTime())) return startTime;
+    return `${startTime}–${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   };
+
+  const meta = [hostName, formatTimeRange(), event.location].filter(Boolean).join(' · ');
+  const distanceLabel = distanceKm === undefined || distanceKm === null
+    ? null
+    : distanceKm < 1
+      ? `${Math.round(distanceKm * 1000)} m`
+      : `${distanceKm.toFixed(1).replace('.', ',')} km`;
 
   return (
     <TouchableOpacity
@@ -84,10 +91,9 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
       onPress={onPress}
       activeOpacity={0.9}
       accessibilityRole="button"
-      accessibilityLabel={`Evento: ${event.title}. Anfitrião: ${hostName}. ${formatEventDate(eventDate || '')}. ${formatPrice(event.price)} por pessoa`}
+      accessibilityLabel={`Evento: ${event.title}. Anfitrião: ${hostName}. ${formatEventDate(eventDate || '')}. ${formatPrice(event.price)} por pessoa. ${spotsLabel}`}
       accessibilityHint="Toque para ver detalhes do evento"
     >
-      {/* Image with badges */}
       <View style={styles.imageContainer}>
         <Image
           source={{ uri: optimizedCoverImage || DEFAULT_PLACEHOLDER_IMAGE }}
@@ -96,81 +102,51 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
           transition={200}
           cachePolicy="memory-disk"
           placeholder={DEFAULT_PLACEHOLDER_IMAGE}
-          accessible={true}
-          accessibilityLabel={`Imagem do evento ${event.title}`}
+          accessible={false}
         />
-        
-        {/* Rating Badge */}
-        {averageRating && (
-          <View style={styles.ratingBadge}>
-            <Ionicons name="star" size={12} color={Colors.light.warning} />
-            <Text style={styles.ratingText}>{averageRating.toFixed(1)}</Text>
+
+        <View style={styles.dateBadge}>
+          <Text style={styles.dateMonth}>{month}</Text>
+          <Text style={styles.dateDay}>{day}</Text>
+        </View>
+
+        {!!averageRating && (
+          <View style={[styles.glassPill, styles.ratingPill]}>
+            <Ionicons name="star" size={12} color={Palette.star} />
+            <Text style={styles.glassText}>{averageRating.toFixed(1).replace('.', ',')}</Text>
           </View>
         )}
 
-        {/* Distance Badge */}
-        {distanceKm !== undefined && (
-          <View style={styles.distanceBadge}>
-            <Ionicons name="location" size={12} color={Colors.light.primary} />
-            <Text style={styles.distanceText}>
-              {distanceKm < 1 
-                ? `${Math.round(distanceKm * 1000)}m` 
-                : `${distanceKm.toFixed(1)}km`}
-            </Text>
+        {!!distanceLabel && (
+          <View style={[styles.glassPill, styles.distancePill]}>
+            <Ionicons name="location" size={12} color="#FFFFFF" />
+            <Text style={styles.glassText}>{distanceLabel}</Text>
           </View>
         )}
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={2}>{event.title}</Text>
+        {!!meta && <Text style={styles.meta} numberOfLines={1}>{meta}</Text>}
 
-        {/* Host Row */}
-        <View style={styles.hostRow}>
-          <Text style={styles.hostName}>{hostName || 'Host'}</Text>
-          <Ionicons 
-            name="checkmark-circle" 
-            size={14} 
-            color={Colors.light.primary} 
-            style={{ marginLeft: 4 }} 
-          />
-        </View>
-
-        {/* Location */}
-        <Text style={styles.location} numberOfLines={1}>
-          {event.location}
-        </Text>
-
-        {/* Date and Time */}
-        <Text style={styles.date}>
-          {formatEventDate(eventDate || '')}
-        </Text>
-        
-        {/* Time Range */}
-        <Text style={styles.time}>
-          {formatTimeRange()}
-        </Text>
-
-        {/* Tags */}
-        {allTags.length > 0 && (
+        {tags.length > 0 && (
           <View style={styles.tagsContainer}>
-            {allTags.map((tag, index) => (
-              <View key={index} style={styles.tag}>
+            {tags.map((tag, index) => (
+              <View key={`${tag}-${index}`} style={styles.tag}>
                 <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.spotsText}>
-            {maxGuests} lugares • {spotsLabel}
+          <Text style={[styles.spotsText, soldOut && styles.spotsTextSoldOut]}>
+            {soldOut ? 'Esgotado' : `${remaining} de ${maxGuests} vagas livres`}
           </Text>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceText}>{formatPrice(event.price)}</Text>
-            <Text style={styles.priceSub}>por pessoa</Text>
-          </View>
+          <Text style={styles.priceText}>
+            {formatPrice(event.price)}
+            <Text style={styles.priceSub}> /pessoa</Text>
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -179,150 +155,128 @@ export function EnhancedEventCard({ event, onPress }: EnhancedEventCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.light.card,
-    borderRadius: BorderRadius.lg,
-    marginHorizontal: Spacing.lg,
+    backgroundColor: Palette.surface,
+    borderRadius: 22,
+    marginHorizontal: Spacing.xl,
     marginBottom: Spacing.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: Colors.light.border,
+    borderColor: Palette.lineSoft,
+    ...Elevation.card,
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: Dimensions.eventImage.height,
-    backgroundColor: '#f0f0f0',
+    height: 188,
+    backgroundColor: Palette.track,
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  ratingBadge: {
+  dateBadge: {
     position: 'absolute',
     top: Spacing.md,
-    right: Spacing.md,
-    backgroundColor: Colors.light.card,
+    left: Spacing.md,
+    minWidth: 48,
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Palette.surface,
+    alignItems: 'center',
+  },
+  dateMonth: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: Palette.orangeDeep,
+  },
+  dateDay: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Palette.ink,
+    lineHeight: 20,
+  },
+  glassPill: {
+    position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    elevation: 3,
+    gap: 4,
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Palette.scrim,
   },
-  ratingText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginLeft: 4,
-    color: Colors.light.text,
+  ratingPill: {
+    top: Spacing.md,
+    right: Spacing.md,
   },
-  distanceBadge: {
-    position: 'absolute',
+  distancePill: {
     bottom: Spacing.md,
     left: Spacing.md,
-    backgroundColor: Colors.light.card,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    elevation: 3,
   },
-  distanceText: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 2,
-    color: Colors.light.text,
+  glassText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   content: {
-    padding: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: 14,
+    paddingBottom: Spacing.lg,
+    gap: Spacing.sm,
   },
   title: {
     fontSize: 17,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-    marginBottom: Spacing.sm,
+    fontWeight: '800',
+    color: Palette.ink,
     lineHeight: 22,
   },
-  hostRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  hostName: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    fontWeight: '500',
-  },
-  location: {
+  meta: {
     fontSize: 13,
-    color: Colors.light.textTertiary,
-    fontStyle: 'italic',
-    marginBottom: Spacing.sm,
-  },
-  date: {
-    fontSize: 14,
-    color: Colors.light.textSecondary,
-    marginBottom: 2,
-  },
-  time: {
-    fontSize: 13,
-    color: Colors.light.primary,
-    fontWeight: '600',
-    marginBottom: Spacing.md,
+    color: Palette.inkSoft,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: Spacing.md,
   },
   tag: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    backgroundColor: Colors.light.secondary,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: '#FFE0B2',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: Palette.orangeSoft,
+    borderRadius: BorderRadius.full,
   },
   tagText: {
-    fontSize: 11,
-    color: Colors.light.primary,
-    fontWeight: '600',
+    fontSize: 12,
+    color: Palette.orangeDarker,
+    fontWeight: '700',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: Spacing.xs,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.light.border,
+    borderTopColor: Palette.lineSoft,
   },
   spotsText: {
     fontSize: 13,
-    color: Colors.light.textSecondary,
+    fontWeight: '700',
+    color: Palette.green,
   },
-  priceContainer: {
-    alignItems: 'flex-end',
+  spotsTextSoldOut: {
+    color: Palette.danger,
   },
   priceText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+    fontWeight: '800',
+    color: Palette.ink,
   },
   priceSub: {
-    fontSize: 10,
-    color: Colors.light.textTertiary,
-    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '600',
+    color: Palette.muted,
   },
 });

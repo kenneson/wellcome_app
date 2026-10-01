@@ -1,7 +1,9 @@
 import { AppIcon } from '@/components/ui/icon';
 import { EventDraftRecord, eventDraftService } from '@/services/api/EventDraftService';
 import { eventService } from '@/services/api/EventService';
-import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
+import { BrandHeader, BrandSheet, HeaderIconButton } from '@/components/ui/wellcome';
+import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
+import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import { getEventStart, isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
 import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
@@ -21,7 +23,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 type DashboardFilter = 'overview' | 'attention' | 'upcoming' | 'drafts' | 'past';
 
@@ -72,19 +73,19 @@ const DRAFT_STEP_ROUTES = [
 ] as const;
 
 const palette = {
-    canvas: '#F7F7F8',
-    surface: Colors.light.card,
-    primary: Colors.light.primary,
-    primarySoft: '#FFF1E8',
-    text: '#1C2430',
-    muted: '#697386',
-    subtle: '#98A2B3',
-    border: '#E7E9ED',
-    success: '#237A4B',
-    successSoft: '#EAF7F0',
-    warning: Colors.light.primary,
-    warningSoft: '#FFF4E8',
-    danger: '#B42318',
+    canvas: Palette.paper,
+    surface: Palette.surface,
+    primary: Palette.orange,
+    primarySoft: Palette.orangeSoft,
+    text: Palette.ink,
+    muted: Palette.inkSoft,
+    subtle: Palette.subtle,
+    border: Palette.line,
+    success: Palette.green,
+    successSoft: Palette.greenSoft,
+    warning: Palette.orangeDeep,
+    warningSoft: Palette.orangeSoft,
+    danger: Palette.danger,
 };
 
 function normalizeSearch(value: string) {
@@ -135,6 +136,7 @@ function filterDescription(filter: DashboardFilter) {
 
 export default function HostEventsScreen() {
     const router = useRouter();
+    const { unreadCount, refetch: refetchUnread } = useUnreadNotifications();
     const [events, setEvents] = useState<HostEvent[]>([]);
     const [drafts, setDrafts] = useState<EventDraftRecord[]>([]);
     const [selectedFilter, setSelectedFilter] = useState<DashboardFilter>('overview');
@@ -192,7 +194,8 @@ export default function HostEventsScreen() {
 
     useFocusEffect(useCallback(() => {
         void loadDashboard('initial');
-    }, [loadDashboard]));
+        void refetchUnread();
+    }, [loadDashboard, refetchUnread]));
 
     const stats = useMemo(() => {
         const now = new Date();
@@ -315,33 +318,20 @@ export default function HostEventsScreen() {
     ), [handleDeleteDraft, router]);
 
     return (
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-            <View style={styles.topBar}>
-                <View style={styles.titleGroup}>
-                    <Text style={styles.eyebrow}>CENTRAL DO ANFITRIÃO</Text>
-                    <Text style={styles.screenTitle}>Eventos</Text>
-                </View>
-                <View style={styles.topActions}>
-                    <TouchableOpacity
-                        style={styles.iconButton}
+        <View style={styles.safeArea}>
+            <BrandHeader
+                eyebrow="CENTRAL DO ANFITRIÃO"
+                title="Meus eventos"
+                actions={(
+                    <HeaderIconButton
+                        icon="notifications-outline"
+                        accessibilityLabel="Notificações"
+                        badge={unreadCount}
                         onPress={() => router.push('/notifications')}
-                        accessibilityRole="button"
-                        accessibilityLabel="Abrir notificações"
-                    >
-                        <AppIcon name="notifications-outline" size={Dimensions.icon.large} color={palette.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.createButton}
-                        onPress={() => router.push('/events/create')}
-                        accessibilityRole="button"
-                        accessibilityLabel="Criar novo evento"
-                    >
-                        <AppIcon name="add" size={20} color="#FFFFFF" />
-                        <Text style={styles.createButtonText}>Criar</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
+                    />
+                )}
+            />
+            <BrandSheet>
             <FlatList
                 data={rows}
                 keyExtractor={(item) => item.id}
@@ -379,7 +369,8 @@ export default function HostEventsScreen() {
                     />
                 )}
             />
-        </SafeAreaView>
+            </BrandSheet>
+        </View>
     );
 }
 
@@ -413,7 +404,7 @@ function DashboardHeader({
                     accessibilityHint="Mostrar eventos com inscrições pendentes"
                 >
                     <View style={styles.attentionIcon}>
-                        <AppIcon name="person-add-outline" size={24} color={palette.warning} />
+                        <AppIcon name="person-add-outline" size={24} color="#FFFFFF" />
                     </View>
                     <View style={styles.attentionCopy}>
                         <Text style={styles.attentionKicker}>PRECISA DE VOCÊ</Text>
@@ -423,7 +414,7 @@ function DashboardHeader({
                         <Text style={styles.attentionDescription}>Revise agora e dê um retorno aos convidados.</Text>
                     </View>
                     <View style={styles.attentionArrow}>
-                        <AppIcon name="chevron-forward" size={20} color={palette.warning} />
+                        <AppIcon name="chevron-forward" size={20} color="#FFFFFF" />
                     </View>
                 </TouchableOpacity>
             ) : !errorMessage ? (
@@ -808,51 +799,15 @@ function EmptyState({ filter, hasSearch, onCreate, onClearSearch }: EmptyStatePr
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: palette.surface },
-    topBar: {
-        minHeight: 76,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: Spacing.xl,
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: palette.border,
-        backgroundColor: palette.surface,
-    },
-    titleGroup: { flex: 1, paddingRight: Spacing.md },
-    eyebrow: { fontSize: 10, lineHeight: 14, letterSpacing: 1.2, fontWeight: '800', color: palette.primary },
-    screenTitle: { marginTop: 1, fontSize: 28, lineHeight: 34, fontWeight: '800', color: palette.text },
-    topActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-    iconButton: {
-        width: Dimensions.touchTarget.recommended,
-        height: Dimensions.touchTarget.recommended,
-        borderRadius: BorderRadius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
-    },
-    createButton: {
-        minHeight: Dimensions.touchTarget.recommended,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: BorderRadius.full,
-        backgroundColor: palette.primary,
-    },
-    createButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
-    listContent: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingTop: Spacing.lg, paddingBottom: Spacing.xxxl },
+    safeArea: { flex: 1, backgroundColor: palette.canvas },
+    listContent: { flexGrow: 1, paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.xxxl * 2 },
     attentionCard: {
         minHeight: 108,
         flexDirection: 'row',
         alignItems: 'center',
         padding: Spacing.lg,
-        borderRadius: BorderRadius.xl,
-        borderWidth: 1,
-        borderColor: '#F4C9AC',
-        backgroundColor: palette.warningSoft,
+        borderRadius: 20,
+        backgroundColor: Palette.ink,
     },
     attentionIcon: {
         width: 50,
@@ -860,12 +815,12 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.lg,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FFE1CC',
+        backgroundColor: palette.primary,
     },
     attentionCopy: { flex: 1, paddingHorizontal: Spacing.md },
-    attentionKicker: { fontSize: 10, lineHeight: 14, letterSpacing: 0.9, fontWeight: '800', color: palette.warning },
-    attentionTitle: { marginTop: 2, fontSize: 16, lineHeight: 21, fontWeight: '800', color: palette.text },
-    attentionDescription: { marginTop: 3, fontSize: 12, lineHeight: 17, color: palette.muted },
+    attentionKicker: { fontSize: 11, lineHeight: 14, letterSpacing: 1.2, fontWeight: '800', color: '#FFC9A3' },
+    attentionTitle: { marginTop: 2, fontSize: 16, lineHeight: 21, fontWeight: '800', color: '#FFFFFF' },
+    attentionDescription: { marginTop: 3, fontSize: 12, lineHeight: 17, color: '#E9DAD1' },
     attentionArrow: { width: 32, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
     allGoodCard: {
         minHeight: 82,
@@ -874,12 +829,12 @@ const styles = StyleSheet.create({
         padding: Spacing.lg,
         borderRadius: BorderRadius.xl,
         borderWidth: 1,
-        borderColor: '#CDE8D8',
+        borderColor: palette.successSoft,
         backgroundColor: palette.successSoft,
     },
-    allGoodIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D8F0E2' },
-    allGoodTitle: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: '#185C39' },
-    allGoodDescription: { marginTop: 2, fontSize: 12, lineHeight: 17, color: '#397257' },
+    allGoodIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.surface },
+    allGoodTitle: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: palette.success },
+    allGoodDescription: { marginTop: 2, fontSize: 12, lineHeight: 17, color: palette.muted },
     metricsRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
     metricCard: {
         flex: 1,
@@ -891,9 +846,9 @@ const styles = StyleSheet.create({
         borderColor: palette.border,
         backgroundColor: palette.surface,
     },
-    metricCardSelected: { borderColor: '#F1B28D', backgroundColor: palette.primarySoft },
-    metricIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6' },
-    metricIconSelected: { backgroundColor: '#FFDDC8' },
+    metricCardSelected: { borderColor: palette.primarySoft, backgroundColor: palette.primarySoft },
+    metricIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: Palette.track },
+    metricIconSelected: { backgroundColor: palette.surface },
     metricValue: { marginTop: Spacing.sm, fontSize: 21, lineHeight: 24, fontWeight: '800', color: palette.text },
     metricLabel: { marginTop: 1, fontSize: 11, lineHeight: 15, fontWeight: '600', color: palette.muted },
     errorCard: {
@@ -921,7 +876,7 @@ const styles = StyleSheet.create({
         paddingLeft: Spacing.lg,
         borderWidth: 1,
         borderColor: palette.border,
-        borderRadius: BorderRadius.lg,
+        borderRadius: BorderRadius.full,
         backgroundColor: palette.surface,
     },
     searchInput: { flex: 1, minHeight: 50, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, fontSize: 15, color: palette.text },
@@ -947,14 +902,10 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.lg,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: palette.border,
-        borderRadius: BorderRadius.xl,
+        borderColor: Palette.lineSoft,
+        borderRadius: 22,
         backgroundColor: palette.surface,
-        shadowColor: '#101828',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 2,
+        ...Elevation.card,
     },
     eventSummary: { minHeight: 142, flexDirection: 'row', padding: Spacing.md },
     eventImage: { width: 112, minHeight: 118, borderRadius: BorderRadius.lg, backgroundColor: '#ECEEF1' },
@@ -971,7 +922,7 @@ const styles = StyleSheet.create({
     eventTitle: { marginTop: 5, fontSize: 17, lineHeight: 21, fontWeight: '800', color: palette.text },
     metadataLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
     metadataText: { flex: 1, fontSize: 11, lineHeight: 15, color: palette.muted },
-    eventPrice: { marginTop: 7, fontSize: 13, lineHeight: 17, fontWeight: '800', color: palette.primary },
+    eventPrice: { marginTop: 7, fontSize: 13, lineHeight: 17, fontWeight: '800', color: palette.text },
     priceSuffix: { fontSize: 10, fontWeight: '500', color: palette.muted },
     capacityBlock: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md },
     capacityHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 },
@@ -1015,12 +966,12 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.lg,
         padding: Spacing.lg,
         borderWidth: 1,
-        borderColor: '#F0D5C1',
-        borderRadius: BorderRadius.xl,
-        backgroundColor: '#FFFAF6',
+        borderColor: Palette.line,
+        borderRadius: 22,
+        backgroundColor: palette.surface,
     },
     draftTopLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
-    draftBadge: { minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, borderRadius: BorderRadius.full, backgroundColor: '#FFE7D5' },
+    draftBadge: { minHeight: 26, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, borderRadius: BorderRadius.full, backgroundColor: palette.primarySoft },
     draftBadgeText: { fontSize: 9, letterSpacing: 0.5, fontWeight: '800', color: palette.warning },
     draftSavedAt: { flexShrink: 1, fontSize: 10, color: palette.muted },
     draftBody: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md },

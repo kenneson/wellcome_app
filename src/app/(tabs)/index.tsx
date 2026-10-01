@@ -1,18 +1,18 @@
 import { EnhancedEventCard } from '@/components/ui/EnhancedEventCard';
 import { FilterCriteria, FilterModal } from '@/components/ui/events/FilterModal';
-import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
-import { QuickStats } from '@/components/ui/QuickStats';
-import { SideMenu } from '@/components/ui/SideMenu';
-import { useBlockedIds } from '@/hooks/useBlockedIds';
-import { eventService } from '@/services/api/EventService';
-import { userService } from '@/services/api/UserService';
-import { BorderRadius, Colors, Dimensions, Spacing } from '@/shared/constants/theme';
-import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
-import { Image } from 'expo-image';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
+import { BrandHeader, BrandSheet, HeaderIconButton } from '@/components/ui/wellcome';
+import { useBlockedIds } from '@/hooks/useBlockedIds';
+import { useMyProfile } from '@/hooks/useMyProfile';
+import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
+import { eventService } from '@/services/api/EventService';
+import { BorderRadius, Dimensions, Palette, Spacing } from '@/shared/constants/theme';
+import { supabase } from '@/shared/lib/supabase';
+import { formatFirstName } from '@/utils/formatters';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,18 +23,47 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEFAULT_RADIUS_KM = 60;
 const DEFAULT_FILTERS: FilterCriteria = { radiusInKm: DEFAULT_RADIUS_KM };
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type FeedCoordinates = { lat: number; lon: number };
+type DateRange = 'all' | 'today' | 'week';
+
+const DATE_RANGES: { id: DateRange; label: string }[] = [
+  { id: 'all', label: 'Todos' },
+  { id: 'today', label: 'Hoje' },
+  { id: 'week', label: 'Esta semana' },
+];
+
+function eventStart(event: any) {
+  return new Date(event.eventDate || event.event_date);
+}
+
+function isWithinRange(event: any, range: DateRange, now = new Date()) {
+  if (range === 'all') return true;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(today.getTime() + (range === 'today' ? 1 : 7) * DAY_MS);
+  const date = eventStart(event);
+  return date >= today && date < end;
+}
+
+/** Earliest upcoming reservation that still holds (or may hold) a seat. */
+function findNextBooking(bookings: any[] | undefined) {
+  const now = Date.now();
+  return (bookings ?? [])
+    .filter((booking) => ['APPROVED', 'PENDING', 'WAITLIST'].includes(booking.status))
+    .filter((booking) => new Date(booking.event?.eventDate ?? '').getTime() >= now)
+    .sort((a, b) => new Date(a.event.eventDate).getTime() - new Date(b.event.eventDate).getTime())[0];
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const blockedIds = useBlockedIds();
   const eventsRequestId = useRef(0);
+  const { userId, data: currentUser, refetch: refetchProfile } = useMyProfile();
+  const { unreadCount, refetch: refetchUnread } = useUnreadNotifications();
 
   const [location, setLocation] = useState<string | null>(null);
   const [locationCity, setLocationCity] = useState<string | null>(null);
@@ -46,26 +75,14 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filters, setFilters] = useState<FilterCriteria>(DEFAULT_FILTERS);
+  const [dateRange, setDateRange] = useState<DateRange>('all');
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  const fetchCurrentUser = useCallback(async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-
-      const profile = await userService.getProfile(session.user.id);
-      setCurrentUser(profile);
-    } catch (error) {
-      console.error('[HomeScreen] Falha ao carregar perfil atual', error);
-    }
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      void fetchCurrentUser();
-    }, [fetchCurrentUser])
+      if (userId) void refetchProfile();
+      void refetchUnread();
+    }, [refetchProfile, refetchUnread, userId])
   );
 
   useEffect(() => {
@@ -228,260 +245,215 @@ export default function HomeScreen() {
 
   const clearFilters = async () => {
     setFilters(DEFAULT_FILTERS);
+    setDateRange('all');
     await getEvents(locationCoords, locationCity, DEFAULT_FILTERS);
   };
 
+  const radiusInKm = filters.radiusInKm || DEFAULT_RADIUS_KM;
+  const nextBooking = useMemo(() => findNextBooking(currentUser?.bookings), [currentUser?.bookings]);
+  const visibleEvents = events
+    .filter((event) => !blockedIds.has(event.hostId || event.host_id))
+    .filter((event) => isWithinRange(event, dateRange));
+  const cityLabel = locationCity || location;
+
   const renderEmptyState = () => {
+    let icon = 'calendar-outline';
+    let title = 'Nenhum evento por perto';
+    let body = 'Que tal ser o primeiro a criar um evento na sua região?';
+    let action = { label: 'Criar evento', onPress: () => router.push('/events/create') };
+
     if (!locationCoords) {
-      return (
-        <View style={styles.emptyStateContainer}>
-          <View style={styles.emptyStateIconContainer}>
-            <Ionicons name="location-outline" size={56} color="#CDCDE0" />
-          </View>
-          <Text style={styles.emptyStateTitle}>Defina sua localização</Text>
-          <Text style={styles.emptyStateBody}>
-            Escolha sua cidade para encontrar eventos realmente próximos a você.
-          </Text>
-          <TouchableOpacity style={styles.emptyStateButton} onPress={() => setShowLocationModal(true)}>
-            <Text style={styles.emptyStateButtonText}>Escolher cidade</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    if (eventsError) {
-      return (
-        <View style={styles.emptyStateContainer}>
-          <View style={styles.emptyStateIconContainer}>
-            <Ionicons name="cloud-offline-outline" size={56} color="#CDCDE0" />
-          </View>
-          <Text style={styles.emptyStateTitle}>Não foi possível carregar</Text>
-          <Text style={styles.emptyStateBody}>{eventsError}</Text>
-          <TouchableOpacity
-            style={styles.emptyStateButton}
-            onPress={() => void getEvents(locationCoords, locationCity, filters)}
-          >
-            <Text style={styles.emptyStateButtonText}>Tentar novamente</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    if (activeFilterCount > 0) {
-      return (
-        <View style={styles.emptyStateContainer}>
-          <View style={styles.emptyStateIconContainer}>
-            <Ionicons name="search-outline" size={56} color="#CDCDE0" />
-          </View>
-          <Text style={styles.emptyStateTitle}>Nenhum evento encontrado</Text>
-          <Text style={styles.emptyStateBody}>
-            Amplie a distância ou remova alguns filtros para ver mais opções.
-          </Text>
-          <TouchableOpacity style={styles.emptyStateButton} onPress={() => void clearFilters()}>
-            <Text style={styles.emptyStateButtonText}>Limpar filtros</Text>
-          </TouchableOpacity>
-        </View>
-      );
+      icon = 'location-outline';
+      title = 'Defina sua localização';
+      body = 'Escolha sua cidade para encontrar eventos realmente próximos a você.';
+      action = { label: 'Escolher cidade', onPress: () => setShowLocationModal(true) };
+    } else if (eventsError) {
+      icon = 'cloud-offline-outline';
+      title = 'Não foi possível carregar';
+      body = eventsError;
+      action = { label: 'Tentar novamente', onPress: () => void getEvents(locationCoords, locationCity, filters) };
+    } else if (activeFilterCount > 0 || dateRange !== 'all') {
+      icon = 'search-outline';
+      title = 'Nenhum evento encontrado';
+      body = dateRange === 'today'
+        ? 'Nada marcado para hoje com esses filtros. Veja a semana inteira ou amplie a distância.'
+        : 'Amplie a distância ou remova alguns filtros para ver mais opções.';
+      action = { label: 'Limpar filtros', onPress: () => void clearFilters() };
     }
 
     return (
       <View style={styles.emptyStateContainer}>
         <View style={styles.emptyStateIconContainer}>
-          <Ionicons name="calendar-outline" size={56} color="#CDCDE0" />
+          <Ionicons name={icon} size={36} color={Palette.orangeDeep} />
         </View>
-        <Text style={styles.emptyStateTitle}>Nenhum evento por perto</Text>
-        <Text style={styles.emptyStateBody}>
-          Que tal ser o primeiro a criar um evento na sua região?
-        </Text>
-        <TouchableOpacity
-          style={styles.emptyStateButton}
-          onPress={() => router.push('/events/create')}
-        >
-          <Text style={styles.emptyStateButtonText}>Criar evento</Text>
+        <Text style={styles.emptyStateTitle}>{title}</Text>
+        <Text style={styles.emptyStateBody}>{body}</Text>
+        <TouchableOpacity style={styles.emptyStateButton} onPress={action.onPress} accessibilityRole="button">
+          <Text style={styles.emptyStateButtonText}>{action.label}</Text>
         </TouchableOpacity>
       </View>
     );
   };
 
-  const getQuickStats = () => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const eventsToday = events.filter((event) => {
-      const eventDate = new Date(event.eventDate || event.event_date);
-      return eventDate >= today && eventDate < tomorrow;
-    }).length;
-    const eventsThisWeek = events.filter((event) => {
-      const eventDate = new Date(event.eventDate || event.event_date);
-      return eventDate >= today && eventDate < weekFromNow;
-    }).length;
-
-    return {
-      eventsToday,
-      eventsThisWeek,
-      newHosts: new Set(events.map((event) => event.hostId || event.host_id)).size,
-    };
-  };
-
-  const quickStats = getQuickStats();
-  const visibleEvents = events.filter((event) => !blockedIds.has(event.hostId || event.host_id));
-  const radiusInKm = filters.radiusInKm || DEFAULT_RADIUS_KM;
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.mainHeader}>
-        <TouchableOpacity
-          onPress={() => setMenuVisible(true)}
-          accessibilityRole="button"
-          accessibilityLabel="Abrir menu de navegação"
-          style={styles.headerButton}
-        >
-          <Ionicons name="menu" size={Dimensions.icon.xlarge} color="#FFF" />
-        </TouchableOpacity>
-        <Image
-          source={require('../../../assets/images/logo.png')}
-          style={styles.logoImage}
-          contentFit="contain"
-          tintColor="#FFF"
-          accessible
-          accessibilityLabel="Logo Wellcome"
-        />
-        <TouchableOpacity
-          onPress={() => router.push('/(tabs)/profile')}
-          accessibilityRole="button"
-          accessibilityLabel="Ir para perfil"
-          style={styles.headerButton}
-        >
-          {currentUser?.avatarUrl ? (
-            <Image
-              source={{ uri: currentUser.avatarUrl }}
-              style={styles.headerAvatar}
-              contentFit="cover"
-              transition={150}
+    <View style={styles.container}>
+      <BrandHeader
+        actions={(
+          <>
+            <HeaderIconButton
+              icon="chatbubble-outline"
+              accessibilityLabel="Mensagens"
+              onPress={() => router.push('/messages' as any)}
             />
-          ) : (
-            <Ionicons name="person-circle-outline" size={30} color="#FFF" />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.locationControls}>
-        <TouchableOpacity
-          style={styles.searchBar}
-          onPress={() => setShowLocationModal(true)}
-          accessibilityRole="button"
-          accessibilityLabel={`Cidade do feed: ${location || 'não definida'}`}
-          accessibilityHint="Toque para escolher outra cidade"
-        >
-          <Ionicons name="location-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
-          <Text style={styles.searchText} numberOfLines={1}>
-            {loadingLocation ? 'Buscando localização...' : location || 'Definir localização'}
-          </Text>
-          <Ionicons name="search-outline" size={Dimensions.icon.medium} color={Colors.light.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.gpsButton}
-          onPress={() => void getLocation(filters)}
-          disabled={loadingLocation}
-          accessibilityRole="button"
-          accessibilityLabel="Usar minha localização atual pelo GPS"
-        >
-          {loadingLocation ? (
-            <ActivityIndicator size="small" color={Colors.light.primary} />
-          ) : (
-            <Ionicons name="navigate" size={22} color={Colors.light.primary} />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={(
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[Colors.light.primary]}
-          />
+            <HeaderIconButton
+              icon="notifications-outline"
+              accessibilityLabel="Notificações"
+              badge={unreadCount}
+              onPress={() => router.push('/notifications')}
+            />
+          </>
         )}
-      >
-        <QuickStats
-          eventsToday={quickStats.eventsToday}
-          eventsThisWeek={quickStats.eventsThisWeek}
-          newHosts={quickStats.newHosts}
-        />
-
-        <Text style={styles.sectionTitle}>Eventos próximos a você</Text>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContainer}
-          accessibilityLabel="Filtros de eventos"
-        >
-          <TouchableOpacity
-            style={[styles.filterChip, styles.filterChipActive]}
-            onPress={() => setFilterModalVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel={`Abrir filtros${activeFilterCount ? `, ${activeFilterCount} ativos` : ''}`}
-          >
-            <Ionicons name="options" size={18} color="#FFF" />
-            <Text style={styles.filterTextActive}>
-              {activeFilterCount ? `Filtros (${activeFilterCount})` : 'Filtros'}
+        leading={(
+          <View style={styles.greetingBlock}>
+            <Text style={styles.greeting}>
+              {currentUser?.fullName ? `Olá, ${formatFirstName(currentUser.fullName)}` : 'Olá!'}
             </Text>
-          </TouchableOpacity>
+            <View style={styles.locationRow}>
+              <TouchableOpacity
+                style={styles.locationButton}
+                onPress={() => setShowLocationModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Cidade do feed: ${location || 'não definida'}`}
+                accessibilityHint="Toque para escolher outra cidade"
+              >
+                <Ionicons name="location" size={20} color="#FFFFFF" />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {loadingLocation ? 'Localizando…' : cityLabel || 'Escolher cidade'}
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.gpsButton}
+                onPress={() => void getLocation(filters)}
+                disabled={loadingLocation}
+                accessibilityRole="button"
+                accessibilityLabel="Usar minha localização atual pelo GPS"
+                hitSlop={8}
+              >
+                {loadingLocation ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="navigate-outline" size={18} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
 
-          <TouchableOpacity
-            style={styles.filterChip}
-            onPress={() => setFilterModalVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel={`Alterar raio atual de ${radiusInKm} quilômetros`}
+      <BrandSheet>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={(
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Palette.orange}
+              colors={[Palette.orange]}
+            />
+          )}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContainer}
+            accessibilityLabel="Filtros de eventos"
           >
-            <Ionicons name="navigate-outline" size={18} color={Colors.light.textSecondary} />
-            <Text style={styles.filterText}>Até {radiusInKm} km</Text>
-          </TouchableOpacity>
-
-          {activeFilterCount > 0 && (
             <TouchableOpacity
-              style={styles.clearFilterButton}
-              onPress={() => void clearFilters()}
+              style={[styles.chip, activeFilterCount > 0 && styles.chipAccent]}
+              onPress={() => setFilterModalVisible(true)}
               accessibilityRole="button"
-              accessibilityLabel="Limpar filtros"
+              accessibilityLabel={`Abrir filtros${activeFilterCount ? `, ${activeFilterCount} ativos` : ''}`}
             >
-              <Ionicons name="close" size={18} color={Colors.light.primary} />
-              <Text style={styles.clearFilterText}>Limpar</Text>
+              <Ionicons name="filter-outline" size={16} color={activeFilterCount > 0 ? Palette.orangeDarker : Palette.ink} />
+              <Text style={[styles.chipText, activeFilterCount > 0 && styles.chipTextAccent]}>
+                {activeFilterCount ? `Filtros · ${activeFilterCount}` : 'Filtros'}
+              </Text>
             </TouchableOpacity>
+
+            {DATE_RANGES.map((range) => {
+              const selected = dateRange === range.id;
+              return (
+                <TouchableOpacity
+                  key={range.id}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => setDateRange(range.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{range.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              style={styles.chip}
+              onPress={() => setFilterModalVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Alterar raio atual de ${radiusInKm} quilômetros`}
+            >
+              <Text style={styles.chipText}>Até {radiusInKm} km</Text>
+            </TouchableOpacity>
+
+            {(activeFilterCount > 0 || dateRange !== 'all') && (
+              <TouchableOpacity
+                style={styles.clearChip}
+                onPress={() => void clearFilters()}
+                accessibilityRole="button"
+                accessibilityLabel="Limpar filtros"
+              >
+                <Ionicons name="close" size={16} color={Palette.orangeDeep} />
+                <Text style={styles.clearChipText}>Limpar</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+
+          {nextBooking && (
+            <NextBookingCard
+              booking={nextBooking}
+              onOpen={() => router.push(`/events/${nextBooking.event.id}`)}
+              onTicket={() => router.push(`/events/${nextBooking.event.id}/ticket`)}
+            />
+          )}
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle} accessibilityRole="header">Perto de você</Text>
+            {!loadingEvents && visibleEvents.length > 0 && (
+              <Text style={styles.sectionCount}>
+                {visibleEvents.length} {visibleEvents.length === 1 ? 'evento' : 'eventos'}
+              </Text>
+            )}
+          </View>
+
+          {loadingEvents ? (
+            <View style={styles.loadingContainer} accessible accessibilityLabel="Carregando eventos">
+              <ActivityIndicator size="large" color={Palette.orange} />
+              <Text style={styles.loadingText}>Buscando experiências…</Text>
+            </View>
+          ) : visibleEvents.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            visibleEvents.map((event) => (
+              <EnhancedEventCard
+                key={event.id}
+                event={event}
+                onPress={() => router.push(`/events/${event.id}`)}
+              />
+            ))
           )}
         </ScrollView>
-
-        {loadingEvents ? (
-          <View style={styles.loadingContainer} accessible accessibilityLabel="Carregando eventos">
-            <ActivityIndicator size="large" color={Colors.light.primary} />
-            <Text style={styles.loadingText}>Carregando eventos...</Text>
-          </View>
-        ) : visibleEvents.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          visibleEvents.map((event) => (
-            <EnhancedEventCard
-              key={event.id}
-              event={event}
-              onPress={() => router.push(`/events/${event.id}`)}
-            />
-          ))
-        )}
-      </ScrollView>
-
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 30 + insets.bottom }]}
-        onPress={() => router.push('/events/create')}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Criar novo evento"
-      >
-        <Ionicons name="add" size={32} color="#FFF" />
-      </TouchableOpacity>
+      </BrandSheet>
 
       <LocationAutocomplete
         visible={showLocationModal}
@@ -493,12 +465,6 @@ export default function HomeScreen() {
         placeholder="Digite sua cidade"
       />
 
-      <SideMenu
-        visible={menuVisible}
-        onClose={() => setMenuVisible(false)}
-        user={currentUser}
-      />
-
       <FilterModal
         visible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
@@ -508,197 +474,273 @@ export default function HomeScreen() {
         }}
         initialFilters={filters}
       />
-    </SafeAreaView>
+    </View>
+  );
+}
+
+function NextBookingCard({ booking, onOpen, onTicket }: { booking: any; onOpen: () => void; onTicket: () => void }) {
+  const date = new Date(booking.event.eventDate);
+  const weekday = date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
+  const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const approved = booking.status === 'APPROVED';
+  const host = booking.event.host?.fullName ? formatFirstName(booking.event.host.fullName) : null;
+
+  return (
+    <TouchableOpacity
+      style={styles.nextCard}
+      onPress={onOpen}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`Sua próxima experiência: ${booking.event.title}`}
+      accessibilityHint="Abrir detalhes do evento"
+    >
+      <View style={styles.nextDate}>
+        <Text style={styles.nextWeekday}>{weekday}</Text>
+        <Text style={styles.nextDay}>{date.getDate()}</Text>
+      </View>
+      <View style={styles.nextInfo}>
+        <Text style={styles.nextEyebrow}>{approved ? 'SUA PRÓXIMA EXPERIÊNCIA' : 'AGUARDANDO CONFIRMAÇÃO'}</Text>
+        <Text style={styles.nextTitle} numberOfLines={1}>{booking.event.title}</Text>
+        <Text style={styles.nextMeta} numberOfLines={1}>{time}{host ? ` · com ${host}` : ''}</Text>
+      </View>
+      {approved ? (
+        <TouchableOpacity
+          style={styles.nextAction}
+          onPress={onTicket}
+          accessibilityRole="button"
+          accessibilityLabel="Ver ingresso"
+        >
+          <Ionicons name="qr-code-outline" size={16} color={Palette.ink} />
+          <Text style={styles.nextActionText}>Ingresso</Text>
+        </TouchableOpacity>
+      ) : (
+        <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+      )}
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Palette.paper,
   },
-  mainHeader: {
-    backgroundColor: Colors.light.primary,
+  greetingBlock: {
+    gap: 0,
+  },
+  greeting: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Palette.orangeOnBrand,
+  },
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
   },
-  headerButton: {
-    minWidth: Dimensions.touchTarget.min,
-    minHeight: Dimensions.touchTarget.min,
+  locationButton: {
+    flexShrink: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    minHeight: Dimensions.touchTarget.min,
   },
-  headerAvatar: {
+  locationText: {
+    flexShrink: 1,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    color: '#FFFFFF',
+  },
+  gpsButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#FFF',
-    backgroundColor: '#F3F4F6',
-  },
-  logoImage: {
-    width: Dimensions.logo.width,
-    height: Dimensions.logo.height,
-  },
-  locationControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    margin: Spacing.lg,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.light.card,
-    padding: Spacing.md,
-    minHeight: Dimensions.touchTarget.min,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  gpsButton: {
-    width: Dimensions.touchTarget.min,
-    height: Dimensions.touchTarget.min,
+    backgroundColor: Palette.onBrandGlass,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
-  },
-  searchText: {
-    flex: 1,
-    marginLeft: Spacing.sm,
-    color: Colors.light.text,
   },
   scrollContent: {
-    paddingBottom: 90,
-  },
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: Colors.light.text,
-    marginLeft: Spacing.lg,
-    marginBottom: Spacing.md,
-    marginTop: Spacing.lg,
-    letterSpacing: 0,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxxl * 2,
   },
   filtersContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
     gap: Spacing.sm,
   },
-  filterChip: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    minHeight: Dimensions.touchTarget.min,
+    minHeight: 40,
     paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: Colors.light.border,
-    backgroundColor: Colors.light.card,
+    borderColor: Palette.line,
+    backgroundColor: Palette.surface,
   },
-  filterChipActive: {
-    backgroundColor: Colors.light.primary,
-    borderColor: Colors.light.primary,
+  chipSelected: {
+    backgroundColor: Palette.ink,
+    borderColor: Palette.ink,
   },
-  filterText: {
+  chipAccent: {
+    backgroundColor: Palette.orangeSoft,
+    borderColor: Palette.orangeSoft,
+  },
+  chipText: {
     fontSize: 14,
-    color: Colors.light.text,
+    fontWeight: '700',
+    color: Palette.ink,
   },
-  filterTextActive: {
-    fontSize: 14,
-    color: '#FFF',
-    fontWeight: '600',
+  chipTextSelected: {
+    color: '#FFFFFF',
   },
-  clearFilterButton: {
+  chipTextAccent: {
+    color: Palette.orangeDarker,
+  },
+  clearChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 4,
-    minHeight: Dimensions.touchTarget.min,
-    paddingHorizontal: Spacing.md,
+    minHeight: 40,
+    paddingHorizontal: Spacing.sm,
   },
-  clearFilterText: {
-    color: Colors.light.primary,
+  clearChipText: {
+    color: Palette.orangeDeep,
     fontSize: 14,
+    fontWeight: '700',
+  },
+  nextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: Palette.ink,
+  },
+  nextDate: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: Palette.orange,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextWeekday: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: '#FFFFFF',
+  },
+  nextDay: {
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 22,
+    color: '#FFFFFF',
+  },
+  nextInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  nextEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: '#FFC9A3',
+  },
+  nextTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  nextMeta: {
+    fontSize: 13,
+    color: '#E9DAD1',
+  },
+  nextAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.full,
+    backgroundColor: '#FFFFFF',
+  },
+  nextActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Palette.ink,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xxl,
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    color: Palette.ink,
+  },
+  sectionCount: {
+    fontSize: 13,
     fontWeight: '600',
+    color: Palette.muted,
   },
   loadingContainer: {
     alignItems: 'center',
-    padding: Spacing.xl,
+    padding: Spacing.xxxl,
     gap: Spacing.sm,
   },
   loadingText: {
-    color: Colors.light.textSecondary,
+    color: Palette.inkSoft,
     fontSize: 14,
-  },
-  fab: {
-    position: 'absolute',
-    right: Spacing.xl,
-    width: Dimensions.fab.size,
-    height: Dimensions.fab.size,
-    borderRadius: Dimensions.fab.borderRadius,
-    backgroundColor: Colors.light.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   emptyStateContainer: {
     alignItems: 'center',
-    padding: Spacing.xxxl,
-    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.xxxl,
+    paddingVertical: Spacing.xxl,
+    gap: Spacing.md,
   },
   emptyStateIconContainer: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: '#F5F5F5',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Palette.orangeSoft,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.xxl,
+    marginBottom: Spacing.xs,
   },
   emptyStateTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.light.text,
+    fontWeight: '800',
+    color: Palette.ink,
     textAlign: 'center',
-    marginBottom: Spacing.md,
   },
   emptyStateBody: {
     fontSize: 14,
-    color: Colors.light.textSecondary,
+    color: Palette.inkSoft,
     textAlign: 'center',
-    marginBottom: Spacing.xxxl,
-    lineHeight: 22,
+    lineHeight: 21,
     maxWidth: 320,
   },
   emptyStateButton: {
-    minHeight: Dimensions.touchTarget.min,
+    minHeight: 48,
     justifyContent: 'center',
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 12,
-    paddingHorizontal: Spacing.xxxl,
-    borderRadius: BorderRadius.sm,
+    backgroundColor: Palette.orange,
+    paddingHorizontal: Spacing.xxl,
+    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.full,
   },
   emptyStateButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });
