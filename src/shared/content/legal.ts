@@ -52,7 +52,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
             {
                 title: 'Contato',
                 paragraphs: [
-                    'Para suporte, privacidade, exclusão de conta ou dúvidas sobre estas regras, escreva para oi@wellcome.app.',
+                    'Para suporte, privacidade, exclusão de conta ou dúvidas sobre estas regras, escreva para wellcomeappdesenvolvedor@gmail.com.',
                 ],
             },
         ],
@@ -90,7 +90,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
                 title: 'Seus direitos',
                 paragraphs: [
                     'Você pode solicitar confirmação do tratamento, acesso, correção, informação sobre compartilhamento, revisão, portabilidade quando aplicável, revogação de consentimento e exclusão, respeitadas as hipóteses legais de conservação.',
-                    'Envie sua solicitação para oi@wellcome.app ou use a opção de exclusão de conta nas configurações.',
+                    'Envie sua solicitação para wellcomeappdesenvolvedor@gmail.com ou use a opção de exclusão de conta nas configurações.',
                 ],
             },
         ],
@@ -123,7 +123,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
                 title: 'Pagamentos por fora',
                 paragraphs: [
                     'Transferências, dinheiro ou cobranças combinadas fora do Wellcome não possuem registro financeiro na plataforma. Nesses casos, não conseguimos confirmar o pagamento, executar reembolso, analisar disputa ou aplicar a retenção de saldo.',
-                    'Se alguém solicitar pagamento por fora, não pague e entre em contato pelo e-mail oi@wellcome.app.',
+                    'Se alguém solicitar pagamento por fora, não pague e entre em contato pelo e-mail wellcomeappdesenvolvedor@gmail.com.',
                 ],
             },
         ],

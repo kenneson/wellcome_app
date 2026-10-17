@@ -99,7 +99,7 @@ const sections = [
   {
     title: '13. Atendimento e contato',
     paragraphs: [
-      'Para duvidas, solicitacoes, suporte, privacidade, exclusao de conta ou comunicacoes relacionadas a estes termos, entre em contato pelo e-mail oi@wellcome.app.',
+      'Para duvidas, solicitacoes, suporte, privacidade, exclusao de conta ou comunicacoes relacionadas a estes termos, entre em contato pelo e-mail wellcomeappdesenvolvedor@gmail.com.',
       'Estes termos sao regidos pelas leis da Republica Federativa do Brasil. Eventuais controversias deverao observar a legislacao aplicavel e os direitos garantidos ao consumidor quando cabiveis.',
     ],
   },

@@ -38,7 +38,7 @@ const sections = [
     title: '5. Seus direitos',
     paragraphs: [
       'Voce pode solicitar confirmacao do tratamento, acesso, correcao, informacoes sobre compartilhamento, revisao, portabilidade quando aplicavel, revogacao de consentimento e exclusao, respeitadas as hipoteses legais de conservacao.',
-      'Use a opcao de excluir conta no aplicativo ou envie sua solicitacao para oi@wellcome.app.',
+      'Use a opcao de excluir conta no aplicativo ou envie sua solicitacao para wellcomeappdesenvolvedor@gmail.com.',
     ],
   },
 ];

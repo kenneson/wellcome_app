@@ -16,7 +16,7 @@ const sections = [
   {
     title: '2. Solicitar pela web',
     paragraphs: [
-      'Se você não consegue acessar o aplicativo, envie um e-mail para oi@wellcome.app com o assunto Exclusão de conta. Use o mesmo endereço de e-mail cadastrado e informe seu nome para que possamos validar a titularidade.',
+      'Se você não consegue acessar o aplicativo, envie um e-mail para wellcomeappdesenvolvedor@gmail.com com o assunto Exclusão de conta. Use o mesmo endereço de e-mail cadastrado e informe seu nome para que possamos validar a titularidade.',
       'Nunca envie senha, código de acesso, documento completo ou dados de cartão por e-mail. Podemos pedir informações adicionais estritamente necessárias para confirmar que a conta pertence a você.',
     ],
   },
@@ -54,7 +54,7 @@ export default function AccountDeletionPage() {
 
       <article className="legal-content shell">
         <div className="legal-notice">
-          <strong>Canal de suporte:</strong> envie sua solicitação para <a href="mailto:oi@wellcome.app">oi@wellcome.app</a> se não conseguir acessar o aplicativo.
+          <strong>Canal de suporte:</strong> envie sua solicitação para <a href="mailto:wellcomeappdesenvolvedor@gmail.com">wellcomeappdesenvolvedor@gmail.com</a> se não conseguir acessar o aplicativo.
         </div>
 
         {sections.map((section) => (

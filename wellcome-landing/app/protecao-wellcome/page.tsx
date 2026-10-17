@@ -41,7 +41,7 @@ export default function WellcomeProtectionPage() {
         <section className="legal-section">
           <h2>Pagamentos por fora</h2>
           <p>Transferencias, dinheiro ou cobrancas combinadas fora da Wellcome nao possuem registro financeiro na plataforma. Nao conseguimos confirmar esses pagamentos, executar reembolso, analisar disputa ou aplicar a retencao de saldo.</p>
-          <p>Se alguem solicitar pagamento por fora, nao pague e entre em contato pelo e-mail oi@wellcome.app.</p>
+          <p>Se alguem solicitar pagamento por fora, nao pague e entre em contato pelo e-mail wellcomeappdesenvolvedor@gmail.com.</p>
         </section>
       </article>
     </main>
