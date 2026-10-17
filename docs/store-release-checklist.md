@@ -54,8 +54,13 @@
 ## Security and backend hardening still recommended
 
 - Revalidar em ambiente implantado as politicas RLS, grants de coluna e migrations financeiras.
-- Add rate limiting and structured audit logs for KYC, withdrawals, and ticket validation.
-- Add a scheduled balance-release/reconciliation job and alerts for invariant failures.
+- Rate limiting and structured audit logs for KYC, withdrawals, and ticket validation are in code
+  (`backend/src/presentation/http/security`, `public.audit_logs`, `verify-kyc` daily attempt cap).
+  Apply `20261017140000_security_audit_logs.sql` before deploying the backend and the `verify-kyc` function.
+- The scheduled balance-release/reconciliation job runs in the backend every 10 minutes and alerts on
+  invariant failures. Optional env vars: `OPS_ALERT_WEBHOOK_URL` (alert delivery),
+  `HOST_FUNDS_SETTLEMENT_INTERVAL_MS`, and `KYC_MAX_ATTEMPTS_PER_DAY` on the Edge Function.
+- The rate limiter is in memory; move it to a shared store before running more than one backend instance.
 
 ## Validation status
 

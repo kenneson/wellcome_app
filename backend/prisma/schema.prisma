@@ -1040,6 +1040,27 @@ model WithdrawalRequest {
   @@schema("public")
 }
 
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  action     String
+  outcome    String
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorRole  String?  @map("actor_role")
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  statusCode Int?     @map("status_code")
+  ip         String?
+  requestId  String?  @map("request_id")
+  metadata   Json     @default("{}")
+
+  @@index([actorId, action, createdAt(sort: Desc)], map: "idx_audit_logs_actor_action_created")
+  @@index([action, createdAt(sort: Desc)], map: "idx_audit_logs_action_created")
+  @@index([targetType, targetId, createdAt(sort: Desc)], map: "idx_audit_logs_target")
+  @@map("audit_logs")
+  @@schema("public")
+}
+
 model WalletTransaction {
   id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String          @map("user_id") @db.Uuid

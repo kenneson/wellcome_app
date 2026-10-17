@@ -14,6 +14,33 @@ const corsHeaders = {
 // Thresholds
 const REVIEW_THRESHOLD = 80;
 
+// Each attempt calls AWS Rekognition; cap retries per user per rolling day.
+const MAX_ATTEMPTS_PER_DAY = Number(Deno.env.get("KYC_MAX_ATTEMPTS_PER_DAY") || 5);
+
+type AuditOutcome = "success" | "denied" | "rejected" | "rate_limited" | "error";
+
+// Best-effort append to public.audit_logs; never blocks the KYC flow.
+async function audit(
+  client: ReturnType<typeof createClient>,
+  req: Request,
+  entry: { action: string; outcome: AuditOutcome; actorId: string; statusCode: number; metadata?: Record<string, unknown> },
+) {
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const line = { audit: true, ...entry, ip: forwarded };
+  console.log(JSON.stringify(line));
+  const { error } = await client.from("audit_logs").insert({
+    action: entry.action,
+    outcome: entry.outcome,
+    actor_id: entry.actorId,
+    target_type: "user",
+    target_id: entry.actorId,
+    status_code: entry.statusCode,
+    ip: forwarded,
+    metadata: entry.metadata ?? {},
+  });
+  if (error) console.error(JSON.stringify({ audit: true, action: entry.action, err: error.message }));
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -93,6 +120,26 @@ Deno.serve(async (req) => {
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: recentAttempts, error: attemptsError } = await supabaseAdmin
+      .from("audit_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("actor_id", user.id)
+      .eq("action", "kyc.submit")
+      .eq("outcome", "success")
+      .gte("created_at", since);
+    if (attemptsError) {
+      console.error("Failed to count KYC attempts:", attemptsError.message);
+    } else if ((recentAttempts ?? 0) >= MAX_ATTEMPTS_PER_DAY) {
+      await audit(supabaseAdmin, req, { action: "kyc.submit", outcome: "rate_limited", actorId: user.id, statusCode: 429 });
+      return new Response(
+        JSON.stringify({ error: "Limite de tentativas de verificação atingido. Tente novamente em 24 horas." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "86400" } }
+      );
+    }
+    // Recorded before calling Rekognition so failed attempts also count toward the limit.
+    await audit(supabaseAdmin, req, { action: "kyc.submit", outcome: "success", actorId: user.id, statusCode: 202 });
 
     // 3. Download images from Supabase Storage
     const [docResult, selfieResult] = await Promise.all([
@@ -245,6 +292,14 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    await audit(supabaseAdmin, req, {
+      action: "kyc.result",
+      outcome: kycStatus === "PENDING" ? "success" : "rejected",
+      actorId: user.id,
+      statusCode: 200,
+      metadata: { kycStatus, similarityScore: Math.round(similarityScore) },
+    });
 
     return new Response(
       JSON.stringify({

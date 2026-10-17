@@ -5,6 +5,7 @@ import { prisma } from '../../../infrastructure/database/prismaClient';
 import { supabaseAdmin } from '../../../infrastructure/external/supabaseClient';
 import { ForbiddenRequestError, UnauthorizedRequestError, requireAdminUser } from '../helpers/auth';
 import { GetPlatformEconomicsUseCase } from '../../../application/use-cases/GetPlatformEconomicsUseCase';
+import { HostFundsSettlementJob } from '../../../application/services/HostFundsSettlementJob';
 
 const listKycQuerySchema = z.object({
     status: z.enum(['ALL', 'PENDING', 'APPROVED', 'REJECTED']).optional().default('PENDING'),
@@ -15,7 +16,34 @@ const rejectKycBodySchema = z.object({
 });
 
 export class AdminController {
-    constructor(private getPlatformEconomicsUseCase?: GetPlatformEconomicsUseCase) {}
+    constructor(
+        private getPlatformEconomicsUseCase?: GetPlatformEconomicsUseCase,
+        private settlementJob?: Pick<HostFundsSettlementJob, 'run' | 'latestReport'>
+    ) {}
+
+    async settlementReport(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            await requireAdminUser(request);
+            if (!this.settlementJob) {
+                return reply.code(503).send({ message: 'Conciliacao indisponivel' });
+            }
+            return reply.send({ report: this.settlementJob.latestReport });
+        } catch (error) {
+            return this.handleAuthError(error, reply);
+        }
+    }
+
+    async runSettlement(request: FastifyRequest, reply: FastifyReply) {
+        try {
+            await requireAdminUser(request);
+            if (!this.settlementJob) {
+                return reply.code(503).send({ message: 'Conciliacao indisponivel' });
+            }
+            return reply.send({ report: await this.settlementJob.run() });
+        } catch (error) {
+            return this.handleAuthError(error, reply);
+        }
+    }
 
     async paymentEconomics(request: FastifyRequest, reply: FastifyReply) {
         try {

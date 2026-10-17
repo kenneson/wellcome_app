@@ -67,6 +67,13 @@ import { WithdrawalController } from './presentation/http/controllers/Withdrawal
 import { ForbiddenRequestError, getAuthenticatedUserContext, getAuthenticatedUserId } from './presentation/http/helpers/auth';
 import { getMinimumWithdrawalAmount, getProcessingFeePayer } from './domain/services/PaymentEconomics';
 import { eventListResponseSchema } from './presentation/http/schemas/EventResponseSchemas';
+import { AuditTrail } from './application/services/AuditTrail';
+import { HostFundsSettlementJob, getSettlementIntervalMs } from './application/services/HostFundsSettlementJob';
+import { OpsAlerter, createWebhookAlertTransport } from './application/services/OpsAlerter';
+import { PrismaAuditLogRepository } from './infrastructure/repositories/PrismaAuditLogRepository';
+import { PrismaHostFundsLedgerRepository } from './infrastructure/repositories/PrismaHostFundsLedgerRepository';
+import { InMemoryRateLimiter } from './presentation/http/security/RateLimiter';
+import { registerAbuseProtection, sensitiveRateLimits } from './presentation/http/security/abuseProtection';
 
 
 const fastify = Fastify({
@@ -213,6 +220,24 @@ const start = async () => {
         refundTimer.unref();
         fastify.addHook('onClose', async () => { clearInterval(refundTimer); await refundRun; });
         reconcileRegistrationRefunds();
+
+        const auditTrail = new AuditTrail(new PrismaAuditLogRepository(), fastify.log);
+        registerAbuseProtection(fastify, { limiter: new InMemoryRateLimiter(), auditTrail });
+
+        const hostFundsSettlementJob = new HostFundsSettlementJob(
+            paymentRepository,
+            new PrismaHostFundsLedgerRepository(),
+            new OpsAlerter(fastify.log, createWebhookAlertTransport()),
+            fastify.log
+        );
+        const runHostFundsSettlement = () => {
+            hostFundsSettlementJob.run()
+                .catch((error) => fastify.log.error({ err: error, alert: true }, 'Host funds settlement failed'));
+        };
+        const settlementTimer = setInterval(runHostFundsSettlement, getSettlementIntervalMs());
+        settlementTimer.unref();
+        fastify.addHook('onClose', async () => { clearInterval(settlementTimer); });
+        runHostFundsSettlement();
         const geoapifyLocationService = new GeoapifyLocationService();
 
         // Use Cases
@@ -365,7 +390,7 @@ const start = async () => {
             withdrawalRepository
         );
         const getPlatformEconomicsUseCase = new GetPlatformEconomicsUseCase(paymentRepository);
-        const adminController = new AdminController(getPlatformEconomicsUseCase);
+        const adminController = new AdminController(getPlatformEconomicsUseCase, hostFundsSettlementJob);
 
         // Test route to verify deploy
         fastify.get('/test-deploy', async () => {
@@ -908,6 +933,14 @@ const start = async () => {
         }, (req, reply) => eventRegistrationController.reject(req, reply));
 
         fastify.post('/bookings/validate-ticket', {
+            config: {
+                rateLimit: sensitiveRateLimits.ticketValidation,
+                audit: {
+                    action: 'ticket.validate',
+                    targetType: 'booking',
+                    target: (req) => (req.body as { bookingId?: unknown } | undefined)?.bookingId,
+                },
+            },
             schema: {
                 summary: 'Validate event ticket',
                 description: 'Host scans QR code to validate participant ticket',
@@ -1235,6 +1268,14 @@ const start = async () => {
 
         // Withdrawals
         fastify.post('/withdrawals', {
+            config: {
+                rateLimit: sensitiveRateLimits.withdrawalRequest,
+                audit: {
+                    action: 'withdrawal.request',
+                    targetType: 'withdrawal',
+                    metadata: (req) => ({ amount: (req.body as { amount?: unknown } | undefined)?.amount }),
+                },
+            },
             schema: {
                 summary: 'Request withdrawal',
                 description: 'Host request withdrawal of their available balance',
@@ -1262,6 +1303,10 @@ const start = async () => {
         }, (req, reply) => withdrawalController.requestWithdrawal(req, reply));
 
         fastify.post('/admin/withdrawals/:id/approve', {
+            config: {
+                rateLimit: sensitiveRateLimits.adminWithdrawal,
+                audit: { action: 'withdrawal.approve', targetType: 'withdrawal', target: (req) => (req.params as { id?: string }).id },
+            },
             schema: {
                 summary: 'Approve withdrawal (Admin)',
                 description: 'Admin approves a pending withdrawal and sends the PIX',
@@ -1287,6 +1332,10 @@ const start = async () => {
         }, (req, reply) => withdrawalController.approveWithdrawal(req, reply));
 
         fastify.post('/admin/withdrawals/:id/reconcile', {
+            config: {
+                rateLimit: sensitiveRateLimits.adminWithdrawal,
+                audit: { action: 'withdrawal.reconcile', targetType: 'withdrawal', target: (req) => (req.params as { id?: string }).id },
+            },
             schema: {
                 summary: 'Reconcile withdrawal with Asaas (Admin)',
                 description: 'Checks an uncertain or processing transfer without creating another Pix',
@@ -1352,6 +1401,24 @@ const start = async () => {
             },
         }, (req, reply) => adminController.paymentEconomics(req, reply));
 
+        fastify.get('/admin/finance/reconciliation', {
+            schema: {
+                summary: 'Get the latest host funds settlement report (admin)',
+                tags: ['Payments', 'Admin'],
+            },
+        }, (req, reply) => adminController.settlementReport(req, reply));
+
+        fastify.post('/admin/finance/reconciliation/run', {
+            config: {
+                rateLimit: sensitiveRateLimits.adminReconciliation,
+                audit: { action: 'finance.reconciliation.run' },
+            },
+            schema: {
+                summary: 'Release matured host funds and check balance invariants now (admin)',
+                tags: ['Payments', 'Admin'],
+            },
+        }, (req, reply) => adminController.runSettlement(req, reply));
+
         fastify.get('/admin/me', {
             schema: {
                 summary: 'Get authenticated admin context',
@@ -1361,6 +1428,10 @@ const start = async () => {
         }, (req, reply) => adminController.me(req, reply));
 
         fastify.get('/admin/kyc', {
+            config: {
+                rateLimit: sensitiveRateLimits.adminKyc,
+                audit: { action: 'kyc.list' },
+            },
             schema: {
                 summary: 'List KYC requests',
                 description: 'List KYC requests for admin moderation',
@@ -1375,6 +1446,10 @@ const start = async () => {
         }, (req, reply) => adminController.listKycRequests(req, reply));
 
         fastify.post('/admin/kyc/:id/approve', {
+            config: {
+                rateLimit: sensitiveRateLimits.adminKyc,
+                audit: { action: 'kyc.approve', targetType: 'user', target: (req) => (req.params as { id?: string }).id },
+            },
             schema: {
                 summary: 'Approve KYC request',
                 description: 'Approve a pending KYC request',
@@ -1387,6 +1462,18 @@ const start = async () => {
         }, (req, reply) => adminController.approveKyc(req as any, reply));
 
         fastify.post('/admin/kyc/:id/reject', {
+            config: {
+                rateLimit: sensitiveRateLimits.adminKyc,
+                audit: {
+                    action: 'kyc.reject',
+                    targetType: 'user',
+                    target: (req) => (req.params as { id?: string }).id,
+                    metadata: (req) => {
+                        const reason = (req.body as { reason?: unknown } | undefined)?.reason;
+                        return typeof reason === 'string' ? { reason: reason.slice(0, 500) } : undefined;
+                    },
+                },
+            },
             schema: {
                 summary: 'Reject KYC request',
                 description: 'Reject a pending KYC request',
