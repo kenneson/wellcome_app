@@ -11,7 +11,9 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://wellcome-backend.igpqhp.easypanel.host"
+        "EXPO_PUBLIC_API_URL": "https://wellcome-backend.igpqhp.easypanel.host",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://cmkknuvydqetzmdpzzqv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_NcU_Jp3xZY6SKd-x5uY0gg_AXXWZvM2"
       },
       "android": {
         "buildType": "apk"
@@ -20,7 +22,9 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://wellcome-backend.igpqhp.easypanel.host"
+        "EXPO_PUBLIC_API_URL": "https://wellcome-backend.igpqhp.easypanel.host",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://cmkknuvydqetzmdpzzqv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_NcU_Jp3xZY6SKd-x5uY0gg_AXXWZvM2"
       }
     }
   },
