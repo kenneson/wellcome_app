@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "package": "com.wellcome.app",
+      "package": "br.com.wellcomeapp",
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
