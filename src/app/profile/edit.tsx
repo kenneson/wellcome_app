@@ -1,11 +1,10 @@
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { AppIcon } from '@/components/ui/icon';
-import { WellcomeButton, WellcomeField, WellcomeIconButton } from '@/components/ui/wellcome';
+import { BrandHeader, BrandSheet, BrandStackHeader, WellcomeButton, WellcomeField } from '@/components/ui/wellcome';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
-import { Box } from '@/shared/ui/box';
-import { Text } from '@/shared/ui/text';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,6 +12,8 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    StyleSheet,
+    Text,
     TextInput,
     TouchableOpacity,
     useWindowDimensions,
@@ -46,10 +47,6 @@ export default function EditProfileScreen() {
     const [languages, setLanguages] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
 
-    useEffect(() => {
-        void getProfile();
-    }, []);
-
     async function getProfile() {
         setLoading(true);
         try {
@@ -77,6 +74,12 @@ export default function EditProfileScreen() {
             setLoading(false);
         }
     }
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount
+        void getProfile();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+    }, []);
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -146,121 +149,124 @@ export default function EditProfileScreen() {
         }
     };
 
+    const header = mandatory === 'true' ? (
+        <BrandHeader eyebrow="CONTA" title="Editar perfil" />
+    ) : (
+        <BrandStackHeader eyebrow="CONTA" title="Editar perfil" backIcon="close" />
+    );
+
     if (loading) {
         return (
-            <SafeAreaView className="flex-1 items-center justify-center bg-[#FFF8F3]">
-                <ActivityIndicator size="large" color="#FF8C42" />
-                <Text className="mt-3 text-sm text-typography-500">Carregando seu perfil...</Text>
-            </SafeAreaView>
+            <View style={styles.screen}>
+                {header}
+                <BrandSheet>
+                    <View style={styles.loading}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                        <Text style={styles.loadingText}>Carregando seu perfil...</Text>
+                    </View>
+                </BrandSheet>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-[#FFF8F3]" edges={['top', 'bottom']}>
-            <Box className="min-h-[64px] flex-row items-center border-b border-outline-100 bg-white px-2">
-                {mandatory === 'true' ? (
-                    <Box className="h-12 w-12" />
-                ) : (
-                    <WellcomeIconButton icon="chevron-back" onPress={() => router.back()} accessibilityLabel="Voltar" />
-                )}
-                <Box className="flex-1 items-center px-2">
-                    <Text className="text-[17px] font-bold text-typography-900">Editar perfil</Text>
-                    <Text className="mt-0.5 text-[11px] text-typography-400">Mantenha seus dados atualizados</Text>
-                </Box>
-                <Box className="h-12 w-12" />
-            </Box>
-
-            <KeyboardAwareScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingTop: 20, paddingBottom: 36 }}
-                extraHeight={80}
-                extraScrollHeight={24}
-                keyboardShouldPersistTaps="handled"
-            >
-                <Box className="mb-5 items-center rounded-3xl border border-outline-100 bg-white px-5 py-6">
-                    <TouchableOpacity
-                        onPress={() => void pickImage()}
-                        activeOpacity={0.8}
-                        accessibilityRole="button"
-                        accessibilityLabel="Alterar foto de perfil"
-                        className="relative"
+        <View style={styles.screen}>
+            {header}
+            <BrandSheet>
+                <SafeAreaView style={styles.flex} edges={['bottom']}>
+                    <KeyboardAwareScrollView
+                        style={styles.flex}
+                        contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingTop: Spacing.xl, paddingBottom: 36 }}
+                        extraHeight={80}
+                        extraScrollHeight={24}
+                        keyboardShouldPersistTaps="handled"
                     >
-                        {avatarUrl ? (
-                            <Image source={{ uri: avatarUrl }} style={{ width: 104, height: 104, borderRadius: 52 }} contentFit="cover" />
-                        ) : (
-                            <View className="h-[104px] w-[104px] items-center justify-center rounded-full bg-primary-50">
-                                <AppIcon name="person-outline" size={42} color="#C45D22" />
-                            </View>
-                        )}
-                        <View className="absolute -bottom-1 -right-1 h-11 w-11 items-center justify-center rounded-full border-[3px] border-white bg-primary-500">
-                            {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <AppIcon name="camera-outline" size={20} color="#FFFFFF" />}
+                        <View style={[styles.card, styles.introCard]}>
+                            <TouchableOpacity
+                                onPress={() => void pickImage()}
+                                activeOpacity={0.8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Alterar foto de perfil"
+                                style={styles.avatarButton}
+                            >
+                                {avatarUrl ? (
+                                    <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" />
+                                ) : (
+                                    <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                                        <AppIcon name="person-outline" size={42} color={Palette.orangeDeep} />
+                                    </View>
+                                )}
+                                <View style={styles.cameraBadge}>
+                                    {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <AppIcon name="camera-outline" size={20} color="#FFFFFF" />}
+                                </View>
+                            </TouchableOpacity>
+                            <Text style={styles.introTitle}>Sua apresentação</Text>
+                            <Text style={styles.introBody}>
+                                Uma foto nítida e informações completas ajudam a criar confiança na comunidade.
+                            </Text>
                         </View>
-                    </TouchableOpacity>
-                    <Text className="mt-4 text-base font-bold text-typography-900">Sua apresentação</Text>
-                    <Text className="mt-1 text-center text-sm leading-5 text-typography-500">
-                        Uma foto nítida e informações completas ajudam a criar confiança na comunidade.
-                    </Text>
-                </Box>
 
-                <ProfileSection icon="person-outline" title="Informações principais">
-                    <ProfileInput label="Nome completo" hint="Obrigatório" placeholder="Como você quer ser chamado" value={fullName} onChangeText={setFullName} autoCapitalize="words" autoComplete="name" textContentType="name" />
-                    <ProfileInput label="Ocupação" hint="Obrigatório" placeholder="Ex.: Contador(a), Professor(a)" value={occupation} onChangeText={setOccupation} autoCapitalize="sentences" />
+                        <ProfileSection icon="person-outline" title="Informações principais">
+                            <ProfileInput label="Nome completo" hint="Obrigatório" placeholder="Como você quer ser chamado" value={fullName} onChangeText={setFullName} autoCapitalize="words" autoComplete="name" textContentType="name" />
+                            <ProfileInput label="Ocupação" hint="Obrigatório" placeholder="Ex.: Contador(a), Professor(a)" value={occupation} onChangeText={setOccupation} autoCapitalize="sentences" />
 
-                    <Text className="mb-2 text-xs font-bold uppercase tracking-wide text-typography-600">O que você procura na Wellcome?</Text>
-                    <View className="flex-row flex-wrap gap-2">
-                        {lookingForOptions.map((option) => {
-                            const selected = lookingFor === option.value;
-                            return (
-                                <TouchableOpacity
-                                    key={option.value}
-                                    onPress={() => setLookingFor(option.value)}
-                                    accessibilityRole="radio"
-                                    accessibilityState={{ checked: selected }}
-                                    className={`min-h-11 flex-row items-center rounded-full border px-4 ${selected ? 'border-primary-500 bg-primary-50' : 'border-outline-200 bg-white'}`}
-                                >
-                                    <AppIcon name={option.icon} size={18} color={selected ? '#C45D22' : '#6B7280'} />
-                                    <Text className={`ml-2 text-sm font-semibold ${selected ? 'text-primary-700' : 'text-typography-600'}`}>{option.label}</Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                </ProfileSection>
+                            <Text style={styles.groupLabel}>O que você procura na Wellcome?</Text>
+                            <View style={styles.chipRow}>
+                                {lookingForOptions.map((option) => {
+                                    const selected = lookingFor === option.value;
+                                    return (
+                                        <TouchableOpacity
+                                            key={option.value}
+                                            onPress={() => setLookingFor(option.value)}
+                                            accessibilityRole="radio"
+                                            accessibilityState={{ checked: selected }}
+                                            style={[styles.chip, selected && styles.chipSelected]}
+                                        >
+                                            <AppIcon name={option.icon} size={18} color={selected ? Palette.orangeDeep : Palette.inkSoft} />
+                                            <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        </ProfileSection>
 
-                <ProfileSection icon="location-outline" title="Localização">
-                    <View className="flex-row gap-3">
-                        <Box className="flex-1">
-                            <ProfileInput label="Cidade" hint="Obrigatório" placeholder="Sua cidade" value={city} onChangeText={setCity} autoCapitalize="words" />
-                        </Box>
-                        <Box className="flex-1">
-                            <ProfileInput label="Bairro" hint="Obrigatório" placeholder="Seu bairro" value={neighborhood} onChangeText={setNeighborhood} autoCapitalize="words" />
-                        </Box>
-                    </View>
-                </ProfileSection>
+                        <ProfileSection icon="location-outline" title="Localização">
+                            <View style={styles.row}>
+                                <View style={styles.flex}>
+                                    <ProfileInput label="Cidade" hint="Obrigatório" placeholder="Sua cidade" value={city} onChangeText={setCity} autoCapitalize="words" />
+                                </View>
+                                <View style={styles.flex}>
+                                    <ProfileInput label="Bairro" hint="Obrigatório" placeholder="Seu bairro" value={neighborhood} onChangeText={setNeighborhood} autoCapitalize="words" />
+                                </View>
+                            </View>
+                        </ProfileSection>
 
-                <ProfileSection icon="message" title="Sobre você">
-                    <ProfileInput label="Idiomas" hint="Separe por vírgulas" placeholder="Português, inglês, espanhol..." value={languages} onChangeText={setLanguages} autoCapitalize="sentences" />
-                    <ProfileInput label="WhatsApp / telefone" placeholder="(11) 99999-9999" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
-                    <ProfileInput label="Restrições alimentares" hint="Separe por vírgulas" placeholder="Ex.: lactose, amendoim" value={dietaryRestriction} onChangeText={setDietaryRestriction} autoCapitalize="sentences" />
-                    <ProfileInput label="Biografia" hint={`${bio.length}/500`} placeholder="Conte sobre seus interesses, experiências e o que torna um encontro especial para você." value={bio} onChangeText={setBio} multiline maxLength={500} />
-                </ProfileSection>
+                        <ProfileSection icon="message" title="Sobre você">
+                            <ProfileInput label="Idiomas" hint="Separe por vírgulas" placeholder="Português, inglês, espanhol..." value={languages} onChangeText={setLanguages} autoCapitalize="sentences" />
+                            <ProfileInput label="WhatsApp / telefone" placeholder="(11) 99999-9999" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
+                            <ProfileInput label="Restrições alimentares" hint="Separe por vírgulas" placeholder="Ex.: lactose, amendoim" value={dietaryRestriction} onChangeText={setDietaryRestriction} autoCapitalize="sentences" />
+                            <ProfileInput label="Biografia" hint={`${bio.length}/500`} placeholder="Conte sobre seus interesses, experiências e o que torna um encontro especial para você." value={bio} onChangeText={setBio} multiline maxLength={500} />
+                        </ProfileSection>
 
-                <WellcomeButton label="Salvar alterações" icon="checkmark" loading={saving} disabled={saving} onPress={() => void saveProfile()} />
-            </KeyboardAwareScrollView>
-        </SafeAreaView>
+                        <WellcomeButton label="Salvar alterações" icon="checkmark" loading={saving} disabled={saving} onPress={() => void saveProfile()} />
+                    </KeyboardAwareScrollView>
+                </SafeAreaView>
+            </BrandSheet>
+        </View>
     );
 }
 
 function ProfileSection({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
     return (
-        <Box className="mb-5 rounded-3xl border border-outline-100 bg-white p-4">
-            <Box className="mb-4 flex-row items-center">
-                <Box className="h-10 w-10 items-center justify-center rounded-full bg-primary-50">
-                    <AppIcon name={icon} size={20} color="#C45D22" />
-                </Box>
-                <Text className="ml-3 text-base font-bold text-typography-900">{title}</Text>
-            </Box>
+        <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+                <View style={styles.sectionIcon}>
+                    <AppIcon name={icon} size={20} color={Palette.orangeDeep} />
+                </View>
+                <Text style={styles.sectionTitle}>{title}</Text>
+            </View>
             {children}
-        </Box>
+        </View>
     );
 }
 
@@ -272,10 +278,9 @@ function ProfileInput({ label, hint, multiline, style, ...props }: ProfileInputP
             <TextInput
                 {...props}
                 multiline={multiline}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={Palette.subtle}
                 textAlignVertical={multiline ? 'top' : 'center'}
-                className={`px-4 text-base text-[#1A1A1A] ${multiline ? 'min-h-[112px] py-3' : 'min-h-12 py-3'}`}
-                style={style}
+                style={[styles.input, multiline && styles.inputMultiline, style]}
             />
         </WellcomeField>
     );
@@ -284,3 +289,58 @@ function ProfileInput({ label, hint, multiline, style, ...props }: ProfileInputP
 function splitList(value: string) {
     return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
+
+const styles = StyleSheet.create({
+    screen: { flex: 1, backgroundColor: Palette.paper },
+    flex: { flex: 1 },
+    loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
+    loadingText: { fontSize: 14, color: Palette.inkSoft },
+    card: {
+        marginBottom: Spacing.lg,
+        padding: 14,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
+    },
+    introCard: { alignItems: 'center', paddingVertical: Spacing.xxl, paddingHorizontal: Spacing.xl },
+    avatarButton: { position: 'relative' },
+    avatar: { width: 104, height: 104, borderRadius: 52 },
+    avatarPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: Palette.orangeSoft },
+    cameraBadge: {
+        position: 'absolute',
+        right: -4,
+        bottom: -4,
+        width: 44,
+        height: 44,
+        borderRadius: BorderRadius.full,
+        borderWidth: 3,
+        borderColor: Palette.surface,
+        backgroundColor: Palette.orange,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    introTitle: { marginTop: Spacing.lg, fontSize: 18, fontWeight: '800', color: Palette.ink },
+    introBody: { marginTop: 4, fontSize: 14, lineHeight: 21, color: Palette.inkSoft, textAlign: 'center' },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.lg },
+    sectionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.orangeSoft, alignItems: 'center', justifyContent: 'center' },
+    sectionTitle: { marginLeft: Spacing.md, fontSize: 18, fontWeight: '800', color: Palette.ink },
+    groupLabel: { marginBottom: Spacing.sm, fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', color: Palette.inkSoft },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+    chip: {
+        minHeight: 44,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
+    },
+    chipSelected: { borderColor: Palette.orange, backgroundColor: Palette.orangeSoft },
+    chipText: { marginLeft: Spacing.sm, fontSize: 14, fontWeight: '700', color: Palette.inkSoft },
+    chipTextSelected: { color: Palette.orangeDeep, fontWeight: '800' },
+    row: { flexDirection: 'row', gap: Spacing.md },
+    input: { minHeight: 48, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, fontSize: 16, color: Palette.ink },
+    inputMultiline: { minHeight: 112 },
+});

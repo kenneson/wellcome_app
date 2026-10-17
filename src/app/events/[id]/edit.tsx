@@ -10,7 +10,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 
 // Reusing constants from create flow (ideally should be shared)
 const EVENT_TYPES = [
@@ -49,6 +50,7 @@ function EditEventForm() {
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [showLocationSearch, setShowLocationSearch] = useState(false);
     const loadEventRef = useRef(loadEvent);
+    // eslint-disable-next-line react-hooks/refs -- keeps the latest loader without refetching on every render
     loadEventRef.current = loadEvent;
 
     const fetchEvent = useCallback(async () => {
@@ -65,6 +67,7 @@ function EditEventForm() {
     }, [id, router]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch when the id changes
         if (id) void fetchEvent();
     }, [id, fetchEvent]);
 
@@ -74,13 +77,13 @@ function EditEventForm() {
             !data.location.address || !data.location.city || !data.location.state ||
             data.location.latitude === null || data.location.longitude === null || !data.location.confirmed
         ) {
-            Alert.alert('Revise o evento', 'Confirme titulo, data e localizacao completa antes de salvar.');
+            Alert.alert('Revise o evento', 'Confirme título, data e localização completa antes de salvar.');
             return;
         }
 
         const price = parseEventPrice(data.details.pricePerGuest);
         if (!isValidEventPrice(price)) {
-            Alert.alert('Valor invalido', INVALID_EVENT_PRICE_MESSAGE);
+            Alert.alert('Valor inválido', INVALID_EVENT_PRICE_MESSAGE);
             return;
         }
 
@@ -129,25 +132,41 @@ function EditEventForm() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FF8C42" />
+            <View style={styles.container}>
+                <BrandStackHeader eyebrow="SEU EVENTO" title="Editar evento" backIcon="close" onBack={() => router.back()} />
+                <BrandSheet>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                    </View>
+                </BrandSheet>
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="close" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Editar Evento</Text>
-                <TouchableOpacity onPress={handleSave} disabled={saving}>
-                    <Text style={[styles.saveButton, saving && styles.disabledText]}>
-                        {saving ? 'Salvando...' : 'Salvar'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+        <View style={styles.container}>
+            <BrandStackHeader
+                eyebrow="SEU EVENTO"
+                title="Editar evento"
+                backIcon="close"
+                onBack={() => router.back()}
+                actions={(
+                    <TouchableOpacity
+                        onPress={handleSave}
+                        disabled={saving}
+                        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Salvar alterações"
+                        accessibilityState={{ disabled: saving, busy: saving }}
+                    >
+                        {saving && <ActivityIndicator size="small" color={Palette.orangeDeep} />}
+                        <Text style={styles.saveButtonText}>
+                            {saving ? 'Salvando...' : 'Salvar'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            />
+            <BrandSheet>
 
             <KeyboardAwareScrollView
                 enableOnAndroid={true}
@@ -156,18 +175,19 @@ function EditEventForm() {
                 enableResetScrollToCoords={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.content}
-                style={{ flex: 1 }}
+                style={styles.flex}
             >
                 {/* Basic Info */}
-                <Text style={styles.sectionHeader}>Informações Básicas</Text>
+                <Text style={styles.sectionHeader}>Informações básicas</Text>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Título do Evento</Text>
+                    <Text style={styles.label}>Título do evento</Text>
                     <TextInput
                         style={styles.input}
                         value={data.details.title}
                         onChangeText={(text) => updateDetails({ title: text })}
                         placeholder="Nome do seu evento"
+                        placeholderTextColor={Palette.subtle}
                     />
                 </View>
 
@@ -178,6 +198,7 @@ function EditEventForm() {
                         value={data.details.description}
                         onChangeText={(text) => updateDetails({ description: text })}
                         placeholder="Descreva seu evento..."
+                        placeholderTextColor={Palette.subtle}
                         multiline
                         textAlignVertical="top"
                     />
@@ -185,22 +206,28 @@ function EditEventForm() {
 
                 {/* Date & Time */}
                 <View style={styles.row}>
-                    <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                    <View style={[styles.inputGroup, styles.flex]}>
                         <Text style={styles.label}>Data</Text>
                         <TouchableOpacity
                             style={styles.dateButton}
                             onPress={() => setShowDatePicker(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Data do evento"
                         >
-                            <Text>{data.details.date ? data.details.date.toLocaleDateString('pt-BR') : 'Selecionar'}</Text>
+                            <Ionicons name="calendar-outline" size={18} color={Palette.orangeDeep} />
+                            <Text style={styles.dateText}>{data.details.date ? data.details.date.toLocaleDateString('pt-BR') : 'Selecionar'}</Text>
                         </TouchableOpacity>
                     </View>
-                    <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <View style={[styles.inputGroup, styles.flex]}>
                         <Text style={styles.label}>Horário</Text>
                         <TouchableOpacity
                             style={styles.dateButton}
                             onPress={() => setShowTimePicker(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Horário do evento"
                         >
-                            <Text>{data.details.date ? data.details.date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Selecionar'}</Text>
+                            <Ionicons name="time-outline" size={18} color={Palette.orangeDeep} />
+                            <Text style={styles.dateText}>{data.details.date ? data.details.date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'Selecionar'}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -211,7 +238,8 @@ function EditEventForm() {
                         mode="date"
                         display={Platform.OS === 'ios' ? 'inline' : 'default'}
                         themeVariant="light"
-                        textColor="#000000"
+                        textColor={Palette.ink}
+                        accentColor={Palette.orangeDeep}
                         onChange={onDateChange}
                         minimumDate={new Date()}
                         style={Platform.OS === 'ios' ? { height: 320, width: '100%' } : undefined}
@@ -223,7 +251,8 @@ function EditEventForm() {
                         mode="time"
                         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                         themeVariant="light"
-                        textColor="#000000"
+                        textColor={Palette.ink}
+                        accentColor={Palette.orangeDeep}
                         onChange={onTimeChange}
                         style={Platform.OS === 'ios' ? { height: 200, width: '100%' } : undefined}
                     />
@@ -232,15 +261,15 @@ function EditEventForm() {
                 {/* Location */}
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Localização (Endereço)</Text>
-                    <TouchableOpacity style={styles.locationButton} onPress={() => setShowLocationSearch(true)}>
-                        <Ionicons name="search" size={19} color="#C45D22" />
+                    <TouchableOpacity style={styles.locationButton} onPress={() => setShowLocationSearch(true)} accessibilityRole="button" accessibilityLabel="Buscar endereço">
+                        <Ionicons name="search" size={19} color={Palette.orangeDeep} />
                         <View style={styles.locationTextContainer}>
                             <Text style={data.location.address ? styles.locationText : styles.locationPlaceholder} numberOfLines={2}>
-                                {data.location.address || 'Buscar endereco completo'}
+                                {data.location.address || 'Buscar endereço completo'}
                             </Text>
                             {!!data.location.city && <Text style={styles.locationCity}>{data.location.city} - {data.location.state}</Text>}
                         </View>
-                        <Ionicons name="chevron-forward" size={18} color="#73787E" />
+                        <Ionicons name="chevron-forward" size={18} color={Palette.muted} />
                     </TouchableOpacity>
                 </View>
 
@@ -257,8 +286,8 @@ function EditEventForm() {
 
                 {/* Guests & Price */}
                 <View style={styles.row}>
-                    <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                        <Text style={styles.label}>Máx. Convidados</Text>
+                    <View style={[styles.inputGroup, styles.flex]}>
+                        <Text style={styles.label}>Máx. convidados</Text>
                         <TextInput
                             style={styles.input}
                             value={data.details.maxGuests}
@@ -266,7 +295,7 @@ function EditEventForm() {
                             keyboardType="numeric"
                         />
                     </View>
-                    <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <View style={[styles.inputGroup, styles.flex]}>
                         <Text style={styles.label}>Preço (R$)</Text>
                         <TextInput
                             style={styles.input}
@@ -274,6 +303,7 @@ function EditEventForm() {
                             onChangeText={(text) => updateDetails({ pricePerGuest: text })}
                             keyboardType="numeric"
                             placeholder="0,00"
+                            placeholderTextColor={Palette.subtle}
                         />
                     </View>
                 </View>
@@ -282,7 +312,7 @@ function EditEventForm() {
 
                 {/* Categories */}
                 <SelectionSection
-                    title="Tipo de Evento"
+                    title="Tipo de evento"
                     items={EVENT_TYPES}
                     selectedItems={data.eventType}
                     onSelect={setEventType}
@@ -308,8 +338,9 @@ function EditEventForm() {
                     isMultiSelect
                 />
 
-                <View style={{ height: 40 }} />
+                <View style={styles.bottomSpacer} />
             </KeyboardAwareScrollView>
+            </BrandSheet>
 
             <LocationAutocomplete
                 type="address"
@@ -328,7 +359,7 @@ function EditEventForm() {
                     confirmed: false,
                 })}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -343,77 +374,88 @@ export default function EditEventScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: Palette.paper,
+    },
+    flex: {
+        flex: 1,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    header: {
+    saveButton: {
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        gap: 6,
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.surface,
     },
-    backButton: {
-        padding: 4,
+    saveButtonDisabled: {
+        opacity: 0.7,
     },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    saveButton: {
-        fontSize: 16,
-        color: '#FF8C42',
-        fontWeight: 'bold',
-    },
-    disabledText: {
-        color: '#ccc',
+    saveButtonText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: Palette.orangeDeep,
     },
     content: {
-        padding: 20,
+        padding: Spacing.xl,
     },
     sectionHeader: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16,
-        color: '#333',
+        fontWeight: '800',
+        marginBottom: Spacing.lg,
+        color: Palette.ink,
     },
     inputGroup: {
-        marginBottom: 16,
+        marginBottom: Spacing.lg,
     },
     label: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        color: Palette.inkSoft,
+        marginBottom: Spacing.sm,
     },
     input: {
+        minHeight: 48,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-        color: '#333',
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+        backgroundColor: Palette.surface,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
+        fontSize: 15,
+        color: Palette.ink,
     },
     textArea: {
-        height: 100,
+        height: 110,
     },
     row: {
         flexDirection: 'row',
+        gap: Spacing.md,
     },
     dateButton: {
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 12,
+        minHeight: 48,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: Spacing.sm,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+        backgroundColor: Palette.surface,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.md,
+    },
+    dateText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: Palette.ink,
     },
     locationButton: {
         minHeight: 56,
@@ -421,31 +463,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 10,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingHorizontal: 12,
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+        backgroundColor: Palette.surface,
+        paddingHorizontal: Spacing.lg,
         paddingVertical: 10,
     },
     locationTextContainer: {
         flex: 1,
     },
     locationText: {
-        color: '#333',
+        color: Palette.ink,
         fontSize: 15,
-        fontWeight: '600',
+        fontWeight: '700',
     },
     locationPlaceholder: {
-        color: '#73787E',
+        color: Palette.subtle,
         fontSize: 15,
     },
     locationCity: {
-        color: '#73787E',
+        color: Palette.muted,
         fontSize: 12,
         marginTop: 3,
     },
     divider: {
         height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 24,
+        backgroundColor: Palette.line,
+        marginVertical: Spacing.xxl,
+    },
+    bottomSpacer: {
+        height: 40,
     },
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 
 interface ReviewFormProps {
     onSubmit: (rating: number, comment: string) => Promise<void>;
@@ -24,11 +25,17 @@ export function ReviewForm({ onSubmit, loading }: ReviewFormProps) {
             <Text style={styles.title}>Avalie sua experiência</Text>
             <View style={styles.starsContainer}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                    <TouchableOpacity
+                        key={star}
+                        onPress={() => setRating(star)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${star} ${star === 1 ? 'estrela' : 'estrelas'}`}
+                        accessibilityState={{ selected: star <= rating }}
+                    >
                         <Ionicons
                             name={star <= rating ? 'star' : 'star-outline'}
                             size={32}
-                            color={star <= rating ? '#FFD700' : '#CCCCCC'}
+                            color={star <= rating ? Palette.star : Palette.subtle}
                             style={styles.star}
                         />
                     </TouchableOpacity>
@@ -37,7 +44,7 @@ export function ReviewForm({ onSubmit, loading }: ReviewFormProps) {
             <TextInput
                 style={styles.input}
                 placeholder="Escreva um comentário (opcional)"
-                placeholderTextColor="#999"
+                placeholderTextColor={Palette.subtle}
                 value={comment}
                 onChangeText={setComment}
                 multiline
@@ -47,11 +54,13 @@ export function ReviewForm({ onSubmit, loading }: ReviewFormProps) {
                 style={[styles.button, (rating === 0 || loading) && styles.buttonDisabled]}
                 onPress={handleSubmit}
                 disabled={rating === 0 || loading}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: rating === 0 || !!loading }}
             >
                 {loading ? (
-                    <ActivityIndicator color="#FFF" />
+                    <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                    <Text style={styles.buttonText}>Enviar Avaliação</Text>
+                    <Text style={styles.buttonText}>Enviar avaliação</Text>
                 )}
             </TouchableOpacity>
         </View>
@@ -60,55 +69,53 @@ export function ReviewForm({ onSubmit, loading }: ReviewFormProps) {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#FFF',
-        borderRadius: 16,
-        padding: 20,
-        marginVertical: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: Spacing.xl,
+        marginVertical: Spacing.lg,
     },
     title: {
         fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 16,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginBottom: Spacing.lg,
         textAlign: 'center',
     },
     starsContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginBottom: 20,
+        marginBottom: Spacing.xl,
     },
     star: {
         marginHorizontal: 4,
     },
     input: {
-        backgroundColor: '#F9F9F9',
-        borderRadius: 12,
-        padding: 12,
-        fontSize: 16,
-        color: '#333',
+        backgroundColor: Palette.surface,
+        borderRadius: BorderRadius.lg,
+        padding: Spacing.md,
+        fontSize: 15,
+        color: Palette.ink,
         textAlignVertical: 'top',
         minHeight: 80,
-        marginBottom: 16,
+        marginBottom: Spacing.lg,
         borderWidth: 1,
-        borderColor: '#EEE',
+        borderColor: Palette.line,
     },
     button: {
-        backgroundColor: '#FF5A5F',
-        borderRadius: 12,
-        paddingVertical: 14,
+        backgroundColor: Palette.orange,
+        borderRadius: BorderRadius.full,
+        minHeight: 48,
+        justifyContent: 'center',
         alignItems: 'center',
     },
     buttonDisabled: {
-        backgroundColor: '#FFB0B3',
+        opacity: 0.5,
     },
     buttonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: '600',
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '800',
     },
 });

@@ -2,6 +2,8 @@ import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView
 import { userService } from '@/services/api/UserService';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -13,7 +15,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const CONFIRMATION_TEXT = 'EXCLUIR';
 
@@ -31,7 +32,7 @@ export default function DeleteAccountScreen() {
 
         Alert.alert(
             'Excluir conta',
-            'Essa acao e permanente. Seu acesso sera removido e os dados pessoais do perfil serao anonimizados.',
+            'Essa ação é permanente. Seu acesso será removido e os dados pessoais do perfil serão anonimizados.',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
@@ -43,14 +44,14 @@ export default function DeleteAccountScreen() {
                             await userService.deleteAccount();
                             await supabase.auth.signOut();
 
-                            Alert.alert('Conta excluida', 'Sua conta foi removida com sucesso.', [
+                            Alert.alert('Conta excluída', 'Sua conta foi removida com sucesso.', [
                                 {
                                     text: 'OK',
                                     onPress: () => router.replace('/auth/login'),
                                 }
                             ]);
                         } catch (error: any) {
-                            Alert.alert('Nao foi possivel excluir', error?.message || 'Tente novamente em alguns minutos.');
+                            Alert.alert('Não foi possível excluir', error?.message || 'Tente novamente em alguns minutos.');
                         } finally {
                             setIsDeleting(false);
                         }
@@ -61,153 +62,143 @@ export default function DeleteAccountScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <KeyboardAwareScrollView contentContainerStyle={styles.content}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <Ionicons name="chevron-back" size={20} color="#111" />
-                    <Text style={styles.backText}>Voltar</Text>
-                </TouchableOpacity>
+        <View style={styles.container}>
+            <BrandStackHeader eyebrow="CONTA" title="Excluir conta" />
 
-                <View style={styles.hero}>
-                    <View style={styles.iconBadge}>
-                        <Ionicons name="trash-outline" size={28} color="#FF3B30" />
+            <BrandSheet>
+                <KeyboardAwareScrollView contentContainerStyle={styles.content}>
+                    <View style={styles.hero}>
+                        <View style={styles.iconBadge}>
+                            <Ionicons name="trash-outline" size={28} color={Palette.danger} />
+                        </View>
+                        <Text style={styles.title}>Excluir conta</Text>
+                        <Text style={styles.subtitle}>
+                            Use esta tela para remover seu acesso ao app e apagar os dados pessoais do seu perfil.
+                        </Text>
                     </View>
-                    <Text style={styles.title}>Excluir conta</Text>
-                    <Text style={styles.subtitle}>
-                        Use esta tela para remover seu acesso ao app e apagar os dados pessoais do seu perfil.
-                    </Text>
-                </View>
 
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>O que acontece quando voce exclui a conta</Text>
-                    <Text style={styles.cardItem}>Seu login deixa de funcionar imediatamente.</Text>
-                    <Text style={styles.cardItem}>Foto, bio, chave PIX e dados de perfil sao removidos.</Text>
-                    <Text style={styles.cardItem}>Documentos de KYC do perfil sao limpos.</Text>
-                    <Text style={styles.cardItem}>Eventos ou reservas futuras precisam estar encerrados antes.</Text>
-                    <Text style={styles.cardItem}>Seu saldo deve estar zerado para concluir a exclusao.</Text>
-                </View>
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>O que acontece quando você exclui a conta</Text>
+                        <Text style={styles.cardItem}>Seu login deixa de funcionar imediatamente.</Text>
+                        <Text style={styles.cardItem}>Foto, bio, chave PIX e dados de perfil são removidos.</Text>
+                        <Text style={styles.cardItem}>Documentos de KYC do perfil são limpos.</Text>
+                        <Text style={styles.cardItem}>Eventos ou reservas futuras precisam estar encerrados antes.</Text>
+                        <Text style={styles.cardItem}>Seu saldo deve estar zerado para concluir a exclusão.</Text>
+                    </View>
 
-                <View style={styles.card}>
-                    <Text style={styles.inputLabel}>Digite {CONFIRMATION_TEXT} para confirmar</Text>
-                    <TextInput
-                        value={confirmationText}
-                        onChangeText={setConfirmationText}
-                        autoCapitalize="characters"
-                        placeholder={CONFIRMATION_TEXT}
-                        placeholderTextColor="#999"
-                        style={styles.input}
-                        editable={!isDeleting}
-                    />
+                    <View style={styles.card}>
+                        <Text style={styles.inputLabel}>Digite {CONFIRMATION_TEXT} para confirmar</Text>
+                        <TextInput
+                            value={confirmationText}
+                            onChangeText={setConfirmationText}
+                            autoCapitalize="characters"
+                            placeholder={CONFIRMATION_TEXT}
+                            placeholderTextColor={Palette.subtle}
+                            style={styles.input}
+                            editable={!isDeleting}
+                        />
 
-                    <TouchableOpacity
-                        style={[styles.deleteButton, (!canDelete || isDeleting) && styles.deleteButtonDisabled]}
-                        onPress={handleDeleteAccount}
-                        disabled={!canDelete || isDeleting}
-                    >
-                        {isDeleting ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <>
-                                <Ionicons name="trash-outline" size={18} color="#fff" />
-                                <Text style={styles.deleteButtonText}>Excluir minha conta</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAwareScrollView>
-        </SafeAreaView>
+                        <TouchableOpacity
+                            style={[styles.deleteButton, (!canDelete || isDeleting) && styles.deleteButtonDisabled]}
+                            onPress={handleDeleteAccount}
+                            disabled={!canDelete || isDeleting}
+                            accessibilityRole="button"
+                            accessibilityLabel="Excluir minha conta"
+                            accessibilityState={{ disabled: !canDelete || isDeleting, busy: isDeleting }}
+                        >
+                            {isDeleting ? (
+                                <ActivityIndicator color="#FFFFFF" />
+                            ) : (
+                                <>
+                                    <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                                    <Text style={styles.deleteButtonText}>Excluir minha conta</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAwareScrollView>
+            </BrandSheet>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFF7F5',
+        backgroundColor: Palette.paper,
     },
     content: {
-        paddingHorizontal: 24,
-        paddingTop: 12,
-        paddingBottom: 40,
-    },
-    backButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        alignSelf: 'flex-start',
-        marginBottom: 20,
-    },
-    backText: {
-        color: '#111',
-        fontSize: 15,
-        fontWeight: '600',
-        marginLeft: 4,
+        padding: Spacing.xl,
+        paddingBottom: Spacing.xxxl + Spacing.sm,
     },
     hero: {
-        marginBottom: 24,
+        marginBottom: Spacing.xxl,
     },
     iconBadge: {
         width: 56,
         height: 56,
-        borderRadius: 16,
-        backgroundColor: '#FFE9E6',
+        borderRadius: 28,
+        backgroundColor: Palette.dangerLine,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: Spacing.lg,
     },
     title: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: '800',
-        color: '#111',
-        marginBottom: 8,
+        letterSpacing: -0.3,
+        color: Palette.ink,
+        marginBottom: Spacing.sm,
     },
     subtitle: {
         fontSize: 15,
-        lineHeight: 22,
-        color: '#555',
+        lineHeight: 21,
+        color: Palette.inkSoft,
     },
     card: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.05,
-        shadowRadius: 20,
-        elevation: 3,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: 14,
+        marginBottom: Spacing.lg,
     },
     cardTitle: {
         fontSize: 16,
-        fontWeight: '700',
-        color: '#111',
-        marginBottom: 12,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginBottom: Spacing.md,
     },
     cardItem: {
         fontSize: 14,
         lineHeight: 21,
-        color: '#555',
-        marginBottom: 8,
+        color: Palette.inkSoft,
+        marginBottom: Spacing.sm,
     },
     inputLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#111',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        color: Palette.inkSoft,
         marginBottom: 10,
     },
     input: {
+        minHeight: 48,
         borderWidth: 1,
-        borderColor: '#F2C6C1',
-        borderRadius: 14,
-        backgroundColor: '#FFF8F7',
-        paddingHorizontal: 14,
-        paddingVertical: 14,
+        borderColor: Palette.dangerLine,
+        borderRadius: BorderRadius.lg,
+        backgroundColor: Palette.surface,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
         fontSize: 16,
-        color: '#111',
-        marginBottom: 16,
+        color: Palette.ink,
+        marginBottom: Spacing.lg,
     },
     deleteButton: {
-        height: 52,
-        borderRadius: 16,
-        backgroundColor: '#FF3B30',
+        minHeight: 52,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.danger,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -217,8 +208,8 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     deleteButtonText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 15,
-        fontWeight: '700',
+        fontWeight: '800',
     },
 });

@@ -1,11 +1,12 @@
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
+import { Palette } from '@/shared/constants/theme';
 
 export default function AuthCallback() {
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
-            <ActivityIndicator size="large" color="#FF8C42" />
+            <ActivityIndicator size="large" color={Palette.orange} />
             <Text style={styles.text}>Autenticando...</Text>
         </View>
     );
@@ -16,11 +17,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: Palette.paper,
     },
     text: {
         marginTop: 20,
         fontSize: 16,
-        color: '#666',
+        color: Palette.inkSoft,
     },
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
 import RCheckbox from '@/shared/ui/organisms/check-box'; // Default export
-import { Colors } from '@/shared/constants/theme';
+import { Palette } from '@/shared/constants/theme';
 
 interface CheckboxProps {
     label: string;
@@ -22,7 +22,7 @@ export function Checkbox({ label, checked, onChange, style }: CheckboxProps) {
         >
             <RCheckbox
                 checked={checked}
-                checkmarkColor={Colors.light.tint} // Use app tint color (Orange)
+                checkmarkColor={Palette.orange}
                 size={24} // Slightly larger for better visibility of stroke
                 showBorder={true} // Ensure box is visible
             />
@@ -35,10 +35,12 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
+        minHeight: 44,
     },
     label: {
         fontSize: 14,
-        color: Colors.light.text, // Use theme text color
+        lineHeight: 21,
+        color: Palette.ink,
         flex: 1,
         marginLeft: 10, // Add spacing since Checkbox component is self-contained
     },

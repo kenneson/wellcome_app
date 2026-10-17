@@ -1,6 +1,8 @@
 import { registrationService } from '@/services/api/RegistrationService';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { HeaderIconButton } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,6 +14,18 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+function ScannerHeader({ paddingTop, onBack }: { paddingTop: number; onBack: () => void }) {
+    return (
+        <View style={[styles.header, { paddingTop }]}>
+            <HeaderIconButton icon="chevron-back" accessibilityLabel="Voltar" onPress={onBack} />
+            <View style={styles.headerTitles}>
+                <Text style={styles.headerEyebrow}>ANFITRIÃO</Text>
+                <Text style={styles.headerTitle} accessibilityRole="header">Escanear ingresso</Text>
+            </View>
+        </View>
+    );
+}
 
 // Dynamic import to avoid breaking other routes if expo-camera isn't available
 let CameraView: any = null;
@@ -51,7 +65,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
     if (!permission) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#FF8C42" />
+                <ActivityIndicator size="large" color={Palette.orange} />
             </View>
         );
     }
@@ -60,15 +74,17 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.centerContainer}>
-                    <Ionicons name="camera-outline" size={64} color="#CCC" />
-                    <Text style={styles.permissionTitle}>Acesso a Camera</Text>
+                    <View style={styles.permissionIcon}>
+                        <Ionicons name="camera-outline" size={34} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.permissionTitle}>Acesso à câmera</Text>
                     <Text style={styles.permissionText}>
-                        Precisamos da sua camera para escanear os QR Codes dos participantes.
+                        Precisamos da sua câmera para escanear os QR Codes dos participantes.
                     </Text>
-                    <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-                        <Text style={styles.permissionButtonText}>Permitir Camera</Text>
+                    <TouchableOpacity style={styles.permissionButton} onPress={requestPermission} accessibilityRole="button">
+                        <Text style={styles.permissionButtonText}>Permitir câmera</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.backLink} onPress={onBack}>
+                    <TouchableOpacity style={styles.backLink} onPress={onBack} accessibilityRole="button">
                         <Text style={styles.backLinkText}>Voltar</Text>
                     </TouchableOpacity>
                 </View>
@@ -85,20 +101,20 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
             const parsed = JSON.parse(data);
 
             if (!parsed.bookingId || !parsed.eventId) {
-                setResult({ valid: false, message: 'QR Code invalido' });
+                setResult({ valid: false, message: 'QR Code inválido' });
                 setValidating(false);
                 return;
             }
 
             if (parsed.eventId !== eventId) {
-                setResult({ valid: false, message: 'Este ingresso e de outro evento' });
+                setResult({ valid: false, message: 'Este ingresso é de outro evento' });
                 setValidating(false);
                 return;
             }
 
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
-                setResult({ valid: false, message: 'Sessao expirada' });
+                setResult({ valid: false, message: 'Sessão expirada' });
                 setValidating(false);
                 return;
             }
@@ -110,7 +126,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
 
             setResult(response);
         } catch {
-            setResult({ valid: false, message: 'QR Code invalido ou ilegivel' });
+            setResult({ valid: false, message: 'QR Code inválido ou ilegível' });
         } finally {
             setValidating(false);
         }
@@ -123,13 +139,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
-                <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Escanear Ingresso</Text>
-                <View style={{ width: 40 }} />
-            </View>
+            <ScannerHeader paddingTop={headerPaddingTop} onBack={onBack} />
 
             {!scanned ? (
                 <View style={styles.cameraContainer}>
@@ -155,7 +165,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
                 <View style={styles.resultContainer}>
                     {validating ? (
                         <View style={styles.validatingBox}>
-                            <ActivityIndicator size="large" color="#FF8C42" />
+                            <ActivityIndicator size="large" color={Palette.orange} />
                             <Text style={styles.validatingText}>Validando ingresso...</Text>
                         </View>
                     ) : result ? (
@@ -170,7 +180,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
                                 <Ionicons
                                     name={result.valid ? 'checkmark' : 'close'}
                                     size={48}
-                                    color="#fff"
+                                    color="#FFFFFF"
                                 />
                             </View>
 
@@ -178,7 +188,7 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
                                 styles.resultTitle,
                                 result.valid ? styles.resultTitleValid : styles.resultTitleInvalid
                             ]}>
-                                {result.valid ? 'Ingresso Valido!' : 'Ingresso Invalido'}
+                                {result.valid ? 'Ingresso válido!' : 'Ingresso inválido'}
                             </Text>
 
                             <Text style={styles.resultMessage}>{result.message}</Text>
@@ -192,16 +202,16 @@ function ScannerContent({ eventId, headerPaddingTop, onBack }: ScannerContentPro
                                         />
                                     ) : (
                                         <View style={styles.userAvatarPlaceholder}>
-                                            <Ionicons name="person" size={24} color="#fff" />
+                                            <Ionicons name="person" size={24} color={Palette.muted} />
                                         </View>
                                     )}
                                     <Text style={styles.userName}>{result.booking.user.fullName}</Text>
                                 </View>
                             )}
 
-                            <TouchableOpacity style={styles.scanAgainButton} onPress={handleScanAgain}>
-                                <Ionicons name="scan-outline" size={20} color="#fff" />
-                                <Text style={styles.scanAgainText}>Escanear Outro</Text>
+                            <TouchableOpacity style={styles.scanAgainButton} onPress={handleScanAgain} accessibilityRole="button">
+                                <Ionicons name="scan-outline" size={20} color="#FFFFFF" />
+                                <Text style={styles.scanAgainText}>Escanear outro</Text>
                             </TouchableOpacity>
                         </View>
                     ) : null}
@@ -220,20 +230,16 @@ export default function ScannerScreen() {
     if (!CameraView || !useCameraPermissions) {
         return (
             <SafeAreaView style={styles.container}>
-                <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Escanear Ingresso</Text>
-                    <View style={{ width: 40 }} />
-                </View>
+                <ScannerHeader paddingTop={insets.top + 8} onBack={() => router.back()} />
                 <View style={styles.centerContainer}>
-                    <Ionicons name="camera-outline" size={64} color="#CCC" />
-                    <Text style={styles.permissionTitle}>Camera Indisponivel</Text>
+                    <View style={styles.permissionIcon}>
+                        <Ionicons name="camera-outline" size={34} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.permissionTitle}>Câmera indisponível</Text>
                     <Text style={styles.permissionText}>
-                        O modulo de camera nao esta disponivel nesta versao do app. E necessario um novo build para usar o scanner.
+                        O módulo de câmera não está disponível nesta versão do app. É necessário um novo build para usar o scanner.
                     </Text>
-                    <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backLink} onPress={() => router.back()} accessibilityRole="button">
                         <Text style={styles.backLinkText}>Voltar</Text>
                     </TouchableOpacity>
                 </View>
@@ -253,70 +259,88 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: Palette.ink,
     },
     centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#1A1A1A',
+        backgroundColor: Palette.ink,
         paddingHorizontal: 40,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        gap: Spacing.md,
+        paddingHorizontal: Spacing.xl,
+        paddingBottom: Spacing.md,
     },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        justifyContent: 'center',
-        alignItems: 'center',
+    headerTitles: {
+        flex: 1,
+        gap: 2,
+    },
+    headerEyebrow: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.6,
+        color: Palette.orange,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#fff',
+        fontSize: 20,
+        fontWeight: '800',
+        letterSpacing: -0.3,
+        color: '#FFFFFF',
+    },
+    permissionIcon: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: Palette.onBrandGlass,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     permissionTitle: {
         fontSize: 20,
-        fontWeight: '700',
-        color: '#fff',
-        marginTop: 20,
-        marginBottom: 8,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        marginTop: Spacing.xl,
+        marginBottom: Spacing.sm,
     },
     permissionText: {
         fontSize: 14,
-        color: '#999',
+        color: Palette.subtle,
         textAlign: 'center',
-        lineHeight: 20,
-        marginBottom: 24,
+        lineHeight: 21,
+        marginBottom: Spacing.xxl,
     },
     permissionButton: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 14,
-        paddingHorizontal: 32,
-        borderRadius: 16,
+        backgroundColor: Palette.orange,
+        minHeight: 48,
+        justifyContent: 'center',
+        paddingHorizontal: Spacing.xxxl,
+        borderRadius: BorderRadius.full,
     },
     permissionButtonText: {
-        color: '#fff',
-        fontWeight: '700',
+        color: '#FFFFFF',
+        fontWeight: '800',
         fontSize: 16,
     },
     backLink: {
-        marginTop: 16,
+        marginTop: Spacing.md,
+        minHeight: 44,
+        paddingHorizontal: Spacing.xl,
+        justifyContent: 'center',
     },
     backLinkText: {
-        color: '#888',
-        fontSize: 14,
+        color: Palette.subtle,
+        fontSize: 15,
+        fontWeight: '800',
     },
     cameraContainer: {
         flex: 1,
         overflow: 'hidden',
+        borderTopLeftRadius: BorderRadius.sheet,
+        borderTopRightRadius: BorderRadius.sheet,
     },
     camera: {
         flex: 1,
@@ -334,70 +358,77 @@ const styles = StyleSheet.create({
     },
     corner: {
         position: 'absolute',
-        width: 30,
-        height: 30,
-        borderColor: '#FF8C42',
+        width: 36,
+        height: 36,
+        borderColor: Palette.orange,
     },
     cornerTopLeft: {
         top: 0,
         left: 0,
-        borderTopWidth: 3,
-        borderLeftWidth: 3,
-        borderTopLeftRadius: 8,
+        borderTopWidth: 4,
+        borderLeftWidth: 4,
+        borderTopLeftRadius: BorderRadius.xl,
     },
     cornerTopRight: {
         top: 0,
         right: 0,
-        borderTopWidth: 3,
-        borderRightWidth: 3,
-        borderTopRightRadius: 8,
+        borderTopWidth: 4,
+        borderRightWidth: 4,
+        borderTopRightRadius: BorderRadius.xl,
     },
     cornerBottomLeft: {
         bottom: 0,
         left: 0,
-        borderBottomWidth: 3,
-        borderLeftWidth: 3,
-        borderBottomLeftRadius: 8,
+        borderBottomWidth: 4,
+        borderLeftWidth: 4,
+        borderBottomLeftRadius: BorderRadius.xl,
     },
     cornerBottomRight: {
         bottom: 0,
         right: 0,
-        borderBottomWidth: 3,
-        borderRightWidth: 3,
-        borderBottomRightRadius: 8,
+        borderBottomWidth: 4,
+        borderRightWidth: 4,
+        borderBottomRightRadius: BorderRadius.xl,
     },
     scanHint: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 14,
-        marginTop: 32,
-        fontWeight: '500',
+        marginTop: Spacing.xxxl,
+        fontWeight: '700',
+        backgroundColor: Palette.scrim,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.sm,
+        borderRadius: BorderRadius.full,
+        overflow: 'hidden',
     },
     resultContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 32,
+        paddingHorizontal: Spacing.xl,
     },
     validatingBox: {
         alignItems: 'center',
-        gap: 16,
+        gap: Spacing.lg,
     },
     validatingText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '700',
     },
     resultCard: {
         width: '100%',
-        borderRadius: 24,
-        padding: 32,
+        borderRadius: BorderRadius.sheet,
+        padding: Spacing.xxl,
         alignItems: 'center',
+        backgroundColor: Palette.surface,
+        borderWidth: 2,
     },
     resultCardValid: {
-        backgroundColor: '#F0FDF4',
+        borderColor: Palette.green,
     },
     resultCardInvalid: {
-        backgroundColor: '#FEF2F2',
+        borderColor: Palette.danger,
     },
     resultIconCircle: {
         width: 80,
@@ -405,67 +436,75 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: Spacing.xl,
     },
     iconCircleValid: {
-        backgroundColor: '#10B981',
+        backgroundColor: Palette.green,
     },
     iconCircleInvalid: {
-        backgroundColor: '#EF4444',
+        backgroundColor: Palette.danger,
     },
     resultTitle: {
         fontSize: 24,
         fontWeight: '800',
-        marginBottom: 8,
+        marginBottom: Spacing.sm,
     },
     resultTitleValid: {
-        color: '#10B981',
+        color: Palette.green,
     },
     resultTitleInvalid: {
-        color: '#EF4444',
+        color: Palette.danger,
     },
     resultMessage: {
         fontSize: 14,
-        color: '#666',
+        color: Palette.inkSoft,
         textAlign: 'center',
-        marginBottom: 24,
+        lineHeight: 21,
+        marginBottom: Spacing.xxl,
     },
     userInfo: {
         alignItems: 'center',
-        marginBottom: 24,
+        alignSelf: 'stretch',
+        marginBottom: Spacing.xxl,
+        padding: Spacing.lg,
+        borderRadius: 22,
+        backgroundColor: Palette.paper,
     },
     userAvatar: {
         width: 64,
         height: 64,
         borderRadius: 32,
-        marginBottom: 8,
+        marginBottom: Spacing.sm,
+        backgroundColor: Palette.track,
     },
     userAvatarPlaceholder: {
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#CCC',
+        backgroundColor: Palette.track,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: Spacing.sm,
     },
     userName: {
         fontSize: 18,
-        fontWeight: '700',
-        color: '#333',
+        fontWeight: '800',
+        color: Palette.ink,
     },
     scanAgainButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#FF8C42',
-        paddingVertical: 14,
-        paddingHorizontal: 28,
-        borderRadius: 16,
+        justifyContent: 'center',
+        gap: Spacing.sm,
+        backgroundColor: Palette.orange,
+        minHeight: 48,
+        paddingHorizontal: Spacing.xxl,
+        borderRadius: BorderRadius.full,
+        alignSelf: 'stretch',
     },
     scanAgainText: {
-        color: '#fff',
-        fontWeight: '700',
+        color: '#FFFFFF',
+        fontWeight: '800',
         fontSize: 15,
     },
 });

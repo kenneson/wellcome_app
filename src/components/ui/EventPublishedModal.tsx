@@ -2,7 +2,8 @@ import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { WellcomeButton } from '@/components/ui/wellcome';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import React from 'react';
-import { Modal, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Palette, Spacing } from '@/shared/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface EventPublishedModalProps {
@@ -29,40 +30,40 @@ export function EventPublishedModal({
             onRequestClose={onGoToFeed}
         >
             <SafeAreaView
-                className="flex-1 justify-center bg-black/55 px-5"
+                style={styles.backdrop}
                 edges={['top', 'bottom']}
             >
                 <View
-                    className="w-full max-w-[420px] self-center rounded-3xl bg-white px-6 pb-6 pt-7"
+                    style={styles.dialog}
                     accessibilityViewIsModal
                 >
-                    <View className="mb-5 h-20 w-20 self-center items-center justify-center rounded-full bg-orange-50">
-                        <Ionicons name="checkmark-circle" size={54} color="#E56F2D" />
+                    <View style={styles.iconCircle}>
+                        <Ionicons name="checkmark-circle" size={48} color={Palette.orangeDeep} />
                     </View>
 
                     <Text
-                        className="text-center text-2xl font-extrabold text-[#1A1A1A]"
+                        style={styles.title}
                         accessibilityRole="header"
                     >
                         Parabéns! Seu evento está no ar
                     </Text>
-                    <Text className="mt-3 text-center text-base leading-6 text-gray-600">
+                    <Text style={styles.body}>
                         {eventTitle
                             ? `“${eventTitle}” foi publicado com sucesso.`
                             : 'Seu evento foi publicado com sucesso.'}
                     </Text>
 
-                    <View className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4">
-                        <View className="flex-row items-start">
-                            <Ionicons name="compass-outline" size={21} color="#BE521F" />
-                            <Text className="ml-3 flex-1 text-sm leading-5 text-[#7A3D1C]">
+                    <View style={styles.note}>
+                        <View style={styles.noteRow}>
+                            <Ionicons name="compass-outline" size={20} color={Palette.orangeDeep} />
+                            <Text style={styles.noteText}>
                                 Ele já está disponível no feed para participantes da cidade escolhida.
                                 Para gerenciar inscrições, acesse Perfil → Meus Eventos Criados.
                             </Text>
                         </View>
                     </View>
 
-                    <View className="mt-6 gap-3">
+                    <View style={styles.actions}>
                         <WellcomeButton
                             label="Ver meu evento"
                             variant="outline"
@@ -80,3 +81,69 @@ export function EventPublishedModal({
         </Modal>
     );
 }
+
+const styles = StyleSheet.create({
+    backdrop: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingHorizontal: Spacing.xl,
+        backgroundColor: Palette.scrim,
+    },
+    dialog: {
+        width: '100%',
+        maxWidth: 420,
+        alignSelf: 'center',
+        borderRadius: 28,
+        backgroundColor: Palette.surface,
+        paddingHorizontal: Spacing.xxl,
+        paddingTop: 28,
+        paddingBottom: Spacing.xxl,
+    },
+    iconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        alignSelf: 'center',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Palette.orangeSoft,
+        marginBottom: Spacing.xl,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '800',
+        letterSpacing: -0.3,
+        textAlign: 'center',
+        color: Palette.ink,
+    },
+    body: {
+        marginTop: Spacing.md,
+        fontSize: 15,
+        lineHeight: 22,
+        textAlign: 'center',
+        color: Palette.inkSoft,
+    },
+    note: {
+        marginTop: Spacing.xl,
+        padding: 14,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        backgroundColor: Palette.orangeSoft,
+    },
+    noteRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: Spacing.md,
+    },
+    noteText: {
+        flex: 1,
+        fontSize: 14,
+        lineHeight: 21,
+        color: Palette.orangeDarker,
+    },
+    actions: {
+        marginTop: Spacing.xxl,
+        gap: Spacing.md,
+    },
+});

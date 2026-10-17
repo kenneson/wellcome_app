@@ -3,21 +3,25 @@ import { eventService } from '@/services/api/EventService';
 import { supabase } from '@/shared/lib/supabase';
 import { isEventRegistrationClosed } from '@/shared/lib/eventAvailability';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function JoinEventScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/immutability -- function declaration is hoisted
         if (id) fetchEventDetails();
     }, [id]);
 
@@ -28,7 +32,7 @@ export default function JoinEventScreen() {
 
             if (isEventRegistrationClosed(data)) {
                 Alert.alert(
-                    'Inscricoes encerradas',
+                    'Inscrições encerradas',
                     'O prazo para participar deste evento terminou.',
                     [{ text: 'OK', onPress: () => router.replace(`/events/${id}`) }]
                 );
@@ -151,44 +155,49 @@ export default function JoinEventScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FF8C42" />
+            <View style={styles.screen}>
+                <BrandStackHeader eyebrow="INSCRIÇÃO" title="Solicitar inscrição" backIcon="close" />
+                <BrandSheet>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                    </View>
+                </BrandSheet>
             </View>
         );
     }
 
     if (!event) return null;
 
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Solicitar Inscrição</Text>
-                <View style={{ width: 40 }} />
-            </View>
+    const isPaid = Number(event.price) > 0;
 
-            <KeyboardAwareScrollView
-                enableOnAndroid={true}
-                extraScrollHeight={40}
-                extraHeight={120}
-                enableResetScrollToCoords={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.content}
-                style={{ flex: 1 }}
-            >
+    return (
+        <View style={styles.screen}>
+            <BrandStackHeader eyebrow="INSCRIÇÃO" title="Solicitar inscrição" backIcon="close" />
+
+            <BrandSheet>
+                <KeyboardAwareScrollView
+                    enableOnAndroid={true}
+                    extraScrollHeight={40}
+                    extraHeight={120}
+                    enableResetScrollToCoords={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.content}
+                    style={{ flex: 1 }}
+                >
                     <Text style={styles.eventTitle}>{event.title}</Text>
                     <Text style={styles.subtitle}>
                         {event.questions && event.questions.length > 0
-                            ? 'Por favor, responda as perguntas abaixo para concluir sua solicitação.'
+                            ? 'Por favor, responda às perguntas abaixo para concluir sua solicitação.'
                             : 'Confirme sua solicitação abaixo.'}
                     </Text>
 
-                    {Number(event.price) > 0 && (
-                        <View style={{ padding: 16, borderRadius: 12, backgroundColor: '#FFF4E8', marginBottom: 20 }}>
-                            <Text style={{ fontWeight: '700', color: '#9A4819', marginBottom: 8 }}>Pagamento na inscrição</Text>
-                            <Text style={{ color: '#65442E', lineHeight: 22 }}>
+                    {isPaid && (
+                        <View style={styles.notice}>
+                            <View style={styles.noticeHeader}>
+                                <Ionicons name="card-outline" size={18} color={Palette.orangeDeep} />
+                                <Text style={styles.noticeTitle}>Pagamento na inscrição</Text>
+                            </View>
+                            <Text style={styles.noticeBody}>
                                 {event.requiresApproval || event.accessType === 'OPEN_WITH_APPROVAL'
                                     ? 'Você paga primeiro. Após a confirmação do pagamento, sua vaga fica reservada enquanto o anfitrião analisa a inscrição. O ingresso é liberado com a aprovação. Em caso de recusa, o valor pago será devolvido integralmente.'
                                     : 'Conclua o pagamento para confirmar sua participação e receber o ingresso.'}
@@ -203,113 +212,130 @@ export default function JoinEventScreen() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="Sua resposta..."
-                                placeholderTextColor="#999"
+                                placeholderTextColor={Palette.subtle}
                                 value={answers[q.id] || ''}
                                 onChangeText={(text) => handleAnswerChange(q.id, text)}
                                 multiline
+                                accessibilityLabel={q.question}
                             />
                         </View>
                     ))}
 
                     <View style={{ height: 100 }} />
-            </KeyboardAwareScrollView>
+                </KeyboardAwareScrollView>
+            </BrandSheet>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
                 <TouchableOpacity
                     style={[styles.button, submitting && styles.disabledButton]}
                     onPress={handleSubmit}
                     disabled={submitting}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: submitting }}
                 >
                     {submitting ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                        <Text style={styles.buttonText}>{Number(event.price) > 0 ? 'Inscrever-se e pagar' : 'Enviar solicitação'}</Text>
+                        <Text style={styles.buttonText}>{isPaid ? 'Inscrever-se e pagar' : 'Enviar solicitação'}</Text>
                     )}
                 </TouchableOpacity>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
+    screen: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: Palette.paper,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    backButton: {
-        padding: 8,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
     content: {
-        padding: 24,
+        padding: Spacing.xl,
     },
     eventTitle: {
         fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        color: '#333',
+        fontWeight: '800',
+        letterSpacing: -0.3,
+        marginBottom: Spacing.sm,
+        color: Palette.ink,
     },
     subtitle: {
         fontSize: 14,
-        color: '#666',
-        marginBottom: 24,
+        lineHeight: 21,
+        color: Palette.inkSoft,
+        marginBottom: Spacing.xxl,
+    },
+    notice: {
+        padding: Spacing.lg,
+        borderRadius: 22,
+        backgroundColor: Palette.orangeSoft,
+        marginBottom: Spacing.xl,
+        gap: Spacing.sm,
+    },
+    noticeHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+    },
+    noticeTitle: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: Palette.orangeDarker,
+    },
+    noticeBody: {
+        fontSize: 14,
+        color: Palette.inkSoft,
+        lineHeight: 21,
     },
     questionContainer: {
-        marginBottom: 20,
+        marginBottom: Spacing.xl,
     },
     questionLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 8,
-        color: '#333',
+        fontSize: 15,
+        fontWeight: '800',
+        marginBottom: Spacing.sm,
+        color: Palette.ink,
     },
     asterisk: {
-        color: '#FF3B30',
+        color: Palette.danger,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 12,
-        padding: 12,
-        fontSize: 16,
-        backgroundColor: '#FAFAFA',
-        minHeight: 50,
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
+        fontSize: 15,
+        color: Palette.ink,
+        backgroundColor: Palette.surface,
+        minHeight: 48,
     },
     footer: {
-        padding: 20,
+        paddingHorizontal: Spacing.xl,
+        paddingTop: Spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
-        backgroundColor: '#fff',
+        borderTopColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
+        ...Elevation.floating,
     },
     button: {
-        backgroundColor: '#FF8C42',
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: Palette.orange,
+        minHeight: 52,
+        borderRadius: BorderRadius.full,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     disabledButton: {
-        opacity: 0.7,
+        opacity: 0.6,
     },
     buttonText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '800',
     },
 });

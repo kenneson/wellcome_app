@@ -1,9 +1,8 @@
 import { WellcomeButton } from '@/components/ui/wellcome/WellcomeButton';
-import { Box } from '@/shared/ui/box';
-import { Text } from '@/shared/ui/text';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React from 'react';
-import { Modal, Pressable, StyleSheet } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface WellcomeDatePickerSheetProps {
@@ -39,13 +38,13 @@ export function WellcomeDatePickerSheet({
       animationType={reducedMotion ? 'none' : 'slide'}
       onRequestClose={onCancel}
     >
-      <Box className="flex-1 justify-end bg-black/50" accessibilityViewIsModal>
+      <View style={styles.backdrop} accessibilityViewIsModal>
         <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} accessibilityLabel="Fechar seletor" />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <Box className="rounded-t-3xl bg-white px-5 pb-3 pt-2">
-            <Box className="mb-2 h-1 w-10 self-center rounded-full bg-outline-200" />
-            <Text className="py-2 text-center text-lg font-bold text-typography-900">{title}</Text>
-            <Box style={styles.pickerSurface}>
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+            <Text style={styles.title} accessibilityRole="header">{title}</Text>
+            <View style={styles.pickerSurface}>
               <DateTimePicker
                 value={value}
                 mode={mode}
@@ -53,45 +52,79 @@ export function WellcomeDatePickerSheet({
                 locale="pt-BR"
                 is24Hour
                 themeVariant="light"
-                textColor="#111827"
-                accentColor="#C45D22"
+                textColor={Palette.ink}
+                accentColor={Palette.orangeDeep}
                 minimumDate={minimumDate}
                 onChange={(_, selected) => selected && onChange(selected)}
                 style={styles.picker}
               />
-            </Box>
-            <Box className="mt-3 flex-row gap-3">
-              <Box className="flex-1">
-                <WellcomeButton label="Cancelar" variant="ghost" onPress={onCancel} />
-              </Box>
-              <Box className="flex-1">
+            </View>
+            <View style={styles.actions}>
+              <View style={styles.action}>
+                <WellcomeButton label="Cancelar" variant="outline" onPress={onCancel} />
+              </View>
+              <View style={styles.action}>
                 <WellcomeButton label="Confirmar" onPress={onConfirm} />
-              </Box>
-            </Box>
-          </Box>
+              </View>
+            </View>
+          </View>
         </SafeAreaView>
-      </Box>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: Palette.scrim,
+  },
   safeArea: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: Palette.surface,
+    borderTopLeftRadius: BorderRadius.sheet,
+    borderTopRightRadius: BorderRadius.sheet,
     overflow: 'hidden',
+  },
+  sheet: {
+    backgroundColor: Palette.surface,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    alignSelf: 'center',
+    borderRadius: BorderRadius.full,
+    backgroundColor: Palette.line,
+    marginBottom: Spacing.sm,
+  },
+  title: {
+    paddingVertical: Spacing.sm,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: Palette.ink,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  action: {
+    flex: 1,
   },
   pickerSurface: {
     minHeight: 232,
     overflow: 'hidden',
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Palette.surface,
   },
   picker: {
     width: '100%',
     height: 232,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Palette.surface,
     opacity: 1,
   },
 });

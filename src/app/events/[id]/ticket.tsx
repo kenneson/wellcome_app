@@ -4,6 +4,8 @@ import { DEFAULT_PLACEHOLDER_IMAGE } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -13,10 +15,9 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Dynamic import to avoid crashing if react-native-qrcode-svg has issues
 let QRCode: any = null;
@@ -29,11 +30,13 @@ try {
 export default function TicketScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [event, setEvent] = useState<Event | null>(null);
     const [booking, setBooking] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/immutability -- function declaration is hoisted
         fetchTicketData();
     }, [id]);
 
@@ -68,9 +71,14 @@ export default function TicketScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FF8C42" />
-                <Text style={styles.loadingText}>Carregando ingresso...</Text>
+            <View style={styles.container}>
+                <BrandStackHeader eyebrow="SEU INGRESSO" title="Meu ingresso" backIcon="close" />
+                <BrandSheet>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                        <Text style={styles.loadingText}>Carregando ingresso...</Text>
+                    </View>
+                </BrandSheet>
             </View>
         );
     }
@@ -88,192 +96,163 @@ export default function TicketScreen() {
     const timeStr = eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Meu Ingresso</Text>
-                <View style={{ width: 40 }} />
-            </View>
+        <View style={styles.container}>
+            <BrandStackHeader eyebrow="SEU INGRESSO" title="Meu ingresso" backIcon="close" />
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Ticket Card */}
-                <View style={styles.ticketCard}>
-                    {/* Event Cover */}
-                    <Image
-                        source={{ uri: getOptimizedImageUrl(event.coverImageUrl || DEFAULT_PLACEHOLDER_IMAGE, { width: 400 }) }}
-                        style={styles.coverImage}
-                        contentFit="cover"
-                    />
+            <BrandSheet>
+                <ScrollView
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + Spacing.xxxl }]}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Ticket Card */}
+                    <View style={styles.ticketCard}>
+                        {/* Event Cover */}
+                        <Image
+                            source={{ uri: getOptimizedImageUrl(event.coverImageUrl || DEFAULT_PLACEHOLDER_IMAGE, { width: 400 }) }}
+                            style={styles.coverImage}
+                            contentFit="cover"
+                        />
 
-                    {/* Event Info */}
-                    <View style={styles.eventInfo}>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
+                        {/* Event Info */}
+                        <View style={styles.eventInfo}>
+                            <Text style={styles.eventTitle}>{event.title}</Text>
 
-                        <View style={styles.infoRow}>
-                            <View style={styles.dateBlock}>
-                                <Text style={styles.dayNumber}>{dayNumber}</Text>
-                                <Text style={styles.monthText}>{monthShort.toUpperCase()}</Text>
-                            </View>
-                            <View style={styles.infoDetails}>
-                                <View style={styles.infoItem}>
-                                    <Ionicons name="time-outline" size={16} color="#666" />
-                                    <Text style={styles.infoText}>{timeStr}</Text>
+                            <View style={styles.infoRow}>
+                                <View style={styles.dateBlock}>
+                                    <Text style={styles.dayNumber}>{dayNumber}</Text>
+                                    <Text style={styles.monthText}>{monthShort.toUpperCase()}</Text>
                                 </View>
-                                <View style={styles.infoItem}>
-                                    <Ionicons name="location-outline" size={16} color="#666" />
-                                    <Text style={styles.infoText} numberOfLines={1}>{event.location}</Text>
-                                </View>
-                                {event.host && (
+                                <View style={styles.infoDetails}>
                                     <View style={styles.infoItem}>
-                                        <Ionicons name="person-outline" size={16} color="#666" />
-                                        <Text style={styles.infoText}>Anfitrião: {event.host.fullName}</Text>
+                                        <Ionicons name="time-outline" size={16} color={Palette.muted} />
+                                        <Text style={styles.infoText}>{timeStr}</Text>
+                                    </View>
+                                    <View style={styles.infoItem}>
+                                        <Ionicons name="location-outline" size={16} color={Palette.muted} />
+                                        <Text style={styles.infoText} numberOfLines={1}>{event.location}</Text>
+                                    </View>
+                                    {event.host && (
+                                        <View style={styles.infoItem}>
+                                            <Ionicons name="person-outline" size={16} color={Palette.muted} />
+                                            <Text style={styles.infoText}>Anfitrião: {event.host.fullName}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Dashed separator */}
+                        <View style={styles.separator}>
+                            <View style={styles.separatorCircleLeft} />
+                            <View style={styles.dashedLine} />
+                            <View style={styles.separatorCircleRight} />
+                        </View>
+
+                        {/* QR Code Section */}
+                        <View style={styles.qrSection}>
+                            <Text style={styles.qrLabel}>APRESENTE ESTE QR CODE AO ANFITRIÃO</Text>
+                            <View style={styles.qrContainer}>
+                                {QRCode ? (
+                                    <QRCode
+                                        value={qrData}
+                                        size={200}
+                                        color={Palette.ink}
+                                        backgroundColor={Palette.surface}
+                                    />
+                                ) : (
+                                    <View style={styles.qrFallback}>
+                                        <Ionicons name="qr-code-outline" size={64} color={Palette.subtle} />
+                                        <Text style={styles.qrFallbackText}>QR Code indisponível</Text>
                                     </View>
                                 )}
                             </View>
+                            <Text style={styles.bookingId}>#{booking.id.slice(0, 8).toUpperCase()}</Text>
+                        </View>
+
+                        {/* Status */}
+                        <View style={styles.statusBar}>
+                            <Ionicons name="checkmark-circle" size={18} color={Palette.green} />
+                            <Text style={styles.statusText}>INSCRIÇÃO APROVADA</Text>
                         </View>
                     </View>
 
-                    {/* Dashed separator */}
-                    <View style={styles.separator}>
-                        <View style={styles.separatorCircleLeft} />
-                        <View style={styles.dashedLine} />
-                        <View style={styles.separatorCircleRight} />
+                    {/* Info Note */}
+                    <View style={styles.noteCard}>
+                        <Ionicons name="information-circle-outline" size={20} color={Palette.orangeDeep} />
+                        <Text style={styles.noteText}>
+                            No dia do evento, apresente este QR Code ao anfitrião para confirmar sua presença.
+                        </Text>
                     </View>
-
-                    {/* QR Code Section */}
-                    <View style={styles.qrSection}>
-                        <Text style={styles.qrLabel}>Apresente este QR Code ao anfitrião</Text>
-                        <View style={styles.qrContainer}>
-                            {QRCode ? (
-                                <QRCode
-                                    value={qrData}
-                                    size={200}
-                                    color="#1A1A1A"
-                                    backgroundColor="#FFFFFF"
-                                />
-                            ) : (
-                                <View style={{ width: 200, height: 200, backgroundColor: '#F3F4F6', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Ionicons name="qr-code-outline" size={64} color="#9CA3AF" />
-                                    <Text style={{ color: '#6B7280', marginTop: 8, fontSize: 12 }}>QR Code indisponível</Text>
-                                </View>
-                            )}
-                        </View>
-                        <Text style={styles.bookingId}>#{booking.id.slice(0, 8).toUpperCase()}</Text>
-                    </View>
-
-                    {/* Status */}
-                    <View style={styles.statusBar}>
-                        <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                        <Text style={styles.statusText}>Inscrição Aprovada</Text>
-                    </View>
-                </View>
-
-                {/* Info Note */}
-                <View style={styles.noteCard}>
-                    <Ionicons name="information-circle-outline" size={20} color="#FF8C42" />
-                    <Text style={styles.noteText}>
-                        No dia do evento, apresente este QR Code ao anfitrião para confirmar sua presença.
-                    </Text>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                </ScrollView>
+            </BrandSheet>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: Palette.paper,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
     },
     loadingText: {
-        marginTop: 12,
-        color: '#666',
+        marginTop: Spacing.md,
+        color: Palette.inkSoft,
         fontSize: 14,
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#fff',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1A1A1A',
-    },
     scrollContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 40,
+        padding: Spacing.xl,
     },
     ticketCard: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 5,
     },
     coverImage: {
         width: '100%',
         height: 160,
+        backgroundColor: Palette.track,
     },
     eventInfo: {
-        padding: 20,
+        padding: Spacing.xl,
     },
     eventTitle: {
         fontSize: 22,
-        fontWeight: '700',
-        color: '#1A1A1A',
-        marginBottom: 16,
+        fontWeight: '800',
+        letterSpacing: -0.3,
+        color: Palette.ink,
+        marginBottom: Spacing.lg,
     },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
     },
     dateBlock: {
-        backgroundColor: '#FFF3E0',
-        borderRadius: 12,
+        backgroundColor: Palette.orangeSoft,
+        borderRadius: BorderRadius.lg,
         width: 56,
         height: 56,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: Spacing.lg,
     },
     dayNumber: {
         fontSize: 22,
         fontWeight: '800',
-        color: '#FF8C42',
+        color: Palette.orangeDeep,
         lineHeight: 26,
     },
     monthText: {
         fontSize: 11,
-        fontWeight: '700',
-        color: '#FF8C42',
+        fontWeight: '800',
+        letterSpacing: 0.6,
+        color: Palette.orangeDeep,
         textTransform: 'uppercase',
     },
     infoDetails: {
@@ -283,11 +262,11 @@ const styles = StyleSheet.create({
     infoItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: Spacing.sm,
     },
     infoText: {
         fontSize: 14,
-        color: '#555',
+        color: Palette.inkSoft,
         flex: 1,
     },
     separator: {
@@ -299,7 +278,7 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: Palette.paper,
         marginLeft: -12,
     },
     dashedLine: {
@@ -307,38 +286,53 @@ const styles = StyleSheet.create({
         height: 1,
         borderStyle: 'dashed',
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: Palette.line,
     },
     separatorCircleRight: {
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: Palette.paper,
         marginRight: -12,
     },
     qrSection: {
         alignItems: 'center',
-        paddingVertical: 24,
-        paddingHorizontal: 20,
+        paddingVertical: Spacing.xxl,
+        paddingHorizontal: Spacing.xl,
     },
     qrLabel: {
-        fontSize: 13,
-        color: '#888',
-        marginBottom: 20,
-        fontWeight: '500',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1,
+        color: Palette.muted,
+        marginBottom: Spacing.lg,
+        textAlign: 'center',
     },
     qrContainer: {
-        padding: 16,
-        backgroundColor: '#fff',
-        borderRadius: 16,
+        padding: Spacing.lg,
+        backgroundColor: Palette.surface,
+        borderRadius: BorderRadius.xl,
         borderWidth: 1,
-        borderColor: '#F0F0F0',
+        borderColor: Palette.line,
+    },
+    qrFallback: {
+        width: 200,
+        height: 200,
+        backgroundColor: Palette.track,
+        borderRadius: BorderRadius.md,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    qrFallbackText: {
+        color: Palette.inkSoft,
+        marginTop: Spacing.sm,
+        fontSize: 12,
     },
     bookingId: {
-        marginTop: 16,
+        marginTop: Spacing.lg,
         fontSize: 13,
-        fontWeight: '700',
-        color: '#AAA',
+        fontWeight: '800',
+        color: Palette.muted,
         letterSpacing: 2,
     },
     statusBar: {
@@ -346,27 +340,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
-        backgroundColor: '#F0FDF4',
-        paddingVertical: 12,
+        backgroundColor: Palette.greenSoft,
+        paddingVertical: Spacing.md,
     },
     statusText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#10B981',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.6,
+        color: Palette.green,
     },
     noteCard: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 10,
-        backgroundColor: '#FFF8F0',
-        padding: 16,
-        borderRadius: 12,
-        marginTop: 16,
+        backgroundColor: Palette.orangeSoft,
+        padding: Spacing.lg,
+        borderRadius: 22,
+        marginTop: Spacing.lg,
     },
     noteText: {
         flex: 1,
-        fontSize: 13,
-        color: '#666',
-        lineHeight: 19,
+        fontSize: 14,
+        color: Palette.inkSoft,
+        lineHeight: 21,
     },
 });

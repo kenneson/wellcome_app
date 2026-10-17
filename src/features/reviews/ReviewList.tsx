@@ -2,6 +2,7 @@ import { ReportSheet } from '@/components/ui/ReportSheet';
 import { EventReview } from '@/entities/event/types';
 import { useBlockedIds } from '@/hooks/useBlockedIds';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import React, { useState } from 'react';
@@ -36,7 +37,7 @@ export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps
                         source={{ uri: item.user?.avatarUrl || 'https://via.placeholder.com/40' }}
                         style={styles.avatar}
                     />
-                    <View>
+                    <View style={styles.userText}>
                         <Text style={styles.userName}>{item.user?.fullName || 'Usuário'}</Text>
                         <Text style={styles.date}>
                             {format(new Date(item.createdAt), "d 'de' MMMM, yyyy", { locale: ptBR })}
@@ -44,12 +45,22 @@ export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps
                     </View>
                 </View>
                 {currentUserId === item.userId && onDelete ? (
-                    <TouchableOpacity onPress={() => onDelete(item.id)}>
-                        <Ionicons name="trash-outline" size={20} color="#FF4B4B" />
+                    <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => onDelete(item.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Excluir avaliação"
+                    >
+                        <Ionicons name="trash-outline" size={18} color={Palette.danger} />
                     </TouchableOpacity>
                 ) : currentUserId && currentUserId !== item.userId ? (
-                    <TouchableOpacity onPress={() => setReportReviewId(item.id)}>
-                        <Ionicons name="flag-outline" size={18} color="#9CA3AF" />
+                    <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => setReportReviewId(item.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Denunciar avaliação"
+                    >
+                        <Ionicons name="flag-outline" size={18} color={Palette.muted} />
                     </TouchableOpacity>
                 ) : null}
             </View>
@@ -59,7 +70,7 @@ export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps
                         key={star}
                         name={star <= item.rating ? 'star' : 'star-outline'}
                         size={16}
-                        color="#FFD700"
+                        color={star <= item.rating ? Palette.star : Palette.subtle}
                     />
                 ))}
             </View>
@@ -87,63 +98,71 @@ export function ReviewList({ reviews, onDelete, currentUserId }: ReviewListProps
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 16,
+        marginTop: Spacing.lg,
+        gap: Spacing.md,
     },
-    wrapper: {
-        marginBottom: 16,
-    },
+    wrapper: {},
     emptyContainer: {
-        padding: 20,
+        padding: Spacing.xl,
         alignItems: 'center',
     },
     emptyText: {
-        color: '#666',
+        color: Palette.inkSoft,
         fontSize: 14,
     },
     reviewItem: {
-        backgroundColor: '#FFF',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 2,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: 14,
+        gap: Spacing.sm,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
     },
     userInfo: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    userText: {
+        flex: 1,
     },
     avatar: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        marginRight: 12,
-        backgroundColor: '#F0F0F0',
+        marginRight: Spacing.md,
+        backgroundColor: Palette.track,
     },
     userName: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: 15,
+        fontWeight: '800',
+        color: Palette.ink,
     },
     date: {
         fontSize: 12,
-        color: '#999',
+        color: Palette.muted,
+        marginTop: 1,
+    },
+    iconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.paper,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     ratingContainer: {
         flexDirection: 'row',
-        marginBottom: 8,
+        gap: 2,
     },
     comment: {
         fontSize: 14,
-        color: '#444',
-        lineHeight: 20,
+        color: Palette.inkSoft,
+        lineHeight: 21,
     },
 });

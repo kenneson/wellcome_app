@@ -11,9 +11,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { BrandSheet, BrandStackHeader, HeaderIconButton } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 
 type EventFilter = 'todos' | 'pendentes' | 'ativos' | 'concluidos' | 'rascunhos';
+
+const FILTER_LABELS: Record<EventFilter, string> = {
+    todos: 'Todos',
+    pendentes: 'Pendentes',
+    ativos: 'Ativos',
+    concluidos: 'Concluídos',
+    rascunhos: 'Rascunhos',
+};
 
 const DRAFT_STEP_ROUTES = [
     '/events/create',
@@ -104,7 +113,7 @@ export default function MyEventsScreen() {
     }
 
     function handleDeleteDraft(item: EventDraftRecord) {
-        Alert.alert('Excluir rascunho?', 'Esta acao nao pode ser desfeita.', [
+        Alert.alert('Excluir rascunho?', 'Esta ação não pode ser desfeita.', [
             { text: 'Cancelar', style: 'cancel' },
             {
                 text: 'Excluir',
@@ -117,7 +126,7 @@ export default function MyEventsScreen() {
                         await eventDraftService.removeLocal(item.id);
                         setDrafts((current) => current.filter((draft) => draft.id !== item.id));
                     } catch (error: any) {
-                        Alert.alert('Nao foi possivel excluir', error.message || 'Tente novamente.');
+                        Alert.alert('Não foi possível excluir', error.message || 'Tente novamente.');
                     }
                 },
             },
@@ -149,21 +158,27 @@ export default function MyEventsScreen() {
             <View style={styles.card}>
                 <DraftCover uri={getOptimizedImageUrl(cover, { width: 500 })} />
                 <View style={styles.cardContent}>
-                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#202124' }}>{title}</Text>
-                    <Text style={{ fontSize: 13, color: '#73787E', marginTop: 5 }}>Etapa {savedStep + 1} de 5 · salvo {new Date(item.updatedAt).toLocaleDateString('pt-BR')}</Text>
+                    <View style={[styles.statusPill, styles.draftPill]}>
+                        <Text style={[styles.statusText, styles.draftPillText]}>RASCUNHO</Text>
+                    </View>
+                    <Text style={styles.cardTitle}>{title}</Text>
+                    <Text style={styles.cardMeta}>Etapa {savedStep + 1} de 5 · salvo {new Date(item.updatedAt).toLocaleDateString('pt-BR')}</Text>
                 </View>
                 <View style={styles.cardActions}>
                     <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() => router.push({ pathname: DRAFT_STEP_ROUTES[savedStep], params: { draftId: item.id } } as any)}
+                        accessibilityRole="button"
                     >
                         <Text style={styles.actionButtonText}>Continuar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.actionButton, styles.secondaryButton]}
+                        style={[styles.actionButton, styles.iconAction, styles.dangerAction]}
                         onPress={() => handleDeleteDraft(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Excluir rascunho"
                     >
-                        <Ionicons name="trash-outline" size={18} color="#B33A34" />
+                        <Ionicons name="trash-outline" size={18} color={Palette.danger} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -197,7 +212,7 @@ export default function MyEventsScreen() {
                     <Ionicons
                         name={pendingCount > 0 ? 'person-add-outline' : 'people-outline'}
                         size={22}
-                        color={pendingCount > 0 ? '#C45D22' : '#4B5563'}
+                        color={pendingCount > 0 ? Palette.orangeDeep : Palette.inkSoft}
                     />
                 </View>
                 <View style={styles.registrationsShortcutContent}>
@@ -214,7 +229,7 @@ export default function MyEventsScreen() {
                         <Text style={styles.pendingBadgeText}>REVISAR</Text>
                     </View>
                 )}
-                <Ionicons name="chevron-forward" size={20} color={pendingCount > 0 ? '#C45D22' : '#6B7280'} />
+                <Ionicons name="chevron-forward" size={20} color={pendingCount > 0 ? Palette.orangeDeep : Palette.muted} />
             </TouchableOpacity>
         );
     };
@@ -234,19 +249,19 @@ export default function MyEventsScreen() {
                     <View style={styles.imageContainer}>
                         <Image
                             source={{ uri: getOptimizedImageUrl(item.cover_image_url, { width: 400 }) || DEFAULT_PLACEHOLDER_IMAGE }}
-                            style={[styles.cardImage, { opacity: 0.6 }]}
+                            style={[styles.cardImage, styles.cardImageMuted]}
                             contentFit="cover"
                             cachePolicy="memory-disk"
                         />
                         <View style={styles.badgeContainer}>
-                            <View style={[styles.badge, styles.concludedBadge]}>
-                                <Text style={styles.concludedBadgeText}>
-                                    {eventAlreadyStarted ? 'CONCLUIDO' : 'INSCRICOES ENCERRADAS'}
+                            <View style={[styles.statusPill, styles.concludedBadge]}>
+                                <Text style={[styles.statusText, styles.concludedBadgeText]}>
+                                    {eventAlreadyStarted ? 'CONCLUÍDO' : 'INSCRIÇÕES ENCERRADAS'}
                                 </Text>
                             </View>
                         </View>
                         <LinearGradient
-                            colors={['transparent', 'rgba(0,0,0,0.7)']}
+                            colors={['transparent', Palette.scrim]}
                             style={styles.imageOverlay}
                         >
                             <Text style={styles.cardTitleOverlay}>{item.title}</Text>
@@ -255,7 +270,7 @@ export default function MyEventsScreen() {
 
                     <View style={styles.cardContent}>
                         <View style={styles.row}>
-                            <Ionicons name="calendar-outline" size={16} color="#666" />
+                            <Ionicons name="calendar-outline" size={16} color={Palette.muted} />
                             <Text style={styles.dateText}>
                                 {eventDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
                             </Text>
@@ -269,17 +284,17 @@ export default function MyEventsScreen() {
                     {renderRegistrationsShortcut(item)}
 
                     {needsLocationReview && (
-                        <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)}>
-                            <Ionicons name="warning-outline" size={18} color="#8A4B08" />
+                        <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)} accessibilityRole="button">
+                            <Ionicons name="warning-outline" size={18} color={Palette.orangeDarker} />
                             <Text style={styles.locationReviewText}>Confirme a cidade e o estado deste evento</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#8A4B08" />
+                            <Ionicons name="chevron-forward" size={18} color={Palette.orangeDarker} />
                         </TouchableOpacity>
                     )}
 
                     <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.secondaryAction} onPress={() => router.push(`/events/${item.id}`)}>
-                            <Ionicons name="eye-outline" size={18} color="#666" />
-                            <Text style={styles.secondaryActionText}>Ver Detalhes</Text>
+                        <TouchableOpacity style={styles.secondaryAction} onPress={() => router.push(`/events/${item.id}`)} accessibilityRole="button">
+                            <Ionicons name="eye-outline" size={18} color={Palette.ink} />
+                            <Text style={styles.secondaryActionText}>Ver detalhes</Text>
                         </TouchableOpacity>
                         {/* Duplicate logic could go here */}
                     </View>
@@ -298,12 +313,12 @@ export default function MyEventsScreen() {
                         cachePolicy="memory-disk"
                     />
                     <View style={styles.badgeContainer}>
-                        <View style={[styles.badge, styles.activeBadge]}>
-                            <Text style={styles.activeBadgeText}>ATIVO</Text>
+                        <View style={[styles.statusPill, styles.activeBadge]}>
+                            <Text style={[styles.statusText, styles.activeBadgeText]}>ATIVO</Text>
                         </View>
                     </View>
                     <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                        colors={['transparent', Palette.scrim]}
                         style={styles.imageOverlay}
                     >
                         <Text style={styles.cardTitleOverlay}>{item.title}</Text>
@@ -313,7 +328,7 @@ export default function MyEventsScreen() {
                 <View style={styles.cardContent}>
                     <View style={styles.infoRow}>
                         <View style={styles.dateInfo}>
-                            <Ionicons name="calendar-outline" size={16} color="#666" />
+                            <Ionicons name="calendar-outline" size={16} color={Palette.muted} />
                             <Text style={styles.dateText}>
                                 {eventDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
                             </Text>
@@ -328,7 +343,7 @@ export default function MyEventsScreen() {
                         <View style={styles.progressHeader}>
                             <Text style={styles.progressLabel}>Participantes</Text>
                             <Text style={styles.progressValue}>
-                                <Text style={{ color: '#FF8C42', fontWeight: 'bold' }}>{item.participants_count}</Text>
+                                <Text style={styles.progressCount}>{item.participants_count}</Text>
                                 /{item.max_guests} vagas
                             </Text>
                         </View>
@@ -341,32 +356,36 @@ export default function MyEventsScreen() {
                 {renderRegistrationsShortcut(item)}
 
                 {needsLocationReview && (
-                    <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)}>
-                        <Ionicons name="warning-outline" size={18} color="#8A4B08" />
+                    <TouchableOpacity style={styles.locationReview} onPress={() => router.push(`/events/${item.id}/edit`)} accessibilityRole="button">
+                        <Ionicons name="warning-outline" size={18} color={Palette.orangeDarker} />
                         <Text style={styles.locationReviewText}>Confirme a cidade e o estado deste evento</Text>
-                        <Ionicons name="chevron-forward" size={18} color="#8A4B08" />
+                        <Ionicons name="chevron-forward" size={18} color={Palette.orangeDarker} />
                     </TouchableOpacity>
                 )}
 
                 <View style={styles.cardActions}>
                     <TouchableOpacity 
-                        style={styles.actionButton} 
+                        style={styles.actionButton}
                         onPress={() => router.push(`/events/${item.id}`)}
+                        accessibilityRole="button"
                     >
-                        <Text style={styles.actionButtonText}>Ver Detalhes</Text>
+                        <Text style={styles.actionButtonText}>Ver detalhes</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.actionButton, styles.secondaryButton]} 
+                        style={[styles.actionButton, styles.secondaryButton]}
                         onPress={() => router.push(`/events/${item.id}/edit`)}
+                        accessibilityRole="button"
                     >
-                        <Ionicons name="pencil" size={18} color="#FF8C42" />
-                        <Text style={[styles.actionButtonText, { color: '#FF8C42' }]}>Editar</Text>
+                        <Ionicons name="pencil" size={18} color={Palette.ink} />
+                        <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Editar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                        style={[styles.actionButton, styles.secondaryButton]} 
+                        style={[styles.actionButton, styles.iconAction, styles.dangerAction]}
                         onPress={() => handleDelete(item.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Excluir evento"
                     >
-                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                        <Ionicons name="trash-outline" size={18} color={Palette.danger} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -376,46 +395,28 @@ export default function MyEventsScreen() {
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
-            <StatusBar barStyle="light-content" backgroundColor="#FF8C42" />
-            
-            {/* Header */}
-            <View style={styles.header}>
-                <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-                    <View style={styles.headerContent}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.menuButton}>
-                            <Ionicons name="menu-outline" size={28} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Meus Eventos</Text>
-                        <TouchableOpacity style={styles.notificationButton}>
-                             <Ionicons name="notifications-outline" size={24} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                    
-                    <View style={styles.searchBar}>
-                        <Ionicons name="search-outline" size={20} color="#9CA3AF" />
-                        <Text style={styles.searchPlaceholder}>Buscar meus eventos...</Text>
-                    </View>
-                </SafeAreaView>
-            </View>
+            <StatusBar barStyle="light-content" backgroundColor={Palette.orange} />
 
-            {/* Content */}
-            <View style={styles.contentBody}>
-                <View style={styles.subHeader}>
-                    <Text style={styles.subHeaderTitle}>Meus Eventos</Text>
-                    <TouchableOpacity 
-                        style={styles.createButton} 
+            <BrandStackHeader
+                eyebrow="ANFITRIÃO"
+                title="Meus eventos"
+                onBack={() => router.back()}
+                actions={(
+                    <HeaderIconButton
+                        icon="add"
+                        accessibilityLabel="Criar novo evento"
                         onPress={() => router.push('/events/create')}
-                    >
-                        <Ionicons name="add" size={16} color="#fff" />
-                        <Text style={styles.createButtonText}>Criar Novo</Text>
-                    </TouchableOpacity>
-                </View>
+                    />
+                )}
+            />
 
+            <BrandSheet>
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterTabsScroll}
                     contentContainerStyle={styles.filterTabs}
+                    accessibilityRole="tablist"
                 >
                     {(['todos', 'pendentes', 'ativos', 'concluidos', 'rascunhos'] as EventFilter[]).map((filter) => (
                         <TouchableOpacity
@@ -426,10 +427,10 @@ export default function MyEventsScreen() {
                             accessibilityState={{ selected: activeFilter === filter }}
                         >
                             <Text style={[
-                                styles.filterText, 
+                                styles.filterText,
                                 activeFilter === filter && styles.activeFilterText
                             ]} numberOfLines={1}>
-                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                                {FILTER_LABELS[filter]}
                                 {filter === 'pendentes' && ' (' + events.reduce((total, event) => total + Number(event.pending_registrations_count || 0), 0) + ')'}
                                 {filter === 'ativos' && ` (${events.filter(e => !isEventRegistrationClosed(e)).length})`}
                                 {filter === 'rascunhos' && ` (${drafts.length})`}
@@ -439,7 +440,7 @@ export default function MyEventsScreen() {
                 </ScrollView>
 
                 {loading ? (
-                    <ActivityIndicator size="large" color="#FF8C42" style={{ marginTop: 40 }} />
+                    <ActivityIndicator size="large" color={Palette.orange} style={styles.loading} />
                 ) : (
                     <FlatList
                         data={activeFilter === 'rascunhos' ? drafts : filteredEvents}
@@ -450,20 +451,20 @@ export default function MyEventsScreen() {
                         ListEmptyComponent={
                             <View style={styles.emptyState}>
                                 <View style={styles.emptyIconContainer}>
-                                    <Ionicons name="calendar-outline" size={64} color="#CDCDE0" />
+                                    <Ionicons name="calendar-outline" size={32} color={Palette.orangeDeep} />
                                 </View>
                                 <Text style={styles.emptyText}>Nenhum evento encontrado.</Text>
                                 <Text style={styles.emptySubText}>
                                     Que tal criar seu primeiro evento e começar a receber convidados?
                                 </Text>
-                                <TouchableOpacity style={styles.createButtonLarge} onPress={() => router.push('/events/create')}>
+                                <TouchableOpacity style={styles.createButtonLarge} onPress={() => router.push('/events/create')} accessibilityRole="button">
                                     <Text style={styles.createButtonTextLarge}>Criar meu primeiro evento</Text>
                                 </TouchableOpacity>
                             </View>
                         }
                     />
                 )}
-            </View>
+            </BrandSheet>
         </View>
     );
 }
@@ -483,7 +484,7 @@ function DraftCover({ uri }: { uri?: string }) {
                 />
             ) : (
                 <View style={styles.draftImageFallback}>
-                    <Ionicons name="restaurant-outline" size={36} color="#9CA3AF" />
+                    <Ionicons name="restaurant-outline" size={32} color={Palette.orangeDeep} />
                     <Text style={styles.draftImageFallbackText}>Capa pendente</Text>
                 </View>
             )}
@@ -494,136 +495,75 @@ function DraftCover({ uri }: { uri?: string }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9F9F9',
+        backgroundColor: Palette.paper,
     },
-    header: {
-        backgroundColor: '#FF8C42',
-        paddingBottom: 20,
-    },
-    headerSafeArea: {
-        paddingHorizontal: 16,
-    },
-    headerContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 12,
-    },
-    menuButton: {
-        padding: 4,
-    },
-    notificationButton: {
-        padding: 4,
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        borderRadius: 25,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        marginTop: 8,
-    },
-    searchPlaceholder: {
-        color: '#9CA3AF',
-        marginLeft: 8,
-        fontSize: 14,
-    },
-    contentBody: {
-        flex: 1,
-        marginTop: 10,
-    },
-    subHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        marginBottom: 16,
-    },
-    subHeaderTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#1F2937',
-    },
-    createButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FF8C42',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    createButtonText: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 13,
-        marginLeft: 4,
+    loading: {
+        marginTop: 40,
     },
     filterTabs: {
         flexDirection: 'row',
-        paddingHorizontal: 16,
-        gap: 8,
+        paddingHorizontal: Spacing.xl,
+        gap: Spacing.sm,
     },
     filterTabsScroll: {
         flexGrow: 0,
-        marginBottom: 16,
+        marginTop: Spacing.lg,
+        marginBottom: Spacing.sm,
     },
     filterTab: {
         minHeight: 44,
-        paddingVertical: 6,
-        paddingHorizontal: 16,
+        paddingHorizontal: Spacing.lg,
         minWidth: 76,
         flexShrink: 0,
+        alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 20,
-        backgroundColor: '#fff',
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.surface,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: Palette.line,
     },
     activeFilterTab: {
-        backgroundColor: '#FF8C42',
-        borderColor: '#FF8C42',
+        backgroundColor: Palette.ink,
+        borderColor: Palette.ink,
     },
     filterText: {
-        fontSize: 13,
-        color: '#6B7280',
-        fontWeight: '500',
+        fontSize: 14,
+        color: Palette.inkSoft,
+        fontWeight: '700',
     },
     activeFilterText: {
-        color: '#fff',
+        color: '#FFFFFF',
+        fontWeight: '800',
     },
     listContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 30,
+        padding: Spacing.xl,
+        paddingTop: Spacing.md,
+        paddingBottom: Spacing.xxxl * 2,
+        gap: Spacing.md,
     },
     card: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        marginBottom: 20,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 4,
     },
     imageContainer: {
         height: 160,
         position: 'relative',
+        backgroundColor: Palette.track,
     },
     cardImage: {
         width: '100%',
         height: '100%',
     },
+    cardImageMuted: {
+        opacity: 0.6,
+    },
     draftImageContainer: {
         width: '100%',
         aspectRatio: 16 / 9,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: Palette.orangeSoft,
     },
     draftImageFallback: {
         flex: 1,
@@ -632,9 +572,9 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     draftImageFallbackText: {
-        color: '#9CA3AF',
+        color: Palette.orangeDeep,
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '800',
     },
     imageOverlay: {
         position: 'absolute',
@@ -643,51 +583,67 @@ const styles = StyleSheet.create({
         right: 0,
         height: '60%',
         justifyContent: 'flex-end',
-        padding: 16,
+        padding: 14,
     },
     badgeContainer: {
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: Spacing.md,
+        right: Spacing.md,
     },
-    badge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 6,
+    statusPill: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: 3,
+        borderRadius: BorderRadius.full,
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.4,
     },
     activeBadge: {
-        backgroundColor: '#22C55E', // Green-500
+        backgroundColor: Palette.greenSoft,
     },
     concludedBadge: {
-        backgroundColor: '#9CA3AF', // Gray-400
+        backgroundColor: Palette.track,
     },
     activeBadgeText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
+        color: Palette.green,
     },
     concludedBadgeText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
+        color: Palette.inkSoft,
+    },
+    draftPill: {
+        backgroundColor: Palette.orangeSoft,
+        marginBottom: Spacing.xs,
+    },
+    draftPillText: {
+        color: Palette.orangeDarker,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: Palette.ink,
+    },
+    cardMeta: {
+        fontSize: 13,
+        color: Palette.inkSoft,
+        marginTop: 4,
     },
     cardTitleOverlay: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 4,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
+        fontWeight: '800',
+        marginBottom: 2,
     },
     cardContent: {
-        padding: 16,
+        padding: 14,
     },
     infoRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 16,
+        marginBottom: Spacing.lg,
     },
     dateInfo: {
         flexDirection: 'row',
@@ -695,79 +651,84 @@ const styles = StyleSheet.create({
     },
     dateText: {
         fontSize: 14,
-        color: '#4B5563',
+        color: Palette.inkSoft,
         marginLeft: 6,
     },
     priceHighlight: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#FF8C42',
+        fontWeight: '800',
+        color: Palette.ink,
         textAlign: 'right',
     },
     perGuestText: {
-        fontSize: 10,
-        color: '#9CA3AF',
+        fontSize: 11,
+        color: Palette.muted,
         textAlign: 'right',
     },
     progressContainer: {
-        marginBottom: 4,
+        marginBottom: Spacing.xs,
     },
     progressHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
+        marginBottom: Spacing.sm,
     },
     progressLabel: {
-        fontSize: 12,
-        color: '#374151',
-        fontWeight: '600',
+        fontSize: 11,
+        color: Palette.inkSoft,
+        fontWeight: '800',
+        letterSpacing: 0.4,
+        textTransform: 'uppercase',
     },
     progressValue: {
-        fontSize: 12,
-        color: '#6B7280',
+        fontSize: 13,
+        color: Palette.inkSoft,
+    },
+    progressCount: {
+        color: Palette.orangeDeep,
+        fontWeight: '800',
     },
     progressBarBg: {
         height: 6,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 3,
+        backgroundColor: Palette.track,
+        borderRadius: BorderRadius.full,
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
-        backgroundColor: '#FF8C42',
-        borderRadius: 3,
+        backgroundColor: Palette.orange,
+        borderRadius: BorderRadius.full,
     },
     locationReview: {
         minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 16,
+        gap: Spacing.sm,
+        paddingHorizontal: 14,
         paddingVertical: 10,
-        backgroundColor: '#FFF7E6',
+        backgroundColor: Palette.orangeSoft,
         borderTopWidth: 1,
-        borderTopColor: '#F6D58A',
+        borderTopColor: Palette.lineSoft,
     },
     locationReviewText: {
         flex: 1,
-        color: '#8A4B08',
+        color: Palette.orangeDarker,
         fontSize: 13,
-        fontWeight: '700',
+        fontWeight: '800',
     },
     registrationsShortcut: {
         minHeight: 64,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        paddingHorizontal: 16,
+        paddingHorizontal: 14,
         paddingVertical: 10,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: Palette.paper,
         borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
+        borderTopColor: Palette.lineSoft,
     },
     registrationsShortcutPending: {
-        backgroundColor: '#FFF7ED',
-        borderTopColor: '#FED7AA',
+        backgroundColor: Palette.orangeSoft,
     },
     registrationsShortcutIcon: {
         width: 40,
@@ -775,142 +736,158 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: Palette.track,
     },
     registrationsShortcutIconPending: {
-        backgroundColor: '#FFEDD5',
+        backgroundColor: Palette.surface,
     },
     registrationsShortcutContent: {
         flex: 1,
     },
     registrationsShortcutTitle: {
-        color: '#374151',
+        color: Palette.ink,
         fontSize: 14,
-        fontWeight: '700',
+        fontWeight: '800',
     },
     registrationsShortcutTitlePending: {
-        color: '#9A4819',
+        color: Palette.orangeDarker,
     },
     registrationsShortcutSubtitle: {
-        color: '#6B7280',
+        color: Palette.inkSoft,
         fontSize: 12,
         marginTop: 2,
     },
     pendingBadge: {
         minHeight: 24,
         justifyContent: 'center',
-        paddingHorizontal: 8,
-        borderRadius: 12,
-        backgroundColor: '#C45D22',
+        paddingHorizontal: Spacing.sm,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.orangeDeep,
     },
     pendingBadgeText: {
-        color: '#FFF',
-        fontSize: 9,
+        color: '#FFFFFF',
+        fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.4,
     },
     cardActions: {
         flexDirection: 'row',
-        padding: 12,
+        padding: 14,
+        paddingTop: Spacing.md,
         borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        borderTopColor: Palette.lineSoft,
         justifyContent: 'space-between',
-        gap: 8,
+        gap: Spacing.sm,
     },
     actionButton: {
-        flex: 1,
+        flex: 2,
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        backgroundColor: '#FF8C42',
-        borderRadius: 8,
+        gap: 6,
+        paddingHorizontal: Spacing.md,
+        backgroundColor: Palette.orange,
+        borderWidth: 1,
+        borderColor: Palette.orange,
+        borderRadius: BorderRadius.full,
     },
     secondaryButton: {
-        backgroundColor: '#FFF0E0',
-        flex: 0.5,
+        flex: 1,
+        backgroundColor: Palette.surface,
+        borderColor: Palette.line,
+    },
+    iconAction: {
+        flex: 0,
+        width: 44,
+        paddingHorizontal: 0,
+    },
+    dangerAction: {
+        backgroundColor: Palette.surface,
+        borderColor: Palette.dangerLine,
     },
     actionButtonText: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginLeft: 6,
+        fontWeight: '800',
+        color: '#FFFFFF',
     },
-    actionDivider: {
-        width: 1,
-        backgroundColor: '#E5E7EB',
-        height: '100%',
+    secondaryButtonText: {
+        color: Palette.ink,
     },
     // Concluded styles additions
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
     },
     priceText: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: '#374151',
+        fontWeight: '800',
+        color: Palette.ink,
         marginLeft: 'auto',
     },
     actionRow: {
         flexDirection: 'row',
-        padding: 16,
-        paddingTop: 0,
-        justifyContent: 'center',
+        padding: 14,
+        borderTopWidth: 1,
+        borderTopColor: Palette.lineSoft,
     },
     secondaryAction: {
+        flex: 1,
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F3F4F6',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 10,
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: Palette.surface,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        paddingHorizontal: Spacing.xl,
+        borderRadius: BorderRadius.full,
     },
     secondaryActionText: {
-        marginLeft: 8,
-        color: '#4B5563',
-        fontWeight: '600',
+        color: Palette.ink,
+        fontWeight: '800',
         fontSize: 14,
     },
     emptyState: {
-        padding: 40,
         alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
+        paddingVertical: Spacing.xxxl,
+        paddingHorizontal: Spacing.lg,
+        gap: Spacing.md,
     },
     emptyIconContainer: {
-        width: 120,
-        height: 120,
-        backgroundColor: '#F3F4F6',
-        borderRadius: 60,
+        width: 72,
+        height: 72,
+        backgroundColor: Palette.orangeSoft,
+        borderRadius: 36,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 24,
+        marginBottom: Spacing.xs,
     },
     emptyText: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 8,
+        fontWeight: '800',
+        color: Palette.ink,
         textAlign: 'center',
     },
     emptySubText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: Palette.inkSoft,
         textAlign: 'center',
-        marginBottom: 32,
-        lineHeight: 20,
+        lineHeight: 21,
+        maxWidth: 300,
     },
     createButtonLarge: {
-        backgroundColor: '#FF8C42',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 12,
+        minHeight: 48,
+        justifyContent: 'center',
+        backgroundColor: Palette.orange,
+        paddingHorizontal: Spacing.xxl,
+        marginTop: Spacing.sm,
+        borderRadius: BorderRadius.full,
     },
     createButtonTextLarge: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '800',
     },
 });

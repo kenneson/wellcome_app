@@ -7,27 +7,14 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
-    Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
-import { Colors, Spacing, BorderRadius } from '@/shared/constants/theme';
+import { Palette, Spacing } from '@/shared/constants/theme';
 import { notificationService, Notification } from '@/services/api/NotificationService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-// Typography local definition to ensure no import errors
-const Typography = {
-    fontSizes: {
-        xs: 12,
-        sm: 14,
-        md: 16,
-        lg: 18,
-        xl: 20,
-        xxl: 24
-    }
-};
 
 export default function NotificationsScreen() {
     const router = useRouter();
@@ -49,6 +36,7 @@ export default function NotificationsScreen() {
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
         fetchNotifications();
     }, [fetchNotifications]);
 
@@ -87,13 +75,15 @@ export default function NotificationsScreen() {
         <TouchableOpacity
             style={[styles.item, !item.read && styles.unreadItem]}
             onPress={() => handlePress(item)}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.read ? '' : 'Não lida, '}${item.title}`}
         >
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, !item.read && styles.iconContainerUnread]}>
                 <Ionicons
                     name={getIconName(item.type)}
-                    size={24}
-                    color={!item.read ? Colors.light.primary : '#888'}
+                    size={22}
+                    color={!item.read ? Palette.orangeDeep : Palette.muted}
                 />
             </View>
             <View style={styles.contentContainer}>
@@ -110,43 +100,47 @@ export default function NotificationsScreen() {
                     {format(new Date(item.createdAt), "d 'de' MMM, HH:mm", { locale: ptBR })}
                 </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#ccc" style={{ marginLeft: 8 }} />
+            <Ionicons name="chevron-forward" size={16} color={Palette.subtle} style={{ marginLeft: 8 }} />
         </TouchableOpacity>
     );
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
-            
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
-                </TouchableOpacity>
-                <Text style={styles.title}>Notificações</Text>
-            </View>
+            <BrandStackHeader eyebrow="AVISOS" title="Notificações" backIcon="close" />
 
-            {loading ? (
-                <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={Colors.light.primary} />
-                </View>
-            ) : (
-                <FlatList
-                    data={notifications}
-                    keyExtractor={item => item.id}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[Colors.light.primary]} />
-                    }
-                    contentContainerStyle={notifications.length === 0 ? styles.emptyList : styles.listContent}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="notifications-off-outline" size={64} color="#ccc" />
-                            <Text style={styles.emptyText}>Nenhuma notificação encontrada</Text>
-                        </View>
-                    }
-                    renderItem={renderItem}
-                />
-            )}
-        </SafeAreaView>
+            <BrandSheet>
+                {loading ? (
+                    <View style={styles.centered}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={notifications}
+                        keyExtractor={item => item.id}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={handleRefresh}
+                                tintColor={Palette.orange}
+                                colors={[Palette.orange]}
+                            />
+                        }
+                        contentContainerStyle={notifications.length === 0 ? styles.emptyList : styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <View style={styles.emptyIcon}>
+                                    <Ionicons name="notifications-off-outline" size={32} color={Palette.orangeDeep} />
+                                </View>
+                                <Text style={styles.emptyText}>Nenhuma notificação encontrada</Text>
+                            </View>
+                        }
+                        renderItem={renderItem}
+                    />
+                )}
+            </BrandSheet>
+        </View>
     );
 }
 
@@ -169,23 +163,7 @@ function getIconName(type: string): string {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff', // Colors.light.background
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backButton: {
-        marginRight: Spacing.md,
-    },
-    title: {
-        fontSize: Typography.fontSizes.xl,
-        fontWeight: 'bold',
-        color: '#111', // Colors.light.text
+        backgroundColor: Palette.paper,
     },
     centered: {
         flex: 1,
@@ -193,41 +171,57 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContent: {
-        paddingBottom: 20,
+        padding: Spacing.xl,
+        paddingBottom: Spacing.xxxl * 2,
+        gap: Spacing.md,
     },
     emptyList: {
-        flex: 1,
+        flexGrow: 1,
         justifyContent: 'center',
+        padding: Spacing.xl,
     },
     emptyContainer: {
         alignItems: 'center',
-        padding: 20,
+        paddingVertical: Spacing.xxxl,
+        gap: Spacing.md,
+    },
+    emptyIcon: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: Palette.orangeSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyText: {
-        marginTop: Spacing.md,
-        color: '#888',
-        fontSize: Typography.fontSizes.md,
+        color: Palette.ink,
+        fontSize: 18,
+        fontWeight: '800',
         textAlign: 'center',
     },
     item: {
         flexDirection: 'row',
-        padding: Spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        padding: 14,
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
     },
     unreadItem: {
-        backgroundColor: '#FFF8F0', // Very light orange/primary tint
+        borderColor: Palette.line,
     },
     iconContainer: {
         marginRight: Spacing.md,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: Palette.track,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    iconContainerUnread: {
+        backgroundColor: Palette.orangeSoft,
     },
     contentContainer: {
         flex: 1,
@@ -239,30 +233,29 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     itemTitle: {
-        fontSize: Typography.fontSizes.md,
-        fontWeight: '600',
-        color: '#111',
+        fontSize: 15,
+        fontWeight: '700',
+        color: Palette.ink,
         flex: 1,
     },
     unreadText: {
-        color: '#000',
-        fontWeight: '700',
+        fontWeight: '800',
     },
     itemBody: {
-        fontSize: Typography.fontSizes.sm,
-        color: '#666',
+        fontSize: 14,
+        color: Palette.inkSoft,
         marginBottom: 4,
         lineHeight: 20,
     },
     itemDate: {
-        fontSize: Typography.fontSizes.xs,
-        color: '#999',
+        fontSize: 12,
+        color: Palette.muted,
     },
     dot: {
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: Colors.light.primary,
+        backgroundColor: Palette.orange,
         marginLeft: 8,
     },
 });

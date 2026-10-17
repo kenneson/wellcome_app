@@ -2,6 +2,8 @@ import { userService } from '@/services/api/UserService';
 import { API_URL } from '@/shared/config/api';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -13,7 +15,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -90,131 +91,122 @@ export default function SettingsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.headerButton}
-                    onPress={() => router.back()}
-                    accessibilityRole="button"
-                    accessibilityLabel="Voltar"
-                >
-                    <Ionicons name="chevron-back" size={26} color="#202124" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Configurações</Text>
-                <View style={styles.headerButton} />
-            </View>
+        <View style={styles.screen}>
+            <BrandStackHeader eyebrow="CONTA" title="Configurações" />
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <SettingsSection title="PERFIL">
-                    <SettingsRow
-                        icon="person-outline"
-                        iconColor="#C45D22"
-                        iconBackground="#FFF1E8"
-                        title="Editar perfil"
-                        subtitle="Foto, bio e informações pessoais"
-                        onPress={() => router.push('/profile/edit')}
-                    />
-                </SettingsSection>
-
-                <SettingsSection title="FINANCEIRO">
-                    <SettingsRow
-                        icon="card-outline"
-                        iconColor="#315E9E"
-                        iconBackground="#EDF3FB"
-                        title="Meus pagamentos"
-                        subtitle="Dados de cobrança e cartões salvos"
-                        onPress={() => router.push('/profile/payments' as any)}
-                    />
-                    <SettingsRow
-                        icon="wallet-outline"
-                        iconColor="#187A67"
-                        iconBackground="#EAF7F3"
-                        title="Carteira e saques"
-                        subtitle="Saldo recebido pelos seus eventos"
-                        onPress={() => router.push('/profile/wallet')}
-                    />
-                    <SettingsRow
-                        icon="flash-outline"
-                        iconColor="#8B6300"
-                        iconBackground="#FFF6D9"
-                        title="Chave Pix"
-                        subtitle="Conta de destino para seus saques"
-                        onPress={() => router.push('/profile/pix-key')}
-                    />
-                </SettingsSection>
-
-                <SettingsSection title="APLICATIVO">
-                    <SettingsRow
-                        icon="notifications-outline"
-                        iconColor="#2374AB"
-                        iconBackground="#EAF4FB"
-                        title="Notificações"
-                        subtitle="Veja avisos e atualizações do Wellcome"
-                        onPress={() => router.push('/notifications')}
-                    />
-                    {__DEV__ && (
+            <BrandSheet>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                    <SettingsSection title="PERFIL">
                         <SettingsRow
-                            icon="paper-plane-outline"
-                            iconColor="#5D646A"
-                            iconBackground="#F0F2F4"
-                            title="Testar notificação push"
-                            subtitle="Disponível somente em desenvolvimento"
-                            onPress={() => void handleTestNotification()}
-                            loading={testingNotification}
+                            icon="person-outline"
+                            iconColor={Palette.orangeDeep}
+                            iconBackground={Palette.orangeSoft}
+                            title="Editar perfil"
+                            subtitle="Foto, bio e informações pessoais"
+                            onPress={() => router.push('/profile/edit')}
                         />
-                    )}
-                </SettingsSection>
+                    </SettingsSection>
 
-                <SettingsSection title="LEGAL E SEGURANÇA">
-                    <SettingsRow
-                        icon="document-text-outline"
-                        iconColor="#315E9E"
-                        iconBackground="#EDF3FB"
-                        title="Termos de Uso"
-                        subtitle="Regras para participantes e anfitriões"
-                        onPress={() => router.push('/legal/terms' as any)}
-                    />
-                    <SettingsRow
-                        icon="lock-closed-outline"
-                        iconColor="#187A67"
-                        iconBackground="#EAF7F3"
-                        title="Política de Privacidade"
-                        subtitle="Como seus dados são tratados"
-                        onPress={() => router.push('/legal/privacy' as any)}
-                    />
-                    <SettingsRow
-                        icon="shield-checkmark-outline"
-                        iconColor="#C45D22"
-                        iconBackground="#FFF1E8"
-                        title="Proteção Wellcome"
-                        subtitle="Benefícios de pagar dentro da plataforma"
-                        onPress={() => router.push('/legal/protection' as any)}
-                    />
-                </SettingsSection>
+                    <SettingsSection title="FINANCEIRO">
+                        <SettingsRow
+                            icon="card-outline"
+                            iconColor={Palette.blue}
+                            iconBackground={Palette.blueSoft}
+                            title="Meus pagamentos"
+                            subtitle="Dados de cobrança e cartões salvos"
+                            onPress={() => router.push('/profile/payments' as any)}
+                        />
+                        <SettingsRow
+                            icon="wallet-outline"
+                            iconColor={Palette.green}
+                            iconBackground={Palette.greenSoft}
+                            title="Carteira e saques"
+                            subtitle="Saldo recebido pelos seus eventos"
+                            onPress={() => router.push('/profile/wallet')}
+                        />
+                        <SettingsRow
+                            icon="flash-outline"
+                            iconColor={Palette.orangeDarker}
+                            iconBackground={Palette.track}
+                            title="Chave Pix"
+                            subtitle="Conta de destino para seus saques"
+                            onPress={() => router.push('/profile/pix-key')}
+                        />
+                    </SettingsSection>
 
-                <SettingsSection title="CONTA">
-                    <SettingsRow
-                        icon="log-out-outline"
-                        iconColor="#B33A34"
-                        iconBackground="#FFF0EF"
-                        title="Sair da conta"
-                        subtitle="Encerrar a sessão neste aparelho"
-                        onPress={handleSignOut}
-                        danger
-                        loading={signingOut}
-                    />
-                    <SettingsRow
-                        icon="trash-outline"
-                        iconColor="#B33A34"
-                        iconBackground="#FFF0EF"
-                        title="Excluir conta"
-                        subtitle="Remover permanentemente sua conta"
-                        onPress={() => router.push('/profile/delete-account')}
-                        danger
-                    />
-                </SettingsSection>
-            </ScrollView>
-        </SafeAreaView>
+                    <SettingsSection title="APLICATIVO">
+                        <SettingsRow
+                            icon="notifications-outline"
+                            iconColor={Palette.blue}
+                            iconBackground={Palette.blueSoft}
+                            title="Notificações"
+                            subtitle="Veja avisos e atualizações do Wellcome"
+                            onPress={() => router.push('/notifications')}
+                        />
+                        {__DEV__ && (
+                            <SettingsRow
+                                icon="paper-plane-outline"
+                                iconColor={Palette.inkSoft}
+                                iconBackground={Palette.track}
+                                title="Testar notificação push"
+                                subtitle="Disponível somente em desenvolvimento"
+                                onPress={() => void handleTestNotification()}
+                                loading={testingNotification}
+                            />
+                        )}
+                    </SettingsSection>
+
+                    <SettingsSection title="LEGAL E SEGURANÇA">
+                        <SettingsRow
+                            icon="document-text-outline"
+                            iconColor={Palette.blue}
+                            iconBackground={Palette.blueSoft}
+                            title="Termos de Uso"
+                            subtitle="Regras para participantes e anfitriões"
+                            onPress={() => router.push('/legal/terms' as any)}
+                        />
+                        <SettingsRow
+                            icon="lock-closed-outline"
+                            iconColor={Palette.green}
+                            iconBackground={Palette.greenSoft}
+                            title="Política de Privacidade"
+                            subtitle="Como seus dados são tratados"
+                            onPress={() => router.push('/legal/privacy' as any)}
+                        />
+                        <SettingsRow
+                            icon="shield-checkmark-outline"
+                            iconColor={Palette.orangeDeep}
+                            iconBackground={Palette.orangeSoft}
+                            title="Proteção Wellcome"
+                            subtitle="Benefícios de pagar dentro da plataforma"
+                            onPress={() => router.push('/legal/protection' as any)}
+                        />
+                    </SettingsSection>
+
+                    <SettingsSection title="CONTA">
+                        <SettingsRow
+                            icon="log-out-outline"
+                            iconColor={Palette.danger}
+                            iconBackground={Palette.dangerLine}
+                            title="Sair da conta"
+                            subtitle="Encerrar a sessão neste aparelho"
+                            onPress={handleSignOut}
+                            danger
+                            loading={signingOut}
+                        />
+                        <SettingsRow
+                            icon="trash-outline"
+                            iconColor={Palette.danger}
+                            iconBackground={Palette.dangerLine}
+                            title="Excluir conta"
+                            subtitle="Remover permanentemente sua conta"
+                            onPress={() => router.push('/profile/delete-account')}
+                            danger
+                        />
+                    </SettingsSection>
+                </ScrollView>
+            </BrandSheet>
+        </View>
     );
 }
 
@@ -257,53 +249,44 @@ function SettingsRow({
             {loading ? (
                 <ActivityIndicator size="small" color={iconColor} />
             ) : (
-                <Ionicons name="chevron-forward" size={20} color="#A4A8AD" />
+                <Ionicons name="chevron-forward" size={20} color={Palette.subtle} />
             )}
         </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-    header: {
-        minHeight: 60,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 8,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#E2E4E7',
-    },
-    headerButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#202124' },
-    content: { paddingBottom: 40 },
-    section: { marginTop: 24 },
+    screen: { flex: 1, backgroundColor: Palette.paper },
+    content: { padding: Spacing.xl, paddingTop: Spacing.sm, paddingBottom: Spacing.xxxl * 2 },
+    section: { marginTop: Spacing.xl },
     sectionTitle: {
-        paddingHorizontal: 20,
-        marginBottom: 8,
-        fontSize: 12,
+        paddingHorizontal: Spacing.xs,
+        marginBottom: Spacing.sm,
+        fontSize: 11,
         fontWeight: '800',
-        color: '#73787E',
-        letterSpacing: 0,
+        color: Palette.muted,
+        letterSpacing: 1.2,
     },
     rows: {
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderColor: '#E5E7E9',
+        overflow: 'hidden',
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
     },
     row: {
         minHeight: 72,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        paddingHorizontal: 20,
+        gap: Spacing.md,
+        paddingHorizontal: 14,
         paddingVertical: 10,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#E7E9EB',
+        borderBottomWidth: 1,
+        borderBottomColor: Palette.lineSoft,
     },
-    iconBox: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    iconBox: { width: 40, height: 40, borderRadius: BorderRadius.full, alignItems: 'center', justifyContent: 'center' },
     rowText: { flex: 1, minWidth: 0 },
-    rowTitle: { fontSize: 16, fontWeight: '700', color: '#202124' },
-    rowSubtitle: { marginTop: 3, fontSize: 13, lineHeight: 18, color: '#73787E' },
-    dangerText: { color: '#B33A34' },
+    rowTitle: { fontSize: 15, fontWeight: '800', color: Palette.ink },
+    rowSubtitle: { marginTop: 3, fontSize: 13, lineHeight: 18, color: Palette.inkSoft },
+    dangerText: { color: Palette.danger },
 });

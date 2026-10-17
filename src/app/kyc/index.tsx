@@ -13,12 +13,15 @@ import {
     Alert,
     Animated,
     Image,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 
@@ -41,6 +44,7 @@ export default function KycVerificationScreen() {
     const params = useLocalSearchParams<{ returnTo?: string | string[]; draftId?: string | string[] }>();
     const { refetchProfile, kycStatus: existingKycStatus } = useUserProfile();
     const reducedMotion = useReducedMotion();
+    const insets = useSafeAreaInsets();
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [fadeAnim] = useState(new Animated.Value(1));
@@ -235,9 +239,9 @@ export default function KycVerificationScreen() {
                         step >= s.id && styles.progressDotActive
                     ]}>
                         {step > s.id ? (
-                            <Ionicons name="checkmark" size={14} color="#fff" />
+                            <Ionicons name="checkmark" size={14} color={Palette.orangeDeep} />
                         ) : (
-                            <Ionicons name={s.icon as any} size={14} color={step >= s.id ? '#fff' : '#ccc'} />
+                            <Ionicons name={s.icon as any} size={14} color={step >= s.id ? Palette.orangeDeep : '#FFFFFF'} />
                         )}
                     </View>
                     {index < STEPS.length - 1 && (
@@ -254,7 +258,7 @@ export default function KycVerificationScreen() {
     const renderIntroStep = () => (
         <View style={styles.centerSection}>
             <View style={styles.iconCircle}>
-                <Ionicons name="shield-checkmark" size={56} color="#fff" />
+                <Ionicons name="shield-checkmark" size={52} color={Palette.orangeDeep} />
             </View>
             <Text style={styles.title}>Verificação de Identidade</Text>
             <Text style={styles.subtitle}>Segurança para nossa comunidade</Text>
@@ -265,21 +269,21 @@ export default function KycVerificationScreen() {
 
             <View style={styles.infoCards}>
                 <View style={styles.infoCard}>
-                    <Ionicons name="card-outline" size={24} color="#FF8C42" />
+                    <Ionicons name="card-outline" size={24} color={Palette.orangeDeep} />
                     <View style={styles.infoCardText}>
                         <Text style={styles.infoCardTitle}>Foto do RG ou CNH</Text>
                         <Text style={styles.infoCardDesc}>Tire uma foto clara do seu documento</Text>
                     </View>
                 </View>
                 <View style={styles.infoCard}>
-                    <Ionicons name="camera-outline" size={24} color="#FF8C42" />
+                    <Ionicons name="camera-outline" size={24} color={Palette.orangeDeep} />
                     <View style={styles.infoCardText}>
                         <Text style={styles.infoCardTitle}>Selfie</Text>
                         <Text style={styles.infoCardDesc}>Tire uma selfie com boa iluminação</Text>
                     </View>
                 </View>
                 <View style={styles.infoCard}>
-                    <Ionicons name="lock-closed-outline" size={24} color="#FF8C42" />
+                    <Ionicons name="lock-closed-outline" size={24} color={Palette.orangeDeep} />
                     <View style={styles.infoCardText}>
                         <Text style={styles.infoCardTitle}>100% Privado</Text>
                         <Text style={styles.infoCardDesc}>Suas fotos são criptografadas e privadas</Text>
@@ -297,32 +301,32 @@ export default function KycVerificationScreen() {
             {documentImage ? (
                 <View style={styles.imagePreviewContainer}>
                     <Image source={{ uri: documentImage }} style={styles.documentPreview} />
-                    <TouchableOpacity style={styles.retakeButton} onPress={() => setDocumentImage(null)}>
-                        <Ionicons name="refresh" size={18} color="#FF8C42" />
+                    <TouchableOpacity style={styles.retakeButton} onPress={() => setDocumentImage(null)} accessibilityRole="button">
+                        <Ionicons name="refresh" size={18} color={Palette.ink} />
                         <Text style={styles.retakeText}>Tirar outra foto</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
                 <View style={styles.captureArea}>
                     <View style={styles.documentPlaceholder}>
-                        <Ionicons name="card-outline" size={64} color="#ccc" />
+                        <Ionicons name="card-outline" size={64} color={Palette.subtle} />
                         <Text style={styles.placeholderText}>Frente do RG ou CNH</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.captureButton} onPress={pickDocument}>
-                        <Ionicons name="camera" size={24} color="#fff" />
+                    <TouchableOpacity style={styles.captureButton} onPress={pickDocument} accessibilityRole="button">
+                        <Ionicons name="camera" size={22} color="#FFFFFF" />
                         <Text style={styles.captureButtonText}>Tirar Foto</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.galleryButton} onPress={pickFromGalleryDocument}>
-                        <Ionicons name="images-outline" size={20} color="#FF8C42" />
+                    <TouchableOpacity style={styles.galleryButton} onPress={pickFromGalleryDocument} accessibilityRole="button">
+                        <Ionicons name="images-outline" size={20} color={Palette.ink} />
                         <Text style={styles.galleryButtonText}>Escolher da galeria</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
             <View style={styles.tipBox}>
-                <Ionicons name="bulb-outline" size={20} color="#F59E0B" />
+                <Ionicons name="bulb-outline" size={20} color={Palette.orangeDeep} />
                 <Text style={styles.tipText}>
                     Certifique-se que a foto do documento está bem iluminada e sem reflexos.
                 </Text>
@@ -338,27 +342,27 @@ export default function KycVerificationScreen() {
             {selfieImage ? (
                 <View style={styles.imagePreviewContainer}>
                     <Image source={{ uri: selfieImage }} style={styles.selfiePreview} />
-                    <TouchableOpacity style={styles.retakeButton} onPress={() => setSelfieImage(null)}>
-                        <Ionicons name="refresh" size={18} color="#FF8C42" />
+                    <TouchableOpacity style={styles.retakeButton} onPress={() => setSelfieImage(null)} accessibilityRole="button">
+                        <Ionicons name="refresh" size={18} color={Palette.ink} />
                         <Text style={styles.retakeText}>Tirar outra selfie</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
                 <View style={styles.captureArea}>
                     <View style={styles.selfiePlaceholder}>
-                        <Ionicons name="person-circle-outline" size={80} color="#ccc" />
+                        <Ionicons name="person-circle-outline" size={80} color={Palette.subtle} />
                         <Text style={styles.placeholderText}>Sua selfie</Text>
                     </View>
 
-                    <TouchableOpacity style={styles.captureButton} onPress={takeSelfie}>
-                        <Ionicons name="camera" size={24} color="#fff" />
+                    <TouchableOpacity style={styles.captureButton} onPress={takeSelfie} accessibilityRole="button">
+                        <Ionicons name="camera" size={22} color="#FFFFFF" />
                         <Text style={styles.captureButtonText}>Tirar Selfie</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
             <View style={styles.tipBox}>
-                <Ionicons name="bulb-outline" size={20} color="#F59E0B" />
+                <Ionicons name="bulb-outline" size={20} color={Palette.orangeDeep} />
                 <Text style={styles.tipText}>
                     Mantenha o rosto centralizado, olhe para a câmera e garanta boa iluminação.
                 </Text>
@@ -370,8 +374,8 @@ export default function KycVerificationScreen() {
         if (loading) {
             return (
                 <View style={styles.centerSection}>
-                    <View style={[styles.iconCircle, { backgroundColor: '#6366F1' }]}>
-                        <ActivityIndicator size="large" color="#fff" />
+                    <View style={[styles.iconCircle, { backgroundColor: Palette.blueSoft }]}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
                     </View>
                     <Text style={styles.title}>Verificando...</Text>
                     <Text style={styles.description}>
@@ -386,8 +390,8 @@ export default function KycVerificationScreen() {
         if (kycResult.status === 'APPROVED') {
             return (
                 <View style={styles.centerSection}>
-                    <View style={[styles.iconCircle, { backgroundColor: '#10B981' }]}>
-                        <Ionicons name="checkmark-circle" size={56} color="#fff" />
+                    <View style={[styles.iconCircle, { backgroundColor: Palette.greenSoft }]}>
+                        <Ionicons name="checkmark-circle" size={52} color={Palette.green} />
                     </View>
                     <Text style={styles.title}>Verificado! ✅</Text>
                     <Text style={styles.description}>
@@ -405,8 +409,8 @@ export default function KycVerificationScreen() {
         if (kycResult.status === 'PENDING') {
             return (
                 <View style={styles.centerSection}>
-                    <View style={[styles.iconCircle, { backgroundColor: '#F59E0B' }]}>
-                        <Ionicons name="time" size={56} color="#fff" />
+                    <View style={[styles.iconCircle, { backgroundColor: Palette.orangeSoft }]}>
+                        <Ionicons name="time" size={52} color={Palette.orangeDarker} />
                     </View>
                     <Text style={styles.title}>Em Análise</Text>
                     <Text style={styles.description}>
@@ -423,16 +427,16 @@ export default function KycVerificationScreen() {
         // REJECTED
         return (
             <View style={styles.centerSection}>
-                <View style={[styles.iconCircle, { backgroundColor: '#EF4444' }]}>
-                    <Ionicons name="close-circle" size={56} color="#fff" />
+                <View style={[styles.iconCircle, { backgroundColor: Palette.dangerLine }]}>
+                    <Ionicons name="close-circle" size={52} color={Palette.danger} />
                 </View>
                 <Text style={styles.title}>Verificação Falhou</Text>
                 <Text style={styles.description}>
                     {kycResult.reason || 'Não foi possível verificar sua identidade.'}
                 </Text>
                 {kycResult.canRetry && (
-                    <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-                        <Ionicons name="refresh" size={20} color="#fff" />
+                    <TouchableOpacity style={styles.retryButton} onPress={handleRetry} accessibilityRole="button">
+                        <Ionicons name="refresh" size={20} color="#FFFFFF" />
                         <Text style={styles.retryButtonText}>Tentar Novamente</Text>
                     </TouchableOpacity>
                 )}
@@ -473,114 +477,108 @@ export default function KycVerificationScreen() {
     const showFooter = step < 3 || kycResult?.status === 'APPROVED' || kycResult?.status === 'PENDING';
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar style="dark" />
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.headerButton} onPress={finish} accessibilityLabel="Voltar">
-                    <Ionicons name="chevron-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Verificacao de identidade</Text>
-                <View style={styles.headerButton} />
-            </View>
-            {step > 0 && renderProgressIndicator()}
+        <View style={styles.container}>
+            <StatusBar style="light" />
+            <BrandStackHeader eyebrow="SEGURANÇA" title="Verificação de identidade" onBack={finish}>
+                {step > 0 && renderProgressIndicator()}
+            </BrandStackHeader>
 
-            <View style={styles.scrollContent}>
-                <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-                    {step === 0 && renderIntroStep()}
-                    {step === 1 && renderDocumentStep()}
-                    {step === 2 && renderSelfieStep()}
-                    {step === 3 && renderResultStep()}
-                </Animated.View>
-            </View>
+            <BrandSheet>
+                <ScrollView
+                    style={styles.flex}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+                        <View style={styles.card}>
+                            {step === 0 && renderIntroStep()}
+                            {step === 1 && renderDocumentStep()}
+                            {step === 2 && renderSelfieStep()}
+                            {step === 3 && renderResultStep()}
+                        </View>
+                    </Animated.View>
+                </ScrollView>
 
-            {showFooter && (
-                <View style={styles.footer}>
-                    {step > 0 && step < 3 && (
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={handleBack}
-                            disabled={loading}
-                        >
-                            <Ionicons name="chevron-back" size={20} color="#666" />
-                            <Text style={styles.backButtonText}>Voltar</Text>
-                        </TouchableOpacity>
-                    )}
+                {showFooter && (
+                    <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
+                        {step > 0 && step < 3 && (
+                            <TouchableOpacity
+                                style={styles.backButton}
+                                onPress={handleBack}
+                                disabled={loading}
+                                accessibilityRole="button"
+                                accessibilityLabel="Voltar"
+                            >
+                                <Ionicons name="chevron-back" size={20} color={Palette.ink} />
+                                <Text style={styles.backButtonText}>Voltar</Text>
+                            </TouchableOpacity>
+                        )}
 
-                    {step < 3 && (
-                        <TouchableOpacity
-                            style={[
-                                styles.nextButton,
-                                step === 0 && styles.nextButtonFull,
-                                !canProceed() && styles.nextButtonDisabled,
-                                loading && styles.nextButtonDisabled,
-                            ]}
-                            onPress={handleNext}
-                            disabled={loading || !canProceed()}
-                        >
-                            <Text style={styles.nextButtonText}>
-                                {step === 0 ? 'Iniciar Verificação' :
-                                    step === 2 ? 'Enviar para Verificação' : 'Continuar'}
-                            </Text>
-                            <Ionicons name="arrow-forward" size={20} color="#fff" />
-                        </TouchableOpacity>
-                    )}
+                        {step < 3 && (
+                            <TouchableOpacity
+                                style={[
+                                    styles.nextButton,
+                                    step === 0 && styles.nextButtonFull,
+                                    !canProceed() && styles.nextButtonDisabled,
+                                    loading && styles.nextButtonDisabled,
+                                ]}
+                                onPress={handleNext}
+                                disabled={loading || !canProceed()}
+                                accessibilityRole="button"
+                                accessibilityState={{ disabled: loading || !canProceed(), busy: loading }}
+                            >
+                                <Text style={styles.nextButtonText}>
+                                    {step === 0 ? 'Iniciar Verificação' :
+                                        step === 2 ? 'Enviar para Verificação' : 'Continuar'}
+                                </Text>
+                                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                            </TouchableOpacity>
+                        )}
 
-                    {step === 3 && (kycResult?.status === 'APPROVED' || kycResult?.status === 'PENDING') && (
-                        <TouchableOpacity
-                            style={[styles.nextButton, styles.nextButtonFull, { backgroundColor: '#10B981' }]}
-                            onPress={async () => { await refetchProfile(); finish(); }}
-                        >
-                            <Text style={styles.nextButtonText}>{returnPath ? 'Voltar ao evento' : 'Concluir'}</Text>
-                            <Ionicons name="arrow-forward" size={20} color="#fff" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
-        </SafeAreaView>
+                        {step === 3 && (kycResult?.status === 'APPROVED' || kycResult?.status === 'PENDING') && (
+                            <TouchableOpacity
+                                style={[styles.nextButton, styles.nextButtonFull]}
+                                onPress={async () => { await refetchProfile(); finish(); }}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.nextButtonText}>{returnPath ? 'Voltar ao evento' : 'Concluir'}</Text>
+                                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
+            </BrandSheet>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: Palette.paper,
     },
-    header: {
-        minHeight: 56,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-        paddingHorizontal: 10,
-    },
-    headerButton: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    headerTitle: {
+    flex: {
         flex: 1,
-        textAlign: 'center',
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#1A1A1A',
     },
     scrollContent: {
-        flex: 1,
-        paddingHorizontal: 24,
+        flexGrow: 1,
+        padding: Spacing.xl,
     },
     content: {
         flex: 1,
         justifyContent: 'center',
     },
+    card: {
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: Spacing.xl,
+    },
     progressContainer: {
         flexDirection: 'row',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        paddingVertical: 20,
-        paddingHorizontal: 24,
     },
     progressItem: {
         flexDirection: 'row',
@@ -590,73 +588,72 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#E8E8E8',
+        backgroundColor: Palette.onBrandGlass,
         justifyContent: 'center',
         alignItems: 'center',
     },
     progressDotActive: {
-        backgroundColor: '#FF8C42',
+        backgroundColor: Palette.surface,
     },
     progressLine: {
         width: 40,
         height: 3,
-        backgroundColor: '#E8E8E8',
+        borderRadius: 2,
+        backgroundColor: Palette.onBrandGlass,
         marginHorizontal: 4,
     },
     progressLineActive: {
-        backgroundColor: '#FF8C42',
+        backgroundColor: Palette.surface,
     },
     centerSection: {
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: Spacing.sm,
     },
     iconCircle: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#FF8C42',
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        backgroundColor: Palette.orangeSoft,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 24,
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
+        marginBottom: Spacing.xl,
     },
     title: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: 24,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginBottom: Spacing.sm,
         textAlign: 'center',
     },
     subtitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#FF8C42',
-        marginBottom: 16,
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: Palette.orangeDeep,
+        marginBottom: Spacing.lg,
         textAlign: 'center',
     },
     description: {
         fontSize: 15,
-        color: '#666',
+        color: Palette.inkSoft,
         textAlign: 'center',
-        lineHeight: 22,
-        paddingHorizontal: 12,
-        marginBottom: 20,
+        lineHeight: 21,
+        marginBottom: Spacing.xl,
     },
     infoCards: {
         width: '100%',
-        gap: 12,
-        marginTop: 8,
+        gap: Spacing.md,
+        marginTop: Spacing.sm,
     },
     infoCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF7ED',
-        padding: 16,
-        borderRadius: 14,
+        backgroundColor: Palette.paper,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: 14,
+        borderRadius: BorderRadius.lg,
         gap: 14,
     },
     infoCardText: {
@@ -664,93 +661,92 @@ const styles = StyleSheet.create({
     },
     infoCardTitle: {
         fontSize: 15,
-        fontWeight: '600',
-        color: '#333',
+        fontWeight: '800',
+        color: Palette.ink,
         marginBottom: 2,
     },
     infoCardDesc: {
         fontSize: 13,
-        color: '#888',
+        color: Palette.inkSoft,
     },
     captureArea: {
         alignItems: 'center',
         width: '100%',
-        marginVertical: 16,
+        marginVertical: Spacing.lg,
     },
     documentPlaceholder: {
         width: '100%',
         height: 200,
-        borderRadius: 16,
+        borderRadius: BorderRadius.lg,
         borderWidth: 2,
-        borderColor: '#E5E5E5',
+        borderColor: Palette.line,
         borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
-        marginBottom: 20,
+        backgroundColor: Palette.paper,
+        marginBottom: Spacing.xl,
     },
     selfiePlaceholder: {
         width: 200,
         height: 200,
         borderRadius: 100,
         borderWidth: 2,
-        borderColor: '#E5E5E5',
+        borderColor: Palette.line,
         borderStyle: 'dashed',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
-        marginBottom: 20,
+        backgroundColor: Palette.paper,
+        marginBottom: Spacing.xl,
     },
     placeholderText: {
-        marginTop: 8,
+        marginTop: Spacing.sm,
         fontSize: 14,
-        color: '#aaa',
+        color: Palette.muted,
     },
     captureButton: {
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FF8C42',
-        paddingVertical: 14,
-        paddingHorizontal: 32,
-        borderRadius: 30,
+        backgroundColor: Palette.orange,
+        paddingHorizontal: Spacing.xxxl,
+        borderRadius: BorderRadius.full,
         gap: 10,
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 4,
     },
     captureButtonText: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#FFFFFF',
     },
     galleryButton: {
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 14,
+        marginTop: Spacing.md,
         gap: 8,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
+        paddingHorizontal: Spacing.xl,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
     },
     galleryButtonText: {
         fontSize: 14,
-        color: '#FF8C42',
-        fontWeight: '500',
+        color: Palette.ink,
+        fontWeight: '800',
     },
     imagePreviewContainer: {
         alignItems: 'center',
         width: '100%',
-        marginVertical: 16,
+        marginVertical: Spacing.lg,
     },
     documentPreview: {
         width: '100%',
         height: 200,
-        borderRadius: 16,
+        borderRadius: BorderRadius.lg,
         resizeMode: 'cover',
         borderWidth: 2,
-        borderColor: '#10B981',
+        borderColor: Palette.green,
     },
     selfiePreview: {
         width: 200,
@@ -758,107 +754,108 @@ const styles = StyleSheet.create({
         borderRadius: 100,
         resizeMode: 'cover',
         borderWidth: 3,
-        borderColor: '#10B981',
+        borderColor: Palette.green,
     },
     retakeButton: {
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 12,
+        marginTop: Spacing.md,
         gap: 6,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
     },
     retakeText: {
         fontSize: 14,
-        color: '#FF8C42',
-        fontWeight: '500',
+        color: Palette.ink,
+        fontWeight: '800',
     },
     tipBox: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#FFFBEB',
+        backgroundColor: Palette.orangeSoft,
         padding: 14,
-        borderRadius: 12,
+        borderRadius: BorderRadius.lg,
         gap: 10,
         width: '100%',
-        marginTop: 16,
+        marginTop: Spacing.lg,
     },
     tipText: {
         flex: 1,
         fontSize: 13,
-        color: '#92400E',
-        lineHeight: 18,
+        color: Palette.orangeDarker,
+        lineHeight: 19,
     },
     scoreText: {
         fontSize: 14,
-        color: '#10B981',
-        fontWeight: '600',
+        color: Palette.green,
+        fontWeight: '800',
         marginTop: 4,
     },
     pendingNote: {
         fontSize: 14,
-        color: '#F59E0B',
-        fontWeight: '600',
-        marginTop: 8,
+        color: Palette.orangeDarker,
+        fontWeight: '700',
+        marginTop: Spacing.sm,
         fontStyle: 'italic',
     },
     retryButton: {
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FF8C42',
-        paddingVertical: 14,
-        paddingHorizontal: 32,
-        borderRadius: 30,
+        backgroundColor: Palette.orange,
+        paddingHorizontal: Spacing.xxxl,
+        borderRadius: BorderRadius.full,
         gap: 10,
-        marginTop: 20,
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 4,
+        marginTop: Spacing.xl,
     },
     retryButtonText: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#FFFFFF',
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
+        gap: Spacing.md,
+        paddingHorizontal: Spacing.xl,
+        paddingTop: Spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        backgroundColor: '#fff',
+        borderTopColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
     },
     backButton: {
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 8,
+        paddingHorizontal: Spacing.lg,
         gap: 4,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
     },
     backButtonText: {
-        fontSize: 16,
-        color: '#666',
-        fontWeight: '500',
+        fontSize: 15,
+        color: Palette.ink,
+        fontWeight: '800',
     },
     nextButton: {
-        backgroundColor: '#FF8C42',
+        flex: 1,
+        minHeight: 48,
+        backgroundColor: Palette.orange,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 28,
-        borderRadius: 30,
+        paddingHorizontal: Spacing.xl,
+        borderRadius: BorderRadius.full,
         gap: 8,
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 4,
+        ...Elevation.floating,
     },
     nextButtonFull: {
         flex: 1,
@@ -869,7 +866,7 @@ const styles = StyleSheet.create({
     },
     nextButtonText: {
         fontSize: 16,
-        color: '#fff',
-        fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontWeight: '800',
     },
 });

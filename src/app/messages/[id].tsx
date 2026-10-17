@@ -1,10 +1,10 @@
 import { ReportSheet } from '@/components/ui/ReportSheet';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader, HeaderIconButton } from '@/components/ui/wellcome';
 import { ChatConversation, ChatMessage, chatService } from '@/services/api/ChatService';
-import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { supabase } from '@/shared/lib/supabase';
-import { Image } from 'expo-image';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -18,11 +18,10 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConversationScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
-    const router = useRouter();
     const insets = useSafeAreaInsets();
     const listRef = useRef<FlatList<ChatMessage>>(null);
     const [conversation, setConversation] = useState<ChatConversation | null>(null);
@@ -81,70 +80,75 @@ export default function ConversationScreen() {
         : null;
 
     if (loading && !conversation) {
-        return <View style={styles.loading}><ActivityIndicator size="large" color="#FF8C42" /></View>;
+        return (
+            <View style={styles.container}>
+                <Stack.Screen options={{ headerShown: false }} />
+                <BrandStackHeader eyebrow="CONVERSA" title="Mensagens" />
+                <BrandSheet>
+                    <View style={styles.loading}><ActivityIndicator size="large" color={Palette.orange} /></View>
+                </BrandSheet>
+            </View>
+        );
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
             <KeyboardAvoidingView
                 style={styles.flex}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={0}
             >
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} hitSlop={10} accessibilityLabel="Voltar">
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-                    </TouchableOpacity>
-                    <Image source={{ uri: other?.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }} style={styles.avatar} contentFit="cover" />
-                    <View style={styles.headerText}>
-                        <Text style={styles.name} numberOfLines={1}>{other?.fullName || 'Participante'}</Text>
-                        <Text style={styles.eventTitle} numberOfLines={1}>{conversation?.event.title}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setReportVisible(true)} style={styles.headerButton} accessibilityLabel="Denunciar conversa">
-                        <Ionicons name="flag-outline" size={22} color="#6B7280" />
-                    </TouchableOpacity>
-                </View>
-
-                <FlatList
-                    ref={listRef}
-                    data={messages}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <MessageBubble message={item} mine={item.senderId === currentUserId} />}
-                    contentContainerStyle={styles.messages}
-                    onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-                    ListHeaderComponent={
-                        <View style={styles.contextCard}>
-                            <Ionicons name="shield-checkmark-outline" size={18} color="#C96D22" />
-                            <Text style={styles.contextText}>Conversa vinculada ao evento. O histórico pode ser usado para suporte e análise de denúncias.</Text>
-                        </View>
-                    }
+                <BrandStackHeader
+                    eyebrow={conversation?.event.title ? conversation.event.title.toUpperCase() : 'CONVERSA'}
+                    title={other?.fullName || 'Participante'}
+                    actions={(
+                        <HeaderIconButton icon="flag-outline" accessibilityLabel="Denunciar conversa" onPress={() => setReportVisible(true)} />
+                    )}
                 />
 
-                <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-                    <TextInput
-                        style={styles.input}
-                        value={draft}
-                        onChangeText={setDraft}
-                        placeholder="Escreva uma mensagem"
-                        placeholderTextColor="#9CA3AF"
-                        multiline
-                        maxLength={2000}
-                        editable={!sending}
-                        textAlignVertical="top"
-                        onFocus={() => requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }))}
+                <BrandSheet>
+                    <FlatList
+                        ref={listRef}
+                        data={messages}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => <MessageBubble message={item} mine={item.senderId === currentUserId} />}
+                        contentContainerStyle={styles.messages}
+                        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+                        keyboardShouldPersistTaps="handled"
+                        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                        ListHeaderComponent={
+                            <View style={styles.contextCard}>
+                                <Ionicons name="shield-checkmark-outline" size={18} color={Palette.orangeDeep} />
+                                <Text style={styles.contextText}>Conversa vinculada ao evento. O histórico pode ser usado para suporte e análise de denúncias.</Text>
+                            </View>
+                        }
                     />
-                    <TouchableOpacity
-                        style={[styles.sendButton, (!draft.trim() || sending) && styles.sendDisabled]}
-                        onPress={send}
-                        disabled={!draft.trim() || sending}
-                        accessibilityLabel="Enviar mensagem"
-                    >
-                        {sending ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="send" size={20} color="#FFFFFF" />}
-                    </TouchableOpacity>
-                </View>
+
+                    <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+                        <TextInput
+                            style={styles.input}
+                            value={draft}
+                            onChangeText={setDraft}
+                            placeholder="Escreva uma mensagem"
+                            placeholderTextColor={Palette.subtle}
+                            multiline
+                            maxLength={2000}
+                            editable={!sending}
+                            textAlignVertical="top"
+                            onFocus={() => requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }))}
+                        />
+                        <TouchableOpacity
+                            style={[styles.sendButton, (!draft.trim() || sending) && styles.sendDisabled]}
+                            onPress={send}
+                            disabled={!draft.trim() || sending}
+                            accessibilityRole="button"
+                            accessibilityLabel="Enviar mensagem"
+                        >
+                            {sending ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="send" size={20} color="#FFFFFF" />}
+                        </TouchableOpacity>
+                    </View>
+                </BrandSheet>
             </KeyboardAvoidingView>
 
             {!!other?.id && (
@@ -155,7 +159,7 @@ export default function ConversationScreen() {
                     targetId={other.id}
                 />
             )}
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -164,7 +168,7 @@ function MessageBubble({ message, mine }: { message: ChatMessage; mine: boolean 
         const address = message.metadata?.type === 'ADDRESS_RELEASED';
         return (
             <View style={[styles.systemMessage, address && styles.addressMessage]}>
-                <Ionicons name={address ? 'location-outline' : 'information-circle-outline'} size={16} color={address ? '#C96D22' : '#6B7280'} />
+                <Ionicons name={address ? 'location-outline' : 'information-circle-outline'} size={16} color={address ? Palette.orangeDeep : Palette.inkSoft} />
                 <Text style={[styles.systemText, address && styles.addressText]}>{message.body}</Text>
             </View>
         );
@@ -183,33 +187,27 @@ function MessageBubble({ message, mine }: { message: ChatMessage; mine: boolean 
 
 const styles = StyleSheet.create({
     flex: { flex: 1 },
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
-    loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
-    header: { minHeight: 64, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
-    headerButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6' },
-    headerText: { flex: 1, marginLeft: 10, marginRight: 4 },
-    name: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
-    eventTitle: { marginTop: 1, fontSize: 12, color: '#FF8C42' },
-    messages: { paddingHorizontal: 12, paddingVertical: 14, flexGrow: 1, justifyContent: 'flex-end' },
-    contextCard: { flexDirection: 'row', alignItems: 'flex-start', padding: 12, borderRadius: 12, backgroundColor: '#FFF7EF', marginBottom: 14 },
-    contextText: { flex: 1, marginLeft: 8, color: '#7C4A24', fontSize: 12, lineHeight: 18 },
-    systemMessage: { alignSelf: 'center', flexDirection: 'row', alignItems: 'flex-start', maxWidth: '92%', paddingHorizontal: 12, paddingVertical: 9, marginVertical: 7, borderRadius: 12, backgroundColor: '#F3F4F6' },
-    addressMessage: { backgroundColor: '#FFF3E8', borderWidth: 1, borderColor: '#FFD5B3' },
-    systemText: { flex: 1, marginLeft: 6, fontSize: 12, lineHeight: 17, color: '#6B7280', textAlign: 'center' },
-    addressText: { color: '#8A4B1D', fontWeight: '600', textAlign: 'left' },
+    container: { flex: 1, backgroundColor: Palette.paper },
+    loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    messages: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.xl, paddingBottom: Spacing.md, flexGrow: 1, justifyContent: 'flex-end' },
+    contextCard: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, borderRadius: 22, backgroundColor: Palette.orangeSoft, marginBottom: Spacing.lg },
+    contextText: { flex: 1, marginLeft: 8, color: Palette.orangeDarker, fontSize: 12, lineHeight: 18 },
+    systemMessage: { alignSelf: 'center', flexDirection: 'row', alignItems: 'flex-start', maxWidth: '92%', paddingHorizontal: Spacing.md, paddingVertical: 9, marginVertical: 7, borderRadius: BorderRadius.lg, backgroundColor: Palette.track },
+    addressMessage: { backgroundColor: Palette.orangeSoft, borderWidth: 1, borderColor: Palette.line },
+    systemText: { flex: 1, marginLeft: 6, fontSize: 12, lineHeight: 17, color: Palette.inkSoft, textAlign: 'center' },
+    addressText: { color: Palette.orangeDarker, fontWeight: '700', textAlign: 'left' },
     bubbleRow: { flexDirection: 'row', marginVertical: 3 },
     mineRow: { justifyContent: 'flex-end' },
     theirRow: { justifyContent: 'flex-start' },
-    bubble: { maxWidth: '82%', paddingHorizontal: 13, paddingTop: 9, paddingBottom: 6, borderRadius: 17 },
-    mineBubble: { backgroundColor: '#FF8C42', borderBottomRightRadius: 5 },
-    theirBubble: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 5 },
-    messageText: { fontSize: 15, lineHeight: 20, color: '#1A1A1A' },
+    bubble: { maxWidth: '82%', paddingHorizontal: 14, paddingTop: 9, paddingBottom: 6, borderRadius: 20 },
+    mineBubble: { backgroundColor: Palette.orange, borderBottomRightRadius: 6 },
+    theirBubble: { backgroundColor: Palette.surface, borderWidth: 1, borderColor: Palette.lineSoft, borderBottomLeftRadius: 6 },
+    messageText: { fontSize: 15, lineHeight: 21, color: Palette.ink },
     mineText: { color: '#FFFFFF' },
-    messageTime: { alignSelf: 'flex-end', marginTop: 3, fontSize: 10, color: '#9CA3AF' },
-    mineTime: { color: 'rgba(255,255,255,0.78)' },
-    composer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
-    input: { flex: 1, minHeight: 46, maxHeight: 120, paddingHorizontal: 15, paddingVertical: 12, borderRadius: 23, backgroundColor: '#F3F4F6', color: '#1A1A1A', fontSize: 15 },
-    sendButton: { width: 46, height: 46, borderRadius: 23, marginLeft: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FF8C42' },
+    messageTime: { alignSelf: 'flex-end', marginTop: 3, fontSize: 10, color: Palette.muted },
+    mineTime: { color: Palette.orangeOnBrand },
+    composer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: Spacing.md, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: Palette.lineSoft, backgroundColor: Palette.surface },
+    input: { flex: 1, minHeight: 48, maxHeight: 120, paddingHorizontal: Spacing.lg, paddingTop: 13, paddingBottom: 13, borderRadius: 24, borderWidth: 1, borderColor: Palette.line, backgroundColor: Palette.paper, color: Palette.ink, fontSize: 15 },
+    sendButton: { width: 48, height: 48, borderRadius: BorderRadius.full, marginLeft: Spacing.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: Palette.orange },
     sendDisabled: { opacity: 0.45 },
 });

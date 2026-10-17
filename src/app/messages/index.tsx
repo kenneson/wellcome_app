@@ -1,12 +1,13 @@
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
 import { ChatConversation, chatService } from '@/services/api/ChatService';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { supabase } from '@/shared/lib/supabase';
 import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MessagesScreen() {
     const router = useRouter();
@@ -42,8 +43,10 @@ export default function MessagesScreen() {
         return (
             <TouchableOpacity
                 style={styles.item}
-                activeOpacity={0.75}
+                activeOpacity={0.8}
                 onPress={() => router.push(`/messages/${item.id}` as any)}
+                accessibilityRole="button"
+                accessibilityLabel={`Conversa com ${other.fullName || 'Participante'}${unread > 0 ? `, ${unread} não lidas` : ''}`}
             >
                 <Image
                     source={{ uri: other.avatarUrl || DEFAULT_AVATAR_PLACEHOLDER }}
@@ -74,35 +77,39 @@ export default function MessagesScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton} hitSlop={10}>
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Mensagens</Text>
-                <View style={styles.iconButton} />
-            </View>
+            <BrandStackHeader eyebrow="CONVERSAS" title="Mensagens" />
 
-            {loading ? (
-                <View style={styles.center}><ActivityIndicator size="large" color="#FF8C42" /></View>
-            ) : (
-                <FlatList
-                    data={conversations}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderConversation}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(true); }} tintColor="#FF8C42" />}
-                    contentContainerStyle={conversations.length ? styles.list : styles.emptyList}
-                    ListEmptyComponent={
-                        <View style={styles.empty}>
-                            <View style={styles.emptyIcon}><Ionicons name="chatbubbles-outline" size={42} color="#FF8C42" /></View>
-                            <Text style={styles.emptyTitle}>Nenhuma conversa ainda</Text>
-                            <Text style={styles.emptyText}>Abra um evento e toque em “Perguntar ao anfitrião”.</Text>
-                        </View>
-                    }
-                />
-            )}
-        </SafeAreaView>
+            <BrandSheet>
+                {loading ? (
+                    <View style={styles.center}><ActivityIndicator size="large" color={Palette.orange} /></View>
+                ) : (
+                    <FlatList
+                        data={conversations}
+                        keyExtractor={(item) => item.id}
+                        renderItem={renderConversation}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={(
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={() => { setRefreshing(true); void load(true); }}
+                                tintColor={Palette.orange}
+                                colors={[Palette.orange]}
+                            />
+                        )}
+                        contentContainerStyle={conversations.length ? styles.list : styles.emptyList}
+                        ListEmptyComponent={
+                            <View style={styles.empty}>
+                                <View style={styles.emptyIcon}><Ionicons name="chatbubbles-outline" size={32} color={Palette.orangeDeep} /></View>
+                                <Text style={styles.emptyTitle}>Nenhuma conversa ainda</Text>
+                                <Text style={styles.emptyText}>Abra um evento e toque em “Perguntar ao anfitrião”.</Text>
+                            </View>
+                        }
+                    />
+                )}
+            </BrandSheet>
+        </View>
     );
 }
 
@@ -116,27 +123,32 @@ function formatListTime(value: string) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
-    header: { height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5E7EB' },
-    iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    title: { fontSize: 20, fontWeight: '700', color: '#1A1A1A' },
+    container: { flex: 1, backgroundColor: Palette.paper },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    list: { paddingVertical: 8 },
-    emptyList: { flexGrow: 1 },
-    item: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 13, minHeight: 86, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F0F0F0' },
-    avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#F3F4F6' },
-    itemBody: { flex: 1, marginLeft: 12, justifyContent: 'center' },
+    list: { padding: Spacing.xl, paddingBottom: Spacing.xxxl * 2, gap: Spacing.md },
+    emptyList: { flexGrow: 1, padding: Spacing.xl },
+    item: {
+        flexDirection: 'row',
+        padding: 14,
+        minHeight: 86,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+    },
+    avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: Palette.track },
+    itemBody: { flex: 1, marginLeft: Spacing.md, justifyContent: 'center' },
     itemHeader: { flexDirection: 'row', alignItems: 'center' },
-    name: { flex: 1, fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
-    time: { marginLeft: 8, fontSize: 12, color: '#9CA3AF' },
-    eventTitle: { fontSize: 12, color: '#FF8C42', marginTop: 2, fontWeight: '600' },
+    name: { flex: 1, fontSize: 16, fontWeight: '700', color: Palette.ink },
+    time: { marginLeft: 8, fontSize: 12, color: Palette.muted },
+    eventTitle: { fontSize: 12, color: Palette.orangeDeep, marginTop: 2, fontWeight: '700' },
     previewRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
-    preview: { flex: 1, fontSize: 14, color: '#6B7280' },
-    unreadText: { fontWeight: '700', color: '#1A1A1A' },
-    badge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: '#FF8C42', alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
-    badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36 },
-    emptyIcon: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#FFF3E8', alignItems: 'center', justifyContent: 'center' },
-    emptyTitle: { marginTop: 18, fontSize: 19, fontWeight: '700', color: '#1A1A1A' },
-    emptyText: { marginTop: 8, fontSize: 14, lineHeight: 21, color: '#6B7280', textAlign: 'center' },
+    preview: { flex: 1, fontSize: 14, color: Palette.inkSoft },
+    unreadText: { fontWeight: '800', color: Palette.ink },
+    badge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: BorderRadius.full, backgroundColor: Palette.orange, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+    badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
+    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xxxl, gap: Spacing.md },
+    emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: Palette.orangeSoft, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs },
+    emptyTitle: { fontSize: 18, fontWeight: '800', color: Palette.ink, textAlign: 'center' },
+    emptyText: { fontSize: 14, lineHeight: 21, color: Palette.inkSoft, textAlign: 'center', maxWidth: 300 },
 });

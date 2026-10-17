@@ -1,5 +1,6 @@
 import { AppIcon } from '@/components/ui/icon';
 import { BorderRadius, Dimensions, Palette, Spacing } from '@/shared/constants/theme';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +48,45 @@ export function BrandHeader({ eyebrow, title, leading, actions, children, style 
 
 export function BrandSheet({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.sheet, style]}>{children}</View>;
+}
+
+interface BrandStackHeaderProps {
+  title: string;
+  eyebrow?: string;
+  /** Overrides the default back navigation. */
+  onBack?: () => void;
+  /** Icon for the leading button; use "close" on modal screens. */
+  backIcon?: 'chevron-back' | 'close';
+  actions?: React.ReactNode;
+  children?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}
+
+/**
+ * Compact brand header for screens pushed on top of the tabs: a back (or close)
+ * button, then eyebrow and title. Pair it with `BrandSheet` like the tabs do.
+ */
+export function BrandStackHeader({ title, eyebrow, onBack, backIcon = 'chevron-back', actions, children, style }: BrandStackHeaderProps) {
+  const router = useRouter();
+  const handleBack = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/(tabs)')));
+
+  return (
+    <BrandHeader style={[styles.stackHeader, style]} actions={actions} leading={(
+      <View style={styles.stackLeading}>
+        <HeaderIconButton
+          icon={backIcon}
+          accessibilityLabel={backIcon === 'close' ? 'Fechar' : 'Voltar'}
+          onPress={handleBack}
+        />
+        <View style={styles.stackTitles}>
+          {!!eyebrow && <Text style={styles.eyebrow} numberOfLines={1}>{eyebrow}</Text>}
+          <Text style={styles.stackTitle} accessibilityRole="header" numberOfLines={1}>{title}</Text>
+        </View>
+      </View>
+    )}>
+      {children}
+    </BrandHeader>
+  );
 }
 
 interface HeaderIconButtonProps {
@@ -105,6 +145,24 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '800',
     letterSpacing: -0.5,
+    color: '#FFFFFF',
+  },
+  stackHeader: {
+    paddingBottom: SHEET_OVERLAP + Spacing.lg,
+  },
+  stackLeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  stackTitles: {
+    flex: 1,
+    gap: 2,
+  },
+  stackTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
     color: '#FFFFFF',
   },
   actions: {

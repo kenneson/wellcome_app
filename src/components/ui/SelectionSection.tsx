@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, Text } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
+import { Palette, Spacing } from '@/shared/constants/theme';
 import { SelectionCard } from '@/components/ui/SelectionCard';
 import { SelectionPill } from '@/components/ui/SelectionPill';
 import { SelectionGridItem } from '@/components/ui/SelectionGridItem';
@@ -32,8 +33,8 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
 
     return (
         <View>
-            <Text className="text-lg font-bold mb-2 mt-2.5 text-[#1A1A1A]">{title}</Text>
-            {subtitle && <Text className="text-sm text-gray-500 mb-4">{subtitle}</Text>}
+            <Text style={styles.title}>{title}</Text>
+            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
             <View className={`flex-row flex-wrap ${variant === 'grid' ? 'justify-between' : 'gap-2.5'}`}>
                 {items.map((item) => {
@@ -78,3 +79,19 @@ export const SelectionSection = React.memo<SelectionSectionProps>(({
 });
 
 SelectionSection.displayName = 'SelectionSection';
+
+const styles = StyleSheet.create({
+    title: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginTop: 10,
+        marginBottom: Spacing.sm,
+    },
+    subtitle: {
+        fontSize: 14,
+        lineHeight: 21,
+        color: Palette.inkSoft,
+        marginBottom: Spacing.lg,
+    },
+});

@@ -2,6 +2,8 @@ import { BillingWallet, paymentService } from '@/services/api/PaymentService';
 import { supabase } from '@/shared/lib/supabase';
 import { displayCardBrand, formatCpf, formatPhone, formatPostalCode, onlyDigits } from '@/shared/lib/paymentValidation';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -14,7 +16,6 @@ import {
     View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PaymentsProfileScreen() {
     const router = useRouter();
@@ -52,7 +53,7 @@ export default function PaymentsProfileScreen() {
             setAddressNumber(profile?.addressNumber || '');
             setAddressComplement(profile?.addressComplement || '');
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Nao foi possivel carregar seus pagamentos.');
+            Alert.alert('Erro', error.message || 'Não foi possível carregar seus pagamentos.');
         } finally {
             setLoading(false);
         }
@@ -80,7 +81,7 @@ export default function PaymentsProfileScreen() {
 
     const saveProfile = async () => {
         if (mode === 'card' && (!onlyDigits(postalCode) || !addressNumber.trim())) {
-            Alert.alert('Endereco necessario', 'Informe CEP e numero para cadastrar um cartao.');
+            Alert.alert('Endereço necessário', 'Informe CEP e número para cadastrar um cartão.');
             return;
         }
         setSaving(true);
@@ -95,17 +96,17 @@ export default function PaymentsProfileScreen() {
                 addressComplement: addressComplement.trim() || undefined,
             });
             if (mode && continueToCheckout(mode)) return;
-            Alert.alert('Dados salvos', 'Seu perfil de cobranca foi atualizado.');
+            Alert.alert('Dados salvos', 'Seu perfil de cobrança foi atualizado.');
             await loadWallet();
         } catch (error: any) {
-            Alert.alert('Nao foi possivel salvar', error.message);
+            Alert.alert('Não foi possível salvar', error.message);
         } finally {
             setSaving(false);
         }
     };
 
     const deleteCard = (cardId: string, description: string) => {
-        Alert.alert('Remover cartao', `Remover ${description} dos seus pagamentos?`, [
+        Alert.alert('Remover cartão', `Remover ${description} dos seus pagamentos?`, [
             { text: 'Cancelar', style: 'cancel' },
             {
                 text: 'Remover',
@@ -133,144 +134,161 @@ export default function PaymentsProfileScreen() {
 
     if (loading) {
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#E56F2D" />
-                </View>
-            </SafeAreaView>
+            <View style={styles.screen}>
+                <BrandStackHeader eyebrow="FINANCEIRO" title="Pagamentos" />
+                <BrandSheet>
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                    </View>
+                </BrandSheet>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => router.back()} accessibilityLabel="Voltar">
-                    <Ionicons name="chevron-back" size={25} color="#202124" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Pagamentos</Text>
-                <View style={styles.iconButton} />
-            </View>
+        <View style={styles.screen}>
+            <BrandStackHeader eyebrow="FINANCEIRO" title="Pagamentos" />
 
-            <KeyboardAwareScrollView
-                contentContainerStyle={styles.content}
-                keyboardShouldPersistTaps="handled"
-                enableOnAndroid
-                extraScrollHeight={32}
-            >
-                <View style={styles.sectionHeader}>
-                    <View style={styles.sectionIcon}>
-                        <Ionicons name="person-outline" size={21} color="#E56F2D" />
-                    </View>
-                    <View style={styles.flexText}>
-                        <Text style={styles.sectionTitle}>Dados de cobranca</Text>
-                        <Text style={styles.sectionSubtitle}>Informacoes privadas usadas apenas nos pagamentos.</Text>
-                    </View>
-                </View>
-
-                <Field label="Nome completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
-                <Field label="CPF" value={cpf} onChangeText={(value) => setCpf(formatCpf(value))} keyboardType="number-pad" />
-                <Field label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-                <Field
-                    label="Celular"
-                    value={mobilePhone}
-                    onChangeText={(value) => setMobilePhone(formatPhone(value))}
-                    keyboardType="phone-pad"
-                />
-
-                <View style={styles.addressTitleRow}>
-                    <Text style={styles.addressTitle}>Endereco para cartao</Text>
-                    <Text style={styles.optionalLabel}>Necessario para cartao</Text>
-                </View>
-                <View style={styles.row}>
-                    <View style={styles.postalField}>
-                        <Field
-                            label="CEP"
-                            value={postalCode}
-                            onChangeText={(value) => setPostalCode(formatPostalCode(value))}
-                            keyboardType="number-pad"
-                        />
-                    </View>
-                    <View style={styles.numberField}>
-                        <Field label="Numero" value={addressNumber} onChangeText={setAddressNumber} keyboardType="number-pad" />
-                    </View>
-                </View>
-                <Field label="Complemento (opcional)" value={addressComplement} onChangeText={setAddressComplement} />
-
-                <TouchableOpacity style={styles.primaryButton} onPress={saveProfile} disabled={saving}>
-                    {saving ? <ActivityIndicator color="#FFFFFF" /> : (
-                        <>
-                            <Ionicons name="checkmark" size={21} color="#FFFFFF" />
-                            <Text style={styles.primaryButtonText}>{mode ? 'Salvar e continuar' : 'Salvar dados'}</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-
-                <View style={styles.divider} />
-
-                <View style={styles.sectionHeader}>
-                    <View style={[styles.sectionIcon, styles.blueIcon]}>
-                        <Ionicons name="card-outline" size={21} color="#315E9E" />
-                    </View>
-                    <View style={styles.flexText}>
-                        <Text style={styles.sectionTitle}>Cartoes salvos</Text>
-                        <Text style={styles.sectionSubtitle}>Somente bandeira, final e token seguro ficam registrados.</Text>
-                    </View>
-                </View>
-
-                {wallet?.cards.map((card) => {
-                    const description = `${displayCardBrand(card.brand)} final ${card.lastFour}`;
-                    return (
-                        <View key={card.id} style={styles.cardRow}>
-                            <View style={styles.cardVisual}>
-                                <Ionicons name="card" size={22} color="#315E9E" />
+            <BrandSheet>
+                <KeyboardAwareScrollView
+                    contentContainerStyle={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                    enableOnAndroid
+                    extraScrollHeight={32}
+                >
+                    <View style={styles.card}>
+                        <View style={styles.sectionHeader}>
+                            <View style={styles.sectionIcon}>
+                                <Ionicons name="person-outline" size={21} color={Palette.orangeDeep} />
                             </View>
                             <View style={styles.flexText}>
-                                <Text style={styles.cardTitle}>{description}</Text>
-                                <Text style={styles.cardSubtitle}>
-                                    {String(card.expiryMonth).padStart(2, '0')}/{String(card.expiryYear).slice(-2)}
-                                    {card.isDefault ? '  Padrao' : ''}
-                                </Text>
+                                <Text style={styles.sectionTitle}>Dados de cobrança</Text>
+                                <Text style={styles.sectionSubtitle}>Informações privadas usadas apenas nos pagamentos.</Text>
                             </View>
-                            {!card.isDefault && (
-                                <TouchableOpacity
-                                    style={styles.smallIconButton}
-                                    onPress={() => void setDefault(card.id)}
-                                    accessibilityLabel="Definir como padrao"
-                                >
-                                    <Ionicons name="star-outline" size={21} color="#A66B00" />
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                style={styles.smallIconButton}
-                                onPress={() => deleteCard(card.id, description)}
-                                accessibilityLabel="Remover cartao"
-                            >
-                                <Ionicons name="trash-outline" size={20} color="#C43D37" />
-                            </TouchableOpacity>
                         </View>
-                    );
-                })}
 
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => {
-                        if (!wallet?.cardReady) {
-                            Alert.alert('Complete o endereco', 'Salve CEP e numero antes de adicionar um cartao.');
-                            return;
-                        }
-                        router.push('/profile/payments/card' as any);
-                    }}
-                >
-                    <Ionicons name="add-circle-outline" size={22} color="#315E9E" />
-                    <Text style={styles.addButtonText}>Adicionar cartao</Text>
-                </TouchableOpacity>
+                        <Field label="Nome completo" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
+                        <Field label="CPF" value={cpf} onChangeText={(value) => setCpf(formatCpf(value))} keyboardType="number-pad" />
+                        <Field label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                        <Field
+                            label="Celular"
+                            value={mobilePhone}
+                            onChangeText={(value) => setMobilePhone(formatPhone(value))}
+                            keyboardType="phone-pad"
+                        />
 
-                <View style={styles.securityRow}>
-                    <Ionicons name="shield-checkmark-outline" size={19} color="#5D646A" />
-                    <Text style={styles.securityText}>O Wellcome nunca armazena numero completo ou codigo de seguranca.</Text>
-                </View>
-            </KeyboardAwareScrollView>
-        </SafeAreaView>
+                        <View style={styles.addressTitleRow}>
+                            <Text style={styles.addressTitle}>Endereço para cartão</Text>
+                            <Text style={styles.optionalLabel}>Necessário para cartão</Text>
+                        </View>
+                        <View style={styles.row}>
+                            <View style={styles.postalField}>
+                                <Field
+                                    label="CEP"
+                                    value={postalCode}
+                                    onChangeText={(value) => setPostalCode(formatPostalCode(value))}
+                                    keyboardType="number-pad"
+                                />
+                            </View>
+                            <View style={styles.numberField}>
+                                <Field label="Número" value={addressNumber} onChangeText={setAddressNumber} keyboardType="number-pad" />
+                            </View>
+                        </View>
+                        <Field label="Complemento (opcional)" value={addressComplement} onChangeText={setAddressComplement} />
+
+                        <TouchableOpacity
+                            style={[styles.primaryButton, saving && styles.buttonDisabled]}
+                            onPress={saveProfile}
+                            disabled={saving}
+                            accessibilityRole="button"
+                            accessibilityLabel={mode ? 'Salvar e continuar' : 'Salvar dados'}
+                            accessibilityState={{ disabled: saving, busy: saving }}
+                        >
+                            {saving ? <ActivityIndicator color="#FFFFFF" /> : (
+                                <>
+                                    <Ionicons name="checkmark" size={21} color="#FFFFFF" />
+                                    <Text style={styles.primaryButtonText}>{mode ? 'Salvar e continuar' : 'Salvar dados'}</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.card}>
+                        <View style={styles.sectionHeader}>
+                            <View style={[styles.sectionIcon, styles.blueIcon]}>
+                                <Ionicons name="card-outline" size={21} color={Palette.blue} />
+                            </View>
+                            <View style={styles.flexText}>
+                                <Text style={styles.sectionTitle}>Cartões salvos</Text>
+                                <Text style={styles.sectionSubtitle}>Somente bandeira, final e token seguro ficam registrados.</Text>
+                            </View>
+                        </View>
+
+                        {wallet?.cards.map((card) => {
+                            const description = `${displayCardBrand(card.brand)} final ${card.lastFour}`;
+                            return (
+                                <View key={card.id} style={styles.cardRow}>
+                                    <View style={styles.cardVisual}>
+                                        <Ionicons name="card" size={22} color={Palette.blue} />
+                                    </View>
+                                    <View style={styles.flexText}>
+                                        <Text style={styles.cardTitle}>{description}</Text>
+                                        <View style={styles.cardMetaRow}>
+                                            <Text style={styles.cardSubtitle}>
+                                                {String(card.expiryMonth).padStart(2, '0')}/{String(card.expiryYear).slice(-2)}
+                                            </Text>
+                                            {card.isDefault && (
+                                                <View style={styles.defaultPill}>
+                                                    <Text style={styles.defaultPillText}>PADRÃO</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </View>
+                                    {!card.isDefault && (
+                                        <TouchableOpacity
+                                            style={styles.smallIconButton}
+                                            onPress={() => void setDefault(card.id)}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Definir como padrão"
+                                        >
+                                            <Ionicons name="star-outline" size={21} color={Palette.star} />
+                                        </TouchableOpacity>
+                                    )}
+                                    <TouchableOpacity
+                                        style={styles.smallIconButton}
+                                        onPress={() => deleteCard(card.id, description)}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Remover cartão"
+                                    >
+                                        <Ionicons name="trash-outline" size={20} color={Palette.danger} />
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        })}
+
+                        <TouchableOpacity
+                            style={styles.addButton}
+                            accessibilityRole="button"
+                            onPress={() => {
+                                if (!wallet?.cardReady) {
+                                    Alert.alert('Complete o endereço', 'Salve CEP e número antes de adicionar um cartão.');
+                                    return;
+                                }
+                                router.push('/profile/payments/card' as any);
+                            }}
+                        >
+                            <Ionicons name="add-circle-outline" size={22} color={Palette.ink} />
+                            <Text style={styles.addButtonText}>Adicionar cartão</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.securityRow}>
+                        <Ionicons name="shield-checkmark-outline" size={19} color={Palette.muted} />
+                        <Text style={styles.securityText}>O Wellcome nunca armazena número completo ou código de segurança.</Text>
+                    </View>
+                </KeyboardAwareScrollView>
+            </BrandSheet>
+        </View>
     );
 }
 
@@ -282,48 +300,52 @@ function Field(props: React.ComponentProps<typeof TextInput> & { label: string }
             <TextInput
                 {...inputProps}
                 style={styles.input}
-                placeholderTextColor="#9A9EA3"
-                selectionColor="#E56F2D"
+                placeholderTextColor={Palette.subtle}
+                selectionColor={Palette.orange}
             />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+    screen: { flex: 1, backgroundColor: Palette.paper },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    header: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12,
-        paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E2E4E7',
+    content: { padding: Spacing.xl, paddingBottom: 44, gap: Spacing.lg },
+    card: {
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: 14,
     },
-    iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#202124' },
-    content: { padding: 20, paddingBottom: 44 },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-    sectionIcon: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#FFF1E8', alignItems: 'center', justifyContent: 'center' },
-    blueIcon: { backgroundColor: '#EDF3FB' },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xl },
+    sectionIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.orangeSoft, alignItems: 'center', justifyContent: 'center' },
+    blueIcon: { backgroundColor: Palette.blueSoft },
     flexText: { flex: 1 },
-    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#202124' },
-    sectionSubtitle: { fontSize: 13, lineHeight: 18, color: '#71767C', marginTop: 2 },
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: Palette.ink },
+    sectionSubtitle: { fontSize: 13, lineHeight: 18, color: Palette.inkSoft, marginTop: 2 },
     fieldBlock: { marginBottom: 15 },
-    label: { fontSize: 13, fontWeight: '700', color: '#4B5055', marginBottom: 7 },
-    input: { height: 50, borderWidth: 1, borderColor: '#D9DDE1', borderRadius: 8, paddingHorizontal: 14, fontSize: 16, color: '#202124', backgroundColor: '#FFFFFF' },
-    addressTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 12 },
-    addressTitle: { fontSize: 15, fontWeight: '800', color: '#202124' },
-    optionalLabel: { fontSize: 12, color: '#7A6060' },
-    row: { flexDirection: 'row', gap: 12 },
+    label: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', color: Palette.inkSoft, marginBottom: Spacing.sm },
+    input: { minHeight: 48, borderWidth: 1, borderColor: Palette.line, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.lg, fontSize: 16, color: Palette.ink, backgroundColor: Palette.surface },
+    addressTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.sm, marginBottom: Spacing.md },
+    addressTitle: { fontSize: 15, fontWeight: '800', color: Palette.ink },
+    optionalLabel: { fontSize: 12, color: Palette.muted },
+    row: { flexDirection: 'row', gap: Spacing.md },
     postalField: { flex: 1.25 },
     numberField: { flex: 0.75 },
-    primaryButton: { minHeight: 52, borderRadius: 8, backgroundColor: '#E56F2D', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 6 },
-    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-    divider: { height: 1, backgroundColor: '#E8EAEC', marginVertical: 30 },
-    cardRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 11, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E0E3E6' },
-    cardVisual: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#EDF3FB', alignItems: 'center', justifyContent: 'center' },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: '#202124' },
-    cardSubtitle: { fontSize: 13, color: '#747980', marginTop: 3 },
-    smallIconButton: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-    addButton: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#B7C8DE', borderRadius: 8, marginTop: 18 },
-    addButtonText: { color: '#315E9E', fontSize: 15, fontWeight: '700' },
-    securityRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 8, marginTop: 24 },
-    securityText: { flex: 1, fontSize: 12, lineHeight: 17, color: '#5D646A' },
+    primaryButton: { minHeight: 52, borderRadius: BorderRadius.full, backgroundColor: Palette.orange, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 6 },
+    buttonDisabled: { opacity: 0.6 },
+    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+    cardRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 11, borderBottomWidth: 1, borderBottomColor: Palette.lineSoft },
+    cardVisual: { width: 40, height: 40, borderRadius: BorderRadius.md, backgroundColor: Palette.blueSoft, alignItems: 'center', justifyContent: 'center' },
+    cardTitle: { fontSize: 15, fontWeight: '800', color: Palette.ink },
+    cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 3 },
+    cardSubtitle: { fontSize: 13, color: Palette.inkSoft },
+    defaultPill: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.full, backgroundColor: Palette.greenSoft },
+    defaultPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4, color: Palette.green },
+    smallIconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    addButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: Palette.line, borderRadius: BorderRadius.full, marginTop: Spacing.lg, backgroundColor: Palette.surface },
+    addButtonText: { color: Palette.ink, fontSize: 15, fontWeight: '800' },
+    securityRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 8, paddingHorizontal: Spacing.xs },
+    securityText: { flex: 1, fontSize: 12, lineHeight: 17, color: Palette.muted },
 });

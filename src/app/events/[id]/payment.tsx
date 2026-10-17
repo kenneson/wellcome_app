@@ -4,6 +4,8 @@ import { BillingWallet, PixPaymentResult, paymentService } from '@/services/api/
 import { registrationService } from '@/services/api/RegistrationService';
 import { displayCardBrand } from '@/shared/lib/paymentValidation';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader, HeaderIconButton } from '@/components/ui/wellcome';
+import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -17,13 +19,14 @@ import {
     View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type PaymentMethod = 'pix' | 'card';
 
 export default function PaymentScreen() {
     const { id, bookingId } = useLocalSearchParams<{ id: string; bookingId: string }>();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const [wallet, setWallet] = useState<BillingWallet | null>(null);
     const [amount, setAmount] = useState(0);
     const [method, setMethod] = useState<PaymentMethod>('pix');
@@ -80,8 +83,8 @@ export default function PaymentScreen() {
                 Alert.alert(
                     refused ? 'Pagamento recusado' : 'Aguardando pagamento',
                     refused
-                        ? 'Revise o cartao ou escolha outro metodo de pagamento.'
-                        : 'A confirmacao ainda nao chegou. Tente novamente em alguns instantes.'
+                        ? 'Revise o cartão ou escolha outro método de pagamento.'
+                        : 'A confirmação ainda não chegou. Tente novamente em alguns instantes.'
                 );
             }
         } catch (error: any) {
@@ -124,7 +127,7 @@ export default function PaymentScreen() {
             });
             await checkPaymentStatus(false);
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Nao foi possivel preparar o pagamento.');
+            Alert.alert('Erro', error.message || 'Não foi possível preparar o pagamento.');
         } finally {
             setLoading(false);
         }
@@ -177,7 +180,7 @@ export default function PaymentScreen() {
             if (result.paid) await confirmPaymentAndRefreshApproval();
             else startPolling();
         } catch (error: any) {
-            Alert.alert('Nao foi possivel gerar o Pix', error.message);
+            Alert.alert('Não foi possível gerar o Pix', error.message);
         } finally {
             setProcessing(false);
         }
@@ -199,10 +202,10 @@ export default function PaymentScreen() {
             if (result.paid) await confirmPaymentAndRefreshApproval();
             else {
                 startPolling();
-                Alert.alert('Pagamento em analise', 'Avisaremos assim que o cartao for confirmado.');
+                Alert.alert('Pagamento em análise', 'Avisaremos assim que o cartão for confirmado.');
             }
         } catch (error: any) {
-            Alert.alert('Pagamento nao aprovado', error.message || 'Tente outro cartao ou pague com Pix.');
+            Alert.alert('Pagamento não aprovado', error.message || 'Tente outro cartão ou pague com Pix.');
         } finally {
             setProcessing(false);
         }
@@ -211,7 +214,7 @@ export default function PaymentScreen() {
     const copyPix = async () => {
         if (!pix?.pixCopyPaste) return;
         await Clipboard.setStringAsync(pix.pixCopyPaste);
-        Alert.alert('Pix copiado', 'Cole o codigo no aplicativo do seu banco.');
+        Alert.alert('Pix copiado', 'Cole o código no aplicativo do seu banco.');
     };
 
     const formatRemaining = () => {
@@ -225,136 +228,138 @@ export default function PaymentScreen() {
 
     const paymentWindowExpired = Boolean(
         bookingExpired
+        // eslint-disable-next-line react-hooks/purity -- deadline is re-checked on every render by design
         || (paymentDueAt && new Date(paymentDueAt).getTime() <= Date.now() && !paid)
     );
 
+    const backToEvent = () => router.replace(`/events/${id}`);
+    const formattedAmount = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
     if (loading) {
         return (
-            <SafeAreaView style={styles.safeArea}>
+            <PaymentShell>
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" color="#E56F2D" />
+                    <ActivityIndicator size="large" color={Palette.orange} />
                     <Text style={styles.mutedText}>Preparando pagamento...</Text>
                 </View>
-            </SafeAreaView>
+            </PaymentShell>
         );
     }
 
     if (bookingStatus === 'WAITLIST') {
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.centered}>
-                    <Ionicons name="people-outline" size={72} color="#315E9E" />
-                    <Text style={styles.successTitle}>Você está na lista de espera</Text>
-                    <Text style={styles.successSubtitle}>
-                        Nenhum pagamento é necessário agora. Avisaremos quando uma vaga for liberada.
-                    </Text>
-                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
-                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
+            <PaymentShell>
+                <StatusState
+                    icon="people-outline"
+                    color={Palette.blue}
+                    background={Palette.blueSoft}
+                    title="Você está na lista de espera"
+                    body="Nenhum pagamento é necessário agora. Avisaremos quando uma vaga for liberada."
+                    onBack={backToEvent}
+                />
+            </PaymentShell>
         );
     }
 
     if (!bookingStatus || ['REJECTED', 'CANCELLED'].includes(bookingStatus) || ['REFUNDED', 'CHARGEBACK'].includes(paymentStatus || '')) {
         const flow = registrationFlow({ status: bookingStatus, paymentStatus }, amount > 0, requiresHostApproval);
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.centered}>
-                    <Ionicons name="hourglass-outline" size={72} color="#C45D22" />
-                    <Text style={styles.successTitle}>{bookingStatus ? flow.label : "Inscrição indisponível"}</Text>
-                    <Text style={styles.successSubtitle}>
-                        {bookingStatus ? flow.description : "Volte ao evento para iniciar uma inscrição."}
-                    </Text>
-                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
-                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
+            <PaymentShell>
+                <StatusState
+                    icon="hourglass-outline"
+                    color={Palette.orangeDeep}
+                    background={Palette.orangeSoft}
+                    title={bookingStatus ? flow.label : 'Inscrição indisponível'}
+                    body={bookingStatus ? flow.description : 'Volte ao evento para iniciar uma inscrição.'}
+                    onBack={backToEvent}
+                />
+            </PaymentShell>
         );
     }
 
     if (paymentWindowExpired) {
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.centered}>
-                    <Ionicons name="alert-circle-outline" size={72} color="#B91C1C" />
-                    <Text style={styles.successTitle}>Prazo de pagamento encerrado</Text>
-                    <Text style={styles.successSubtitle}>
-                        {paid ? "Sua inscrição expirou. O pagamento recebido será devolvido integralmente." : "O prazo desta inscrição terminou. Volte ao evento para consultar sua situação."}
-                    </Text>
-                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
-                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
+            <PaymentShell>
+                <StatusState
+                    icon="alert-circle-outline"
+                    color={Palette.danger}
+                    background={Palette.dangerLine}
+                    title="Prazo de pagamento encerrado"
+                    body={paid ? 'Sua inscrição expirou. O pagamento recebido será devolvido integralmente.' : 'O prazo desta inscrição terminou. Volte ao evento para consultar sua situação.'}
+                    onBack={backToEvent}
+                />
+            </PaymentShell>
         );
     }
 
     if (paid) {
         return (
-            <SafeAreaView style={styles.safeArea}>
-                <View style={styles.centered}>
-                    <Ionicons name="checkmark-circle" size={76} color="#16855B" />
-                    <Text style={styles.successTitle}>Pagamento confirmado</Text>
-                    <Text style={styles.successSubtitle}>
-                        {requiresHostApproval && !bookingApproved
-                            ? 'Seu pagamento foi recebido e a vaga está reservada. Aguarde a aprovação do anfitrião para receber o ingresso.'
-                            : 'Pagamento e aprovação concluídos. Sua participação no evento está confirmada.'}
-                    </Text>
+            <PaymentShell>
+                <StatusState
+                    icon="checkmark-circle"
+                    color={Palette.green}
+                    background={Palette.greenSoft}
+                    title="Pagamento confirmado"
+                    body={requiresHostApproval && !bookingApproved
+                        ? 'Seu pagamento foi recebido e a vaga está reservada. Aguarde a aprovação do anfitrião para receber o ingresso.'
+                        : 'Pagamento e aprovação concluídos. Sua participação no evento está confirmada.'}
+                    onBack={backToEvent}
+                >
                     {requiresHostApproval && !bookingApproved && (
                         <View style={styles.refundNotice}>
-                            <Ionicons name="return-down-back-outline" size={20} color="#87540B" />
+                            <Ionicons name="return-down-back-outline" size={20} color={Palette.orangeDeep} />
                             <Text style={styles.refundNoticeText}>
                                 Se o anfitrião não aceitar sua solicitação, o valor será reembolsado.
                             </Text>
                         </View>
                     )}
-                    <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace(`/events/${id}`)}>
-                        <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
+                </StatusState>
+            </PaymentShell>
         );
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.iconButton} accessibilityLabel="Voltar">
-                    <Ionicons name="arrow-back" size={24} color="#202124" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Pagamento</Text>
-                <TouchableOpacity
-                    onPress={() => openBillingProfile(method)}
-                    style={styles.iconButton}
+        <PaymentShell
+            actions={(
+                <HeaderIconButton
+                    icon="wallet-outline"
                     accessibilityLabel="Gerenciar pagamentos"
-                >
-                    <Ionicons name="wallet-outline" size={23} color="#202124" />
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+                    onPress={() => openBillingProfile(method)}
+                />
+            )}
+        >
+            <ScrollView
+                contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.xxxl }]}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={styles.amountBlock}>
-                    <Text style={styles.amountLabel}>Valor do ingresso</Text>
-                    <Text style={styles.amountValue}>
-                        R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </Text>
+                    <Text style={styles.amountLabel}>VALOR DO INGRESSO</Text>
+                    <Text style={styles.amountValue}>R$ {formattedAmount}</Text>
                 </View>
 
                 {requiresHostApproval && (
                     <View style={styles.approvalNotice}>
                         <View style={styles.approvalNoticeHeader}>
-                            <Ionicons name="information-circle" size={22} color="#9A4819" />
+                            <Ionicons name="information-circle" size={22} color={Palette.orangeDeep} />
                             <Text style={styles.approvalNoticeTitle}>Este evento exige aprovação</Text>
                         </View>
                         <Text style={styles.approvalNoticeText}>
                             O pagamento acontece agora. Após a confirmação, sua vaga fica reservada enquanto o anfitrião analisa sua inscrição.
                         </Text>
                         <View style={styles.approvalSteps}>
-                            <Text style={styles.approvalStep}>1  Faça o pagamento</Text>
-                            <Text style={styles.approvalStep}>2  Vaga reservada · aguarde a aprovação</Text>
-                            <Text style={styles.approvalStep}>3  Após a aprovação, receba seu ingresso</Text>
+                            {[
+                                'Faça o pagamento',
+                                'Vaga reservada · aguarde a aprovação',
+                                'Após a aprovação, receba seu ingresso',
+                            ].map((step, index) => (
+                                <View key={step} style={styles.approvalStepRow}>
+                                    <View style={styles.approvalStepNumber}>
+                                        <Text style={styles.approvalStepNumberText}>{index + 1}</Text>
+                                    </View>
+                                    <Text style={styles.approvalStep}>{step}</Text>
+                                </View>
+                            ))}
                         </View>
                         <Text style={styles.approvalRefundText}>
                             Se o anfitrião recusar, o valor pago será devolvido integralmente pelo meio de pagamento.
@@ -369,9 +374,9 @@ export default function PaymentScreen() {
                     accessibilityLabel="Conhecer a Proteção Wellcome"
                 >
                     <View style={styles.protectionHeader}>
-                        <Ionicons name="shield-checkmark" size={22} color="#187A67" />
+                        <Ionicons name="shield-checkmark" size={22} color={Palette.green} />
                         <Text style={styles.protectionTitle}>Pague pelo Wellcome</Text>
-                        <Ionicons name="chevron-forward" size={19} color="#187A67" />
+                        <Ionicons name="chevron-forward" size={19} color={Palette.green} />
                     </View>
                     <Text style={styles.protectionText}>
                         Pagamento registrado, suporte a reembolsos e saldo do anfitrião retido até 24 horas após o evento.
@@ -379,20 +384,24 @@ export default function PaymentScreen() {
                     <Text style={styles.protectionWarning}>Pagamentos feitos por fora não têm a cobertura da plataforma.</Text>
                 </TouchableOpacity>
 
-                <View style={styles.segmentedControl}>
+                <View style={styles.segmentedControl} accessibilityRole="tablist">
                     <TouchableOpacity
                         style={[styles.segment, method === 'pix' && styles.activeSegment]}
                         onPress={() => setMethod('pix')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: method === 'pix' }}
                     >
-                        <Ionicons name="qr-code-outline" size={20} color={method === 'pix' ? '#FFFFFF' : '#187A67'} />
+                        <Ionicons name="qr-code-outline" size={20} color={method === 'pix' ? Palette.ink : Palette.inkSoft} />
                         <Text style={[styles.segmentText, method === 'pix' && styles.activeSegmentText]}>Pix</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.segment, method === 'card' && styles.activeSegment]}
                         onPress={() => setMethod('card')}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: method === 'card' }}
                     >
-                        <Ionicons name="card-outline" size={20} color={method === 'card' ? '#FFFFFF' : '#315E9E'} />
-                        <Text style={[styles.segmentText, method === 'card' && styles.activeSegmentText]}>Cartao</Text>
+                        <Ionicons name="card-outline" size={20} color={method === 'card' ? Palette.ink : Palette.inkSoft} />
+                        <Text style={[styles.segmentText, method === 'card' && styles.activeSegmentText]}>Cartão</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -402,14 +411,16 @@ export default function PaymentScreen() {
                             <>
                                 {pix.environment === 'sandbox' && (
                                     <View style={styles.sandboxBanner}>
-                                        <Ionicons name="flask-outline" size={19} color="#87540B" />
-                                        <Text style={styles.sandboxText}>Teste: confirme esta cobranca no painel Sandbox do Asaas.</Text>
+                                        <Ionicons name="flask-outline" size={19} color={Palette.orangeDeep} />
+                                        <Text style={styles.sandboxText}>Teste: confirme esta cobrança no painel Sandbox do Asaas.</Text>
                                     </View>
                                 )}
                                 {pix.awaitingSettlement ? (
                                     <View style={styles.reviewBlock}>
-                                        <Ionicons name="time-outline" size={40} color="#A66B00" />
-                                        <Text style={styles.reviewTitle}>Pagamento em analise</Text>
+                                        <View style={[styles.statusIcon, { backgroundColor: Palette.orangeSoft }]}>
+                                            <Ionicons name="time-outline" size={34} color={Palette.orangeDeep} />
+                                        </View>
+                                        <Text style={styles.reviewTitle}>Pagamento em análise</Text>
                                         <Text style={styles.reviewText}>
                                             O Asaas confirmou o Pix, mas a liquidação ainda está em análise. Depois da liquidação, a participação também dependerá da aprovação do anfitrião quando exigida.
                                         </Text>
@@ -420,9 +431,9 @@ export default function PaymentScreen() {
                                             <QRCode value={pix.pixCopyPaste} size={214} quietZone={8} />
                                         </View>
                                         <Text style={styles.expirationLabel}>Expira em {formatRemaining()}</Text>
-                                        <TouchableOpacity style={styles.primaryButton} onPress={copyPix}>
+                                        <TouchableOpacity style={styles.primaryButton} onPress={copyPix} accessibilityRole="button">
                                             <Ionicons name="copy-outline" size={20} color="#FFFFFF" />
-                                            <Text style={styles.primaryButtonText}>Copiar codigo Pix</Text>
+                                            <Text style={styles.primaryButtonText}>Copiar código Pix</Text>
                                         </TouchableOpacity>
                                     </>
                                 )}
@@ -430,10 +441,13 @@ export default function PaymentScreen() {
                                     style={styles.secondaryButton}
                                     onPress={() => void checkPaymentStatus(true)}
                                     disabled={checking}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Verificar pagamento"
+                                    accessibilityState={{ disabled: checking }}
                                 >
-                                    {checking ? <ActivityIndicator color="#C45D22" /> : (
+                                    {checking ? <ActivityIndicator color={Palette.orange} /> : (
                                         <>
-                                            <Ionicons name="refresh" size={20} color="#C45D22" />
+                                            <Ionicons name="refresh" size={20} color={Palette.ink} />
                                             <Text style={styles.secondaryButtonText}>Verificar pagamento</Text>
                                         </>
                                     )}
@@ -442,13 +456,22 @@ export default function PaymentScreen() {
                         ) : wallet?.pixReady ? (
                             <>
                                 <View style={styles.methodIntro}>
-                                    <Ionicons name="flash-outline" size={24} color="#187A67" />
+                                    <View style={[styles.methodIcon, { backgroundColor: Palette.greenSoft }]}>
+                                        <Ionicons name="flash-outline" size={22} color={Palette.green} />
+                                    </View>
                                     <View style={styles.flexText}>
-                                        <Text style={styles.methodTitle}>Pagamento instantaneo</Text>
-                                        <Text style={styles.methodSubtitle}>O QR Code aparecera aqui, sem sair do Wellcome.</Text>
+                                        <Text style={styles.methodTitle}>Pagamento instantâneo</Text>
+                                        <Text style={styles.methodSubtitle}>O QR Code aparecerá aqui, sem sair do Wellcome.</Text>
                                     </View>
                                 </View>
-                                <TouchableOpacity style={styles.primaryButton} onPress={generatePix} disabled={processing}>
+                                <TouchableOpacity
+                                    style={[styles.primaryButton, processing && styles.disabledButton]}
+                                    onPress={generatePix}
+                                    disabled={processing}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Gerar Pix"
+                                    accessibilityState={{ disabled: processing }}
+                                >
                                     {processing ? <ActivityIndicator color="#FFFFFF" /> : (
                                         <Text style={styles.primaryButtonText}>Gerar Pix</Text>
                                     )}
@@ -471,9 +494,11 @@ export default function PaymentScreen() {
                                             key={card.id}
                                             style={[styles.cardRow, selected && styles.selectedCardRow]}
                                             onPress={() => setSelectedCardId(card.id)}
+                                            accessibilityRole="radio"
+                                            accessibilityState={{ checked: selected }}
                                         >
                                             <View style={styles.cardIcon}>
-                                                <Ionicons name="card" size={22} color="#315E9E" />
+                                                <Ionicons name="card" size={22} color={Palette.blue} />
                                             </View>
                                             <View style={styles.flexText}>
                                                 <Text style={styles.cardTitle}>{displayCardBrand(card.brand)} final {card.lastFour}</Text>
@@ -482,28 +507,28 @@ export default function PaymentScreen() {
                                             <Ionicons
                                                 name={selected ? 'radio-button-on' : 'radio-button-off'}
                                                 size={22}
-                                                color={selected ? '#E56F2D' : '#A7ABB0'}
+                                                color={selected ? Palette.orange : Palette.subtle}
                                             />
                                         </TouchableOpacity>
                                     );
                                 })}
 
-                                <TouchableOpacity style={styles.addCardButton} onPress={openAddCard}>
-                                    <Ionicons name="add-circle-outline" size={21} color="#315E9E" />
-                                    <Text style={styles.addCardText}>Adicionar cartao</Text>
+                                <TouchableOpacity style={styles.addCardButton} onPress={openAddCard} accessibilityRole="button">
+                                    <Ionicons name="add-circle-outline" size={21} color={Palette.orangeDeep} />
+                                    <Text style={styles.addCardText}>Adicionar cartão</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[styles.primaryButton, processing && styles.disabledButton]}
                                     onPress={payWithCard}
                                     disabled={processing}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ disabled: processing }}
                                 >
                                     {processing ? <ActivityIndicator color="#FFFFFF" /> : (
                                         <>
                                             <Ionicons name="lock-closed" size={18} color="#FFFFFF" />
-                                            <Text style={styles.primaryButtonText}>
-                                                Pagar R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </Text>
+                                            <Text style={styles.primaryButtonText}>Pagar R$ {formattedAmount}</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -513,119 +538,176 @@ export default function PaymentScreen() {
                 )}
 
                 <View style={styles.securityRow}>
-                    <Ionicons name="shield-checkmark-outline" size={18} color="#5E646A" />
+                    <Ionicons name="shield-checkmark-outline" size={18} color={Palette.muted} />
                     <Text style={styles.securityText}>Dados protegidos e processados pelo Asaas.</Text>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </PaymentShell>
+    );
+}
+
+function PaymentShell({ children, actions }: { children: React.ReactNode; actions?: React.ReactNode }) {
+    return (
+        <View style={styles.screen}>
+            <BrandStackHeader eyebrow="EVENTO" title="Pagamento" backIcon="close" actions={actions} />
+            <BrandSheet>{children}</BrandSheet>
+        </View>
+    );
+}
+
+type StatusStateProps = {
+    icon: string;
+    color: string;
+    background: string;
+    title: string;
+    body: string;
+    onBack: () => void;
+    children?: React.ReactNode;
+};
+
+function StatusState({ icon, color, background, title, body, onBack, children }: StatusStateProps) {
+    return (
+        <View style={styles.centered}>
+            <View style={[styles.statusIcon, { backgroundColor: background }]}>
+                <Ionicons name={icon} size={36} color={color} />
+            </View>
+            <Text style={styles.successTitle}>{title}</Text>
+            <Text style={styles.successSubtitle}>{body}</Text>
+            {children}
+            <TouchableOpacity style={styles.primaryButton} onPress={onBack} accessibilityRole="button">
+                <Text style={styles.primaryButtonText}>Voltar ao evento</Text>
+            </TouchableOpacity>
+        </View>
     );
 }
 
 function MissingProfile({ onPress, card }: { onPress: () => void; card: boolean }) {
     return (
         <View style={styles.missingBlock}>
-            <Ionicons name="person-circle-outline" size={34} color="#E56F2D" />
-            <Text style={styles.missingTitle}>Complete seus dados de cobranca</Text>
+            <View style={[styles.statusIcon, { backgroundColor: Palette.orangeSoft }]}>
+                <Ionicons name="person-circle-outline" size={34} color={Palette.orangeDeep} />
+            </View>
+            <Text style={styles.missingTitle}>Complete seus dados de cobrança</Text>
             <Text style={styles.missingText}>
                 {card
-                    ? 'Cadastre CPF e endereco uma vez para usar cartoes com mais rapidez.'
-                    : 'Precisamos do seu CPF e contato para identificar a cobranca.'}
+                    ? 'Cadastre CPF e endereço uma vez para usar cartões com mais rapidez.'
+                    : 'Precisamos do seu CPF e contato para identificar a cobrança.'}
             </Text>
-            <TouchableOpacity style={styles.primaryButton} onPress={onPress}>
+            <TouchableOpacity style={styles.primaryButton} onPress={onPress} accessibilityRole="button">
                 <Text style={styles.primaryButtonText}>Completar dados</Text>
             </TouchableOpacity>
         </View>
     );
 }
 
+const cardBase = {
+    backgroundColor: Palette.surface,
+    borderWidth: 1,
+    borderColor: Palette.lineSoft,
+    borderRadius: 22,
+    padding: 14,
+} as const;
+
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 28, gap: 14 },
-    header: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#E2E4E7',
-    },
-    iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#202124' },
-    content: { padding: 20, paddingBottom: 40 },
-    amountBlock: { alignItems: 'center', marginVertical: 14, marginBottom: 24 },
-    amountLabel: { fontSize: 14, color: '#6D7278', marginBottom: 5 },
-    amountValue: { fontSize: 34, fontWeight: '800', color: '#202124' },
+    screen: { flex: 1, backgroundColor: Palette.paper },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl, gap: Spacing.md },
+    content: { padding: Spacing.xl },
+    amountBlock: { ...cardBase, alignItems: 'center', paddingVertical: Spacing.xl, marginBottom: Spacing.lg },
+    amountLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2, color: Palette.muted, marginBottom: 6 },
+    amountValue: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5, color: Palette.ink },
     approvalNotice: {
-        backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FDBA74', borderRadius: 12,
-        padding: 14, marginBottom: 20,
+        backgroundColor: Palette.orangeSoft, borderRadius: 22, padding: Spacing.lg, marginBottom: Spacing.lg,
     },
-    approvalNoticeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    approvalNoticeTitle: { flex: 1, color: '#9A4819', fontSize: 16, fontWeight: '800' },
-    approvalNoticeText: { color: '#7C421F', fontSize: 14, lineHeight: 20 },
-    approvalSteps: { gap: 6, marginTop: 12 },
-    approvalStep: { color: '#4B5563', fontSize: 13, fontWeight: '700' },
-    approvalRefundText: { color: '#87540B', fontSize: 12, lineHeight: 18, marginTop: 12 },
+    approvalNoticeHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+    approvalNoticeTitle: { flex: 1, color: Palette.orangeDarker, fontSize: 15, fontWeight: '800' },
+    approvalNoticeText: { color: Palette.inkSoft, fontSize: 14, lineHeight: 21 },
+    approvalSteps: { gap: Spacing.sm, marginTop: Spacing.md },
+    approvalStepRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+    approvalStepNumber: {
+        width: 22, height: 22, borderRadius: 11, backgroundColor: Palette.surface,
+        alignItems: 'center', justifyContent: 'center',
+    },
+    approvalStepNumberText: { fontSize: 12, fontWeight: '800', color: Palette.orangeDeep },
+    approvalStep: { flex: 1, color: Palette.ink, fontSize: 13, fontWeight: '700' },
+    approvalRefundText: { color: Palette.inkSoft, fontSize: 12, lineHeight: 18, marginTop: Spacing.md },
     protectionCard: {
-        backgroundColor: '#EFFAF7', borderWidth: 1, borderColor: '#A7DDD0', borderRadius: 12,
-        padding: 14, marginBottom: 20, minHeight: 44,
+        backgroundColor: Palette.greenSoft, borderRadius: 22, padding: Spacing.lg, marginBottom: Spacing.xl, minHeight: 44,
     },
-    protectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    protectionTitle: { flex: 1, color: '#12604F', fontSize: 16, fontWeight: '800' },
-    protectionText: { color: '#315E55', fontSize: 13, lineHeight: 19, marginTop: 8 },
-    protectionWarning: { color: '#7C421F', fontSize: 12, lineHeight: 18, fontWeight: '700', marginTop: 7 },
+    protectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+    protectionTitle: { flex: 1, color: Palette.green, fontSize: 15, fontWeight: '800' },
+    protectionText: { color: Palette.inkSoft, fontSize: 13, lineHeight: 19, marginTop: Spacing.sm },
+    protectionWarning: { color: Palette.orangeDeep, fontSize: 12, lineHeight: 18, fontWeight: '700', marginTop: 6 },
     segmentedControl: {
-        height: 48, flexDirection: 'row', backgroundColor: '#F0F2F4', borderRadius: 8, padding: 4,
+        flexDirection: 'row', gap: 4, padding: 4, backgroundColor: Palette.track, borderRadius: BorderRadius.full,
     },
     segment: {
-        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 6,
+        flex: 1, minHeight: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+        borderRadius: BorderRadius.full,
     },
-    activeSegment: { backgroundColor: '#30343A' },
-    segmentText: { fontSize: 15, fontWeight: '700', color: '#454A50' },
-    activeSegmentText: { color: '#FFFFFF' },
-    methodContent: { marginTop: 24 },
-    methodIntro: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8 },
-    methodTitle: { fontSize: 17, fontWeight: '700', color: '#202124' },
-    methodSubtitle: { fontSize: 14, lineHeight: 20, color: '#6D7278', marginTop: 3 },
+    activeSegment: {
+        backgroundColor: Palette.surface,
+        shadowColor: Elevation.card.shadowColor,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    segmentText: { fontSize: 14, fontWeight: '700', color: Palette.inkSoft },
+    activeSegmentText: { color: Palette.ink, fontWeight: '800' },
+    methodContent: { marginTop: Spacing.xl },
+    methodIntro: { ...cardBase, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+    methodIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    methodTitle: { fontSize: 16, fontWeight: '800', color: Palette.ink },
+    methodSubtitle: { fontSize: 14, lineHeight: 20, color: Palette.inkSoft, marginTop: 3 },
     flexText: { flex: 1 },
     primaryButton: {
-        minHeight: 52, borderRadius: 8, backgroundColor: '#E56F2D', flexDirection: 'row',
-        alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 18, marginTop: 22,
+        minHeight: 52, borderRadius: BorderRadius.full, backgroundColor: Palette.orange, flexDirection: 'row',
+        alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.xxl,
+        marginTop: Spacing.xl, alignSelf: 'stretch',
     },
-    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+    primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
     secondaryButton: {
-        minHeight: 50, borderRadius: 8, borderWidth: 1, borderColor: '#D66A2C', flexDirection: 'row',
-        alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 18, marginTop: 12,
+        minHeight: 48, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Palette.line,
+        backgroundColor: Palette.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: Spacing.sm, paddingHorizontal: Spacing.xl, marginTop: Spacing.md,
     },
-    secondaryButtonText: { color: '#C45D22', fontSize: 15, fontWeight: '700' },
+    secondaryButtonText: { color: Palette.ink, fontSize: 15, fontWeight: '800' },
     disabledButton: { opacity: 0.6 },
     sandboxBanner: {
-        flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFF5D8',
-        borderRadius: 8, padding: 12, marginBottom: 18,
+        flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Palette.orangeSoft,
+        borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.lg,
     },
-    sandboxText: { flex: 1, color: '#704709', fontSize: 13, lineHeight: 18 },
-    qrArea: { alignItems: 'center', paddingVertical: 12 },
-    expirationLabel: { textAlign: 'center', fontSize: 14, fontWeight: '600', color: '#5E646A', marginTop: 8 },
-    reviewBlock: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 12 },
-    reviewTitle: { marginTop: 10, fontSize: 18, fontWeight: '800', color: '#202124' },
-    reviewText: { marginTop: 7, maxWidth: 330, textAlign: 'center', fontSize: 14, lineHeight: 20, color: '#666B70' },
+    sandboxText: { flex: 1, color: Palette.orangeDarker, fontSize: 13, lineHeight: 18 },
+    qrArea: { ...cardBase, alignItems: 'center', alignSelf: 'center', padding: Spacing.lg },
+    expirationLabel: { textAlign: 'center', fontSize: 14, fontWeight: '700', color: Palette.inkSoft, marginTop: Spacing.md },
+    reviewBlock: { alignItems: 'center', paddingVertical: Spacing.xxl, paddingHorizontal: Spacing.md },
+    reviewTitle: { marginTop: Spacing.md, fontSize: 18, fontWeight: '800', color: Palette.ink },
+    reviewText: { marginTop: 6, maxWidth: 330, textAlign: 'center', fontSize: 14, lineHeight: 21, color: Palette.inkSoft },
     cardRow: {
-        minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1,
-        borderColor: '#E0E3E6', borderRadius: 8, paddingHorizontal: 14, marginBottom: 10,
+        ...cardBase, minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: 10,
     },
-    selectedCardRow: { borderColor: '#E56F2D', backgroundColor: '#FFF8F3' },
-    cardIcon: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#EDF3FB', alignItems: 'center', justifyContent: 'center' },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: '#202124' },
-    cardSubtitle: { fontSize: 13, color: '#747980', marginTop: 3 },
-    addCardButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    addCardText: { color: '#315E9E', fontSize: 15, fontWeight: '700' },
-    missingBlock: { alignItems: 'center', paddingVertical: 18 },
-    missingTitle: { marginTop: 10, fontSize: 18, fontWeight: '700', color: '#202124', textAlign: 'center' },
-    missingText: { marginTop: 7, color: '#6D7278', textAlign: 'center', lineHeight: 20, maxWidth: 320 },
-    securityRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, marginTop: 26 },
-    securityText: { flexShrink: 1, fontSize: 12, color: '#5E646A', textAlign: 'center' },
-    mutedText: { fontSize: 15, color: '#666B70' },
-    successTitle: { fontSize: 24, fontWeight: '800', color: '#202124' },
-    successSubtitle: { fontSize: 16, color: '#666B70', textAlign: 'center' },
+    selectedCardRow: { borderColor: Palette.orange, backgroundColor: Palette.orangeSoft },
+    cardIcon: {
+        width: 44, height: 44, borderRadius: 22, backgroundColor: Palette.blueSoft, alignItems: 'center', justifyContent: 'center',
+    },
+    cardTitle: { fontSize: 15, fontWeight: '800', color: Palette.ink },
+    cardSubtitle: { fontSize: 13, color: Palette.inkSoft, marginTop: 3 },
+    addCardButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
+    addCardText: { color: Palette.orangeDeep, fontSize: 15, fontWeight: '800' },
+    missingBlock: { ...cardBase, alignItems: 'center', paddingVertical: Spacing.xl, paddingHorizontal: Spacing.lg },
+    missingTitle: { marginTop: Spacing.md, fontSize: 18, fontWeight: '800', color: Palette.ink, textAlign: 'center' },
+    missingText: { marginTop: 6, fontSize: 14, color: Palette.inkSoft, textAlign: 'center', lineHeight: 21, maxWidth: 320 },
+    securityRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: Spacing.xxl },
+    securityText: { flexShrink: 1, fontSize: 12, color: Palette.muted, textAlign: 'center' },
+    mutedText: { fontSize: 15, color: Palette.inkSoft },
+    statusIcon: {
+        width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center',
+    },
+    successTitle: { fontSize: 22, fontWeight: '800', color: Palette.ink, textAlign: 'center' },
+    successSubtitle: { fontSize: 15, lineHeight: 22, color: Palette.inkSoft, textAlign: 'center', maxWidth: 340 },
     refundNotice: {
-        flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#FFF5D8',
-        borderRadius: 10, padding: 12, maxWidth: 340,
+        flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Palette.orangeSoft,
+        borderRadius: BorderRadius.lg, padding: Spacing.md, maxWidth: 340,
     },
-    refundNoticeText: { flex: 1, color: '#704709', fontSize: 13, lineHeight: 18 },
+    refundNoticeText: { flex: 1, color: Palette.orangeDarker, fontSize: 13, lineHeight: 18 },
 });

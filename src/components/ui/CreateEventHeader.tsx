@@ -1,9 +1,10 @@
-import { WellcomeIconButton } from '@/components/ui/wellcome';
+import { BrandStackHeader, HeaderIconButton } from '@/components/ui/wellcome';
 import { EventCreationSaveStatus } from '@/entities/event/model/types';
-import { Box } from '@/shared/ui/box';
-import { Text } from '@/shared/ui/text';
+import { AppIcon } from '@/components/ui/icon';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { useRouter } from 'expo-router';
 import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface CreateEventHeaderProps {
   title?: string;
@@ -19,6 +20,10 @@ const SAVE_LABELS: Partial<Record<EventCreationSaveStatus, string>> = {
   error: 'Sem conexão',
 };
 
+/**
+ * Orange compact brand header shared by every step of the event creation wizard.
+ * Pair it with `BrandSheet` for the step content.
+ */
 export function CreateEventHeader({
   title = 'Crie seu evento',
   onBack,
@@ -34,27 +39,57 @@ export function CreateEventHeader({
   };
 
   const hasConnectionError = saveStatus === 'error' || saveStatus === 'offline';
+  const saveLabel = saveStatus ? SAVE_LABELS[saveStatus] : undefined;
 
   return (
-    <Box className="min-h-[64px] flex-row items-center border-b border-outline-100 bg-white px-2">
-      <WellcomeIconButton icon="chevron-back" onPress={handleBack} accessibilityLabel="Voltar" />
-
-      <Box className="flex-1 items-center px-2">
-        <Text className="text-center text-[17px] font-bold text-typography-900" numberOfLines={1}>
-          {title}
-        </Text>
-        {saveStatus && SAVE_LABELS[saveStatus] ? (
-          <Text className={`mt-0.5 text-[11px] ${hasConnectionError ? 'text-warning-700' : 'text-typography-400'}`}>
-            {SAVE_LABELS[saveStatus]}
-          </Text>
-        ) : null}
-      </Box>
-
-      {onDiscard ? (
-        <WellcomeIconButton icon="trash-outline" onPress={onDiscard} accessibilityLabel="Excluir rascunho" danger />
-      ) : (
-        <Box className="h-12 w-12" />
-      )}
-    </Box>
+    <BrandStackHeader
+      eyebrow="NOVO EVENTO"
+      title={title}
+      onBack={handleBack}
+      actions={onDiscard ? (
+        <HeaderIconButton icon="trash-outline" onPress={onDiscard} accessibilityLabel="Excluir rascunho" />
+      ) : undefined}
+    >
+      {saveLabel ? (
+        <View
+          style={[styles.savePill, hasConnectionError && styles.savePillError]}
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={`Rascunho: ${saveLabel}`}
+        >
+          <AppIcon
+            name={hasConnectionError ? 'cloud-offline-outline' : saveStatus === 'saving' ? 'time-outline' : 'checkmark-circle-outline'}
+            size={14}
+            color={hasConnectionError ? Palette.danger : '#FFFFFF'}
+          />
+          <Text style={[styles.saveText, hasConnectionError && styles.saveTextError]}>{saveLabel}</Text>
+        </View>
+      ) : null}
+    </BrandStackHeader>
   );
 }
+
+const styles = StyleSheet.create({
+  savePill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 44 + Spacing.md,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Palette.onBrandGlass,
+  },
+  savePillError: {
+    backgroundColor: Palette.surface,
+  },
+  saveText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: '#FFFFFF',
+  },
+  saveTextError: {
+    color: Palette.danger,
+  },
+});

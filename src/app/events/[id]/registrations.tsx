@@ -6,15 +6,18 @@ import { chatService } from '@/services/api/ChatService';
 import { DEFAULT_AVATAR_PLACEHOLDER } from '@/shared/lib/styles';
 import { getOptimizedImageUrl } from '@/utils/imageOptimizer';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventRegistrationsScreen() {
     const { id, tab } = useLocalSearchParams();
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const requestedTab = Array.isArray(tab) ? tab[0] : tab;
     const [registrations, setRegistrations] = useState<any[]>([]);
     const [event, setEvent] = useState<any>(null);
@@ -138,6 +141,7 @@ export default function EventRegistrationsScreen() {
         || (
             isAwaitingPayment(registration)
             && registration.paymentDueAt
+            // eslint-disable-next-line react-hooks/purity -- deadline is re-checked on every render by design
             && new Date(registration.paymentDueAt).getTime() <= Date.now()
         );
     const isAwaitingHostApproval = (registration: any) =>
@@ -187,189 +191,189 @@ export default function EventRegistrationsScreen() {
         occupancy: event ? `${registrations.filter(r => isFinalConfirmed(r) || (r.status === 'PENDING' && isPaymentConfirmed(r))).length} / ${event.max_guests || event.maxGuests || 0}` : '0 / 0',
     };
 
-    const renderItem = ({ item }: { item: any }) => (
-        <View style={styles.card}>
-            {/* Tappable profile area */}
-            <TouchableOpacity 
-                style={styles.cardHeader}
-                onPress={() => {
-                    if (!item.user?.id) return;
-                    router.dismiss();
-                    setTimeout(() => router.push(`/profile/${item.user.id}` as any), 100);
-                }}
-                activeOpacity={0.7}
-            >
-                <Image
-                    source={{ uri: getOptimizedImageUrl(item.user?.avatarUrl, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
-                    style={styles.avatar}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                />
-                <View style={styles.userInfo}>
-                    <View style={styles.headerTop}>
-                        <Text style={styles.userName}>{item.user?.fullName}</Text>
-                        <View style={[styles.statusBadge, getStatusTone(item).badge]}>
-                            <Text style={[styles.statusText, getStatusTone(item).text]}>
-                                {getStatusLabel(item)}
-                            </Text>
-                        </View>
-                    </View>
-                    
-                    {item.user?.occupation && (
-                        <Text style={styles.occupationText}>{item.user.occupation}</Text>
-                    )}
+    const renderItem = ({ item }: { item: any }) => {
+        const confirmed = isFinalConfirmed(item);
+        const awaitingPayment = isAwaitingPayment(item);
+        const tone = getStatusTone(item);
 
-                    {(item.user?.city || item.user?.neighborhood) && (
-                        <View style={styles.locationRow}>
-                            <Ionicons name="location-outline" size={12} color="#9CA3AF" />
-                            <Text style={styles.locationText}>
-                                {[item.user.city, item.user.neighborhood].filter(Boolean).join(' • ')}
-                            </Text>
-                        </View>
-                    )}
-
-                    <View style={styles.viewProfileRow}>
-                        <Ionicons name="person-circle-outline" size={14} color="#FF8C42" />
-                        <Text style={styles.viewProfileText}>Ver perfil completo</Text>
-                        <Ionicons name="chevron-forward" size={12} color="#FF8C42" />
-                    </View>
-                </View>
-            </TouchableOpacity>
-
-            <View style={[
-                styles.statusExplanation,
-                isFinalConfirmed(item)
-                    ? styles.statusExplanationConfirmed
-                    : isAwaitingPayment(item)
-                        ? styles.statusExplanationPayment
-                        : styles.statusExplanationPending,
-            ]}>
-                <Ionicons
-                    name={isFinalConfirmed(item)
-                        ? 'checkmark-circle-outline'
-                        : isAwaitingPayment(item) ? 'card-outline' : 'time-outline'}
-                    size={17}
-                    color={isFinalConfirmed(item)
-                        ? '#166534'
-                        : isAwaitingPayment(item) ? '#1D4ED8' : '#9A4819'}
-                />
-                <Text style={styles.statusExplanationText}>{getStatusExplanation(item)}</Text>
-            </View>
-
-            {/* Bio snippet */}
-            {item.user?.bio && (
-                <View style={styles.bioSection}>
-                    <Text style={styles.bioLabel}>Sobre</Text>
-                    <Text style={styles.bioText} numberOfLines={2}>{item.user.bio}</Text>
-                </View>
-            )}
-
-            {/* Languages */}
-            {item.user?.languages && item.user.languages.length > 0 && (
-                <View style={styles.tagsSection}>
-                    <Ionicons name="globe-outline" size={14} color="#6B7280" />
-                    <Text style={styles.tagsText}>{item.user.languages.join(', ')}</Text>
-                </View>
-            )}
-
-            {/* Dietary Restrictions */}
-            {item.user?.dietaryRestrictions && item.user.dietaryRestrictions.length > 0 && (
-                <View style={styles.warningBox}>
-                    <Ionicons name="alert-circle" size={16} color="#B45309" />
-                    <Text style={styles.warningText}>
-                        Restrição alimentar: {item.user.dietaryRestrictions.join(', ')}
-                    </Text>
-                </View>
-            )}
-
-            {/* Answers to questions */}
-            {item.answers && item.answers.length > 0 && (
-                <View style={styles.answersSection}>
-                    <Text style={styles.answersTitle}>Respostas</Text>
-                    {item.answers.map((a: any, idx: number) => (
-                        <View key={idx} style={styles.answerItem}>
-                            <Text style={styles.questionText}>{a.question}</Text>
-                            <Text style={styles.answerText}>{a.answer}</Text>
-                        </View>
-                    ))}
-                </View>
-            )}
-
-            <View style={styles.actions}>
-                {!isEventPast && !isClosed(item) && (
-                    <TouchableOpacity 
-                        style={styles.secondaryButton}
-                        disabled={processingId === item.id}
-                        onPress={() => Alert.alert('Recusar inscrição?', isPaymentConfirmed(item) ? 'A vaga será liberada e o valor pago será devolvido integralmente ao participante.' : 'A inscrição será recusada.', [{ text: 'Voltar', style: 'cancel' }, { text: 'Recusar', style: 'destructive', onPress: () => void handleReject(item.id) }])}
-                    >
-                        <Ionicons 
-                            name="close-circle-outline"
-                            size={18} 
-                            color="#666" 
-                        />
-                        <Text style={styles.secondaryButtonText}>
-                            {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Recusar'}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
+        return (
+            <View style={styles.card}>
+                {/* Tappable profile area */}
                 <TouchableOpacity
-                    style={[styles.secondaryButton, styles.contactButton]}
-                    onPress={() => handleOpenChat(item.userId || item.user?.id)}
+                    style={styles.cardHeader}
+                    onPress={() => {
+                        if (!item.user?.id) return;
+                        router.dismiss();
+                        setTimeout(() => router.push(`/profile/${item.user.id}` as any), 100);
+                    }}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver perfil de ${item.user?.fullName ?? 'participante'}`}
                 >
-                    <Ionicons name="chatbubble-outline" size={18} color="#FF8C42" />
-                    <Text style={[styles.secondaryButtonText, { color: '#FF8C42' }]}>Chat</Text>
+                    <Image
+                        source={{ uri: getOptimizedImageUrl(item.user?.avatarUrl, { width: 100 }) || DEFAULT_AVATAR_PLACEHOLDER }}
+                        style={styles.avatar}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                    />
+                    <View style={styles.userInfo}>
+                        <View style={[styles.statusBadge, tone.badge]}>
+                            <Text style={[styles.statusText, tone.text]}>
+                                {getStatusLabel(item).toUpperCase()}
+                            </Text>
+                        </View>
+                        <Text style={styles.userName} numberOfLines={1}>{item.user?.fullName}</Text>
+
+                        {item.user?.occupation && (
+                            <Text style={styles.occupationText}>{item.user.occupation}</Text>
+                        )}
+
+                        {(item.user?.city || item.user?.neighborhood) && (
+                            <View style={styles.locationRow}>
+                                <Ionicons name="location-outline" size={12} color={Palette.muted} />
+                                <Text style={styles.locationText}>
+                                    {[item.user.city, item.user.neighborhood].filter(Boolean).join(' • ')}
+                                </Text>
+                            </View>
+                        )}
+
+                        <View style={styles.viewProfileRow}>
+                            <Text style={styles.viewProfileText}>Ver perfil completo</Text>
+                            <Ionicons name="chevron-forward" size={12} color={Palette.orangeDeep} />
+                        </View>
+                    </View>
                 </TouchableOpacity>
 
-                {!isEventPast && isAwaitingHostApproval(item) && (
-                    <TouchableOpacity 
-                        style={styles.primaryButton}
-                        disabled={processingId === item.id}
-                        onPress={() => handleApprove(item.id)}
-                    >
-                        <Text style={styles.primaryButtonText}>Aprovar</Text>
-                    </TouchableOpacity>
+                <View style={[
+                    styles.statusExplanation,
+                    confirmed
+                        ? styles.statusExplanationConfirmed
+                        : awaitingPayment
+                            ? styles.statusExplanationPayment
+                            : styles.statusExplanationPending,
+                ]}>
+                    <Ionicons
+                        name={confirmed
+                            ? 'checkmark-circle-outline'
+                            : awaitingPayment ? 'card-outline' : 'time-outline'}
+                        size={17}
+                        color={confirmed
+                            ? Palette.green
+                            : awaitingPayment ? Palette.blue : Palette.orangeDeep}
+                    />
+                    <Text style={styles.statusExplanationText}>{getStatusExplanation(item)}</Text>
+                </View>
+
+                {/* Bio snippet */}
+                {item.user?.bio && (
+                    <View style={styles.bioSection}>
+                        <Text style={styles.bioLabel}>Sobre</Text>
+                        <Text style={styles.bioText} numberOfLines={2}>{item.user.bio}</Text>
+                    </View>
                 )}
+
+                {/* Languages */}
+                {item.user?.languages && item.user.languages.length > 0 && (
+                    <View style={styles.tagsSection}>
+                        <Ionicons name="globe-outline" size={14} color={Palette.muted} />
+                        <Text style={styles.tagsText}>{item.user.languages.join(', ')}</Text>
+                    </View>
+                )}
+
+                {/* Dietary Restrictions */}
+                {item.user?.dietaryRestrictions && item.user.dietaryRestrictions.length > 0 && (
+                    <View style={styles.warningBox}>
+                        <Ionicons name="alert-circle" size={16} color={Palette.danger} />
+                        <Text style={styles.warningText}>
+                            Restrição alimentar: {item.user.dietaryRestrictions.join(', ')}
+                        </Text>
+                    </View>
+                )}
+
+                {/* Answers to questions */}
+                {item.answers && item.answers.length > 0 && (
+                    <View style={styles.answersSection}>
+                        <Text style={styles.answersTitle}>Respostas</Text>
+                        {item.answers.map((a: any, idx: number) => (
+                            <View key={idx} style={styles.answerItem}>
+                                <Text style={styles.questionText}>{a.question}</Text>
+                                <Text style={styles.answerText}>{a.answer}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                <View style={styles.actions}>
+                    {!isEventPast && !isClosed(item) && (
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.dangerButton, processingId === item.id && styles.disabledButton]}
+                            disabled={processingId === item.id}
+                            onPress={() => Alert.alert('Recusar inscrição?', isPaymentConfirmed(item) ? 'A vaga será liberada e o valor pago será devolvido integralmente ao participante.' : 'A inscrição será recusada.', [{ text: 'Voltar', style: 'cancel' }, { text: 'Recusar', style: 'destructive', onPress: () => void handleReject(item.id) }])}
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: processingId === item.id }}
+                        >
+                            <Ionicons name="close-circle-outline" size={18} color={Palette.danger} />
+                            <Text style={[styles.actionButtonText, { color: Palette.danger }]}>
+                                {item.status === RegistrationStatus.APPROVED ? 'Cancelar' : 'Recusar'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handleOpenChat(item.userId || item.user?.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Abrir chat"
+                    >
+                        <Ionicons name="chatbubble-outline" size={18} color={Palette.ink} />
+                        <Text style={styles.actionButtonText}>Chat</Text>
+                    </TouchableOpacity>
+
+                    {!isEventPast && isAwaitingHostApproval(item) && (
+                        <TouchableOpacity
+                            style={[styles.actionButton, styles.primaryButton, processingId === item.id && styles.disabledButton]}
+                            disabled={processingId === item.id}
+                            onPress={() => handleApprove(item.id)}
+                            accessibilityRole="button"
+                            accessibilityState={{ disabled: processingId === item.id }}
+                        >
+                            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                            <Text style={[styles.actionButtonText, styles.primaryButtonText]}>Aprovar</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
-        </View>
-    );
+        );
+    };
+
+    const tabs = [
+        { id: 'confirmed', label: 'Confirmados', count: stats.confirmedCount },
+        { id: 'pending', label: 'Pendentes', count: stats.pendingCount },
+        { id: 'closed', label: 'Encerrados', count: registrations.filter(isClosed).length },
+    ] as const;
 
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-            <StatusBar barStyle="light-content" backgroundColor="#FF8C42" />
-            
-            {/* Orange Header Background */}
-            <View style={styles.headerBackground}>
-                <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Gerenciar Evento</Text>
-                        <TouchableOpacity style={styles.moreButton}>
-                            <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
+            <StatusBar barStyle="light-content" backgroundColor={Palette.orange} />
 
-                    {event && (
-                        <View style={styles.eventInfo}>
-                            <Text style={styles.eventTitle}>{event.title}</Text>
-                            <View style={styles.eventDateContainer}>
-                                <Ionicons name="calendar-outline" size={16} color="#fff" />
-                                <Text style={styles.eventDate}>
-                                    {new Date(event.eventDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} • {new Date(event.eventDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </Text>
-                            </View>
+            <BrandStackHeader eyebrow="ANFITRIÃO" title="Gerenciar evento" backIcon="close">
+                {event && (
+                    <View style={styles.eventInfo}>
+                        <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+                        <View style={styles.eventDateContainer}>
+                            <Ionicons name="calendar-outline" size={16} color={Palette.orangeOnBrand} />
+                            <Text style={styles.eventDate}>
+                                {new Date(event.eventDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })} • {new Date(event.eventDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
                         </View>
-                    )}
-                </SafeAreaView>
-            </View>
+                    </View>
+                )}
+            </BrandStackHeader>
 
-            {/* Content Body */}
-            <View style={styles.contentBody}>
+            <BrandSheet>
                 {/* Stats Card */}
                 <View style={styles.statsCard}>
                     <View style={styles.statItem}>
@@ -386,48 +390,30 @@ export default function EventRegistrationsScreen() {
                 </View>
 
                 {/* Tabs */}
-                <View style={styles.tabsContainer}>
-                    <TouchableOpacity 
-                        style={[styles.tab, activeTab === 'confirmed' && styles.activeTab]}
-                        onPress={() => setActiveTab('confirmed')}
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected: activeTab === 'confirmed' }}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'confirmed' && styles.activeTabText]}>
-                            Confirmados ({stats.confirmedCount})
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[
-                            styles.tab,
-                            stats.pendingCount > 0 && activeTab !== 'pending' && styles.pendingTabAttention,
-                            activeTab === 'pending' && styles.activeTab,
-                        ]}
-                        onPress={() => setActiveTab('pending')}
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected: activeTab === 'pending' }}
-                    >
-                        <Text style={[
-                            styles.tabText,
-                            stats.pendingCount > 0 && activeTab !== 'pending' && styles.pendingTabText,
-                            activeTab === 'pending' && styles.activeTabText,
-                        ]}>
-                            Pendentes ({stats.pendingCount})
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
-                        onPress={() => setActiveTab('closed')}
-                        accessibilityRole="tab"
-                        accessibilityState={{ selected: activeTab === 'closed' }}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
-                            Encerrados ({registrations.filter(isClosed).length})
-                        </Text>
-                    </TouchableOpacity>
+                <View style={styles.tabsContainer} accessibilityRole="tablist">
+                    {tabs.map((item) => {
+                        const selected = activeTab === item.id;
+                        const attention = item.id === 'pending' && stats.pendingCount > 0 && !selected;
+                        return (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={[styles.tab, attention && styles.pendingTabAttention, selected && styles.activeTab]}
+                                onPress={() => setActiveTab(item.id)}
+                                accessibilityRole="tab"
+                                accessibilityState={{ selected }}
+                            >
+                                <Text
+                                    style={[styles.tabText, attention && styles.pendingTabText, selected && styles.activeTabText]}
+                                    numberOfLines={1}
+                                >
+                                    {item.label} ({item.count})
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
                 <View style={styles.flowInfo}>
-                    <Ionicons name="information-circle-outline" size={21} color="#9A4819" />
+                    <Ionicons name="information-circle-outline" size={20} color={Palette.orangeDeep} />
                     <View style={styles.flowInfoText}>
                         <Text style={styles.flowInfoTitle}>
                             {requiresHostApproval ? 'Fluxo: pagamento antes da aprovação' : 'Fluxo: inscrição imediata'}
@@ -446,33 +432,34 @@ export default function EventRegistrationsScreen() {
 
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
-                    <Ionicons name="search-outline" size={20} color="#9CA3AF" />
-                    <TextInput 
+                    <Ionicons name="search-outline" size={20} color={Palette.muted} />
+                    <TextInput
                         style={styles.searchInput}
                         placeholder="Buscar participante..."
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor={Palette.subtle}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
+                        accessibilityLabel="Buscar participante"
                     />
-                    <TouchableOpacity>
-                        <Ionicons name="filter-outline" size={20} color="#4B5563" />
-                    </TouchableOpacity>
                 </View>
 
                 {/* List */}
                 {loading ? (
-                    <ActivityIndicator size="large" color="#FF8C42" style={{ marginTop: 40 }} />
+                    <ActivityIndicator size="large" color={Palette.orange} style={{ marginTop: 40 }} />
                 ) : (
                     <FlatList
                         data={filteredRegistrations}
                         keyExtractor={item => item.id}
                         renderItem={renderItem}
-                        contentContainerStyle={styles.listContent}
+                        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + Spacing.xxxl }]}
                         showsVerticalScrollIndicator={false}
                         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
                         keyboardShouldPersistTaps="handled"
                         ListEmptyComponent={
                             <View style={styles.emptyState}>
+                                <View style={styles.emptyIcon}>
+                                    <Ionicons name="people-outline" size={30} color={Palette.orangeDeep} />
+                                </View>
                                 <Text style={styles.emptyStateText}>
                                     Nenhum participante encontrado.
                                 </Text>
@@ -480,77 +467,51 @@ export default function EventRegistrationsScreen() {
                         }
                     />
                 )}
-            </View>
+            </BrandSheet>
         </KeyboardAvoidingView>
     );
 }
 
+const softBox = {
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: 10,
+} as const;
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F3F4F6',
-    },
-    headerBackground: {
-        backgroundColor: '#FF8C42',
-        paddingBottom: 80, // Space for stats card overlap
-    },
-    headerSafeArea: {
-        // backgroundColor: '#FF8C42',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-    },
-    backButton: {
-        padding: 4,
-    },
-    moreButton: {
-        padding: 4,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#fff',
+        backgroundColor: Palette.paper,
     },
     eventInfo: {
-        paddingHorizontal: 20,
-        marginTop: 10,
+        gap: 6,
     },
     eventTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#fff',
-        marginBottom: 8,
-        lineHeight: 28,
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        lineHeight: 24,
     },
     eventDateContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 6,
     },
     eventDate: {
-        color: 'rgba(255,255,255,0.9)',
+        color: Palette.orangeOnBrand,
         fontSize: 14,
-        marginLeft: 6,
-    },
-    contentBody: {
-        flex: 1,
-        marginTop: -60, // Overlap the header
+        fontWeight: '600',
     },
     statsCard: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        marginHorizontal: 16,
-        borderRadius: 20,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 5,
-        marginBottom: 20,
+        backgroundColor: Palette.surface,
+        marginHorizontal: Spacing.xl,
+        marginTop: Spacing.lg,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: Spacing.lg,
+        marginBottom: Spacing.md,
     },
     statItem: {
         flex: 1,
@@ -558,86 +519,82 @@ const styles = StyleSheet.create({
     },
     statDivider: {
         width: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: Palette.line,
         marginHorizontal: 10,
     },
     statLabel: {
-        fontSize: 12,
-        color: '#6B7280',
-        fontWeight: '600',
-        letterSpacing: 0.5,
+        fontSize: 11,
+        color: Palette.muted,
+        fontWeight: '800',
+        letterSpacing: 1,
         marginBottom: 4,
     },
     statValue: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1F2937',
+        fontWeight: '800',
+        color: Palette.ink,
     },
     tabsContainer: {
         flexDirection: 'row',
-        paddingHorizontal: 16,
-        marginBottom: 16,
-        backgroundColor: '#E5E7EB',
-        marginHorizontal: 16,
-        borderRadius: 12,
+        gap: 4,
+        marginBottom: Spacing.md,
+        backgroundColor: Palette.track,
+        marginHorizontal: Spacing.xl,
+        borderRadius: BorderRadius.full,
         padding: 4,
     },
     tab: {
         flex: 1,
-        minHeight: 44,
-        paddingVertical: 10,
+        minHeight: 40,
+        paddingHorizontal: 4,
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 10,
+        borderRadius: BorderRadius.full,
     },
     pendingTabAttention: {
-        backgroundColor: '#FFF7ED',
-        borderWidth: 1,
-        borderColor: '#FDBA74',
+        backgroundColor: Palette.orangeSoft,
     },
     activeTab: {
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        backgroundColor: Palette.surface,
+        shadowColor: Palette.ink,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
         elevation: 2,
     },
     tabText: {
-        fontSize: 14,
-        color: '#6B7280',
-        fontWeight: '500',
+        fontSize: 13,
+        color: Palette.inkSoft,
+        fontWeight: '700',
     },
     activeTabText: {
-        color: '#FF8C42',
-        fontWeight: '700',
+        color: Palette.ink,
+        fontWeight: '800',
     },
     pendingTabText: {
-        color: '#9A4819',
-        fontWeight: '700',
+        color: Palette.orangeDarker,
+        fontWeight: '800',
     },
     flowInfo: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#FFF7ED',
-        borderWidth: 1,
-        borderColor: '#FDBA74',
-        borderRadius: 14,
-        marginHorizontal: 16,
-        marginBottom: 14,
-        padding: 13,
-        gap: 9,
+        backgroundColor: Palette.orangeSoft,
+        borderRadius: BorderRadius.lg,
+        marginHorizontal: Spacing.xl,
+        marginBottom: Spacing.md,
+        padding: Spacing.md,
+        gap: Spacing.sm,
     },
     flowInfoText: {
         flex: 1,
     },
     flowInfoTitle: {
-        color: '#9A4819',
+        color: Palette.orangeDarker,
         fontSize: 14,
         fontWeight: '800',
     },
     flowInfoDescription: {
-        color: '#7C421F',
+        color: Palette.inkSoft,
         fontSize: 12,
         lineHeight: 18,
         marginTop: 3,
@@ -645,107 +602,94 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        marginHorizontal: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 16,
-        marginBottom: 16,
+        backgroundColor: Palette.surface,
+        marginHorizontal: Spacing.xl,
+        paddingHorizontal: Spacing.lg,
+        minHeight: 48,
+        borderRadius: BorderRadius.lg,
+        marginBottom: Spacing.md,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: Palette.line,
     },
     searchInput: {
         flex: 1,
         marginLeft: 10,
+        paddingVertical: Spacing.md,
         fontSize: 15,
-        color: '#1F2937',
+        color: Palette.ink,
     },
     listContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 30,
+        paddingHorizontal: Spacing.xl,
+        gap: Spacing.md,
     },
     card: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 16,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: 14,
     },
     cardHeader: {
         flexDirection: 'row',
-        marginBottom: 16,
+        marginBottom: Spacing.md,
     },
     avatar: {
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: Palette.track,
     },
     userInfo: {
         flex: 1,
-        marginLeft: 12,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 2,
+        marginLeft: Spacing.md,
+        gap: 2,
     },
     userName: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        flex: 1,
-        marginRight: 8,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginTop: 4,
     },
     occupationText: {
         fontSize: 13,
-        color: '#6B7280',
-        marginBottom: 2,
+        color: Palette.inkSoft,
     },
     locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 3,
-        marginBottom: 4,
     },
     locationText: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: Palette.muted,
     },
     viewProfileRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 3,
-        marginTop: 4,
+        gap: 2,
+        marginTop: 2,
     },
     viewProfileText: {
         fontSize: 12,
-        color: '#FF8C42',
-        fontWeight: '600',
+        color: Palette.orangeDeep,
+        fontWeight: '800',
     },
     bioSection: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 10,
-        padding: 10,
-        marginBottom: 10,
+        ...softBox,
+        backgroundColor: Palette.paper,
     },
     bioLabel: {
         fontSize: 11,
-        fontWeight: '700',
-        color: '#9CA3AF',
+        fontWeight: '800',
+        color: Palette.muted,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 0.6,
         marginBottom: 4,
     },
     bioText: {
         fontSize: 13,
-        color: '#4B5563',
-        lineHeight: 18,
+        color: Palette.inkSoft,
+        lineHeight: 19,
     },
     tagsSection: {
         flexDirection: 'row',
@@ -756,139 +700,153 @@ const styles = StyleSheet.create({
     },
     tagsText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: Palette.inkSoft,
     },
     statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        alignSelf: 'flex-start',
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: 3,
+        borderRadius: BorderRadius.full,
     },
     statusConfirmed: {
-        backgroundColor: '#DCFCE7', // Green-100
+        backgroundColor: Palette.greenSoft,
     },
     statusPending: {
-        backgroundColor: '#FFEDD5', // Orange-100
+        backgroundColor: Palette.orangeSoft,
     },
     statusPaymentPending: {
-        backgroundColor: '#DBEAFE',
+        backgroundColor: Palette.blueSoft,
     },
     statusText: {
-        fontSize: 10,
-        fontWeight: 'bold',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.4,
     },
     textConfirmed: {
-        color: '#166534', // Green-800
+        color: Palette.green,
     },
     textPending: {
-        color: '#C2410C',
+        color: Palette.orangeDarker,
     },
     textPaymentPending: {
-        color: '#1D4ED8',
+        color: Palette.blue,
     },
     statusExplanation: {
+        ...softBox,
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: 7,
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 10,
+        gap: Spacing.sm,
     },
     statusExplanationConfirmed: {
-        backgroundColor: '#F0FDF4',
+        backgroundColor: Palette.greenSoft,
     },
     statusExplanationPayment: {
-        backgroundColor: '#EFF6FF',
+        backgroundColor: Palette.blueSoft,
     },
     statusExplanationPending: {
-        backgroundColor: '#FFF7ED',
+        backgroundColor: Palette.orangeSoft,
     },
     statusExplanationText: {
         flex: 1,
-        color: '#4B5563',
+        color: Palette.inkSoft,
         fontSize: 12,
-        lineHeight: 17,
+        lineHeight: 18,
     },
     warningBox: {
+        ...softBox,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        padding: 8,
-        borderRadius: 8,
-        marginBottom: 10,
+        backgroundColor: Palette.surface,
+        borderWidth: 1,
+        borderColor: Palette.dangerLine,
     },
     warningText: {
         fontSize: 12,
-        color: '#92400E',
+        fontWeight: '700',
+        color: Palette.danger,
         marginLeft: 6,
         flex: 1,
     },
     answersSection: {
-        backgroundColor: '#F0F9FF',
-        borderRadius: 10,
-        padding: 12,
-        marginBottom: 10,
+        ...softBox,
+        backgroundColor: Palette.paper,
     },
     answersTitle: {
         fontSize: 11,
-        fontWeight: '700',
-        color: '#3B82F6',
+        fontWeight: '800',
+        color: Palette.muted,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: 8,
+        letterSpacing: 0.6,
+        marginBottom: Spacing.sm,
     },
     answerItem: {
-        marginBottom: 8,
+        marginBottom: Spacing.sm,
     },
     questionText: {
         fontSize: 12,
-        fontWeight: '600',
-        color: '#4B5563',
+        fontWeight: '700',
+        color: Palette.inkSoft,
         marginBottom: 2,
     },
     answerText: {
         fontSize: 13,
-        color: '#1F2937',
-        lineHeight: 18,
+        color: Palette.ink,
+        lineHeight: 19,
     },
     actions: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
+        gap: Spacing.sm,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        paddingTop: 12,
+        borderTopColor: Palette.lineSoft,
+        paddingTop: Spacing.md,
+        marginTop: 2,
     },
-    secondaryButton: {
+    actionButton: {
+        flex: 1,
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
-        marginRight: 16,
+        justifyContent: 'center',
+        gap: 6,
+        paddingHorizontal: Spacing.md,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
     },
-    secondaryButtonText: {
-        fontSize: 13,
-        fontWeight: '500',
-        color: '#6B7280',
-        marginLeft: 4,
+    actionButtonText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: Palette.ink,
     },
-    contactButton: {
-        marginRight: 0,
+    dangerButton: {
+        borderColor: Palette.dangerLine,
     },
     primaryButton: {
-        backgroundColor: '#FF8C42',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 8,
-        marginLeft: 16,
+        backgroundColor: Palette.orange,
+        borderColor: Palette.orange,
     },
     primaryButtonText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    disabledButton: {
+        opacity: 0.6,
     },
     emptyState: {
         alignItems: 'center',
-        padding: 40,
+        paddingVertical: Spacing.xxxl,
+        gap: Spacing.md,
+    },
+    emptyIcon: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: Palette.orangeSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyStateText: {
-        color: '#9CA3AF',
+        color: Palette.inkSoft,
         fontSize: 14,
     },
 });

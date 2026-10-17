@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 interface SelectionPillProps {
@@ -16,11 +17,11 @@ export function SelectionPill({ label, selected, onPress }: SelectionPillProps) 
     }));
 
     const handlePressIn = () => {
-        scale.value = withSpring(0.95);
+        scale.set(withSpring(0.95));
     };
 
     const handlePressOut = () => {
-        scale.value = withSpring(1);
+        scale.set(withSpring(1));
     };
 
     return (
@@ -33,15 +34,8 @@ export function SelectionPill({ label, selected, onPress }: SelectionPillProps) 
             accessibilityState={{ checked: selected }}
         >
             <Animated.View style={animatedStyle}>
-                <View
-                    className={`px-4 py-2 rounded-full border ${selected
-                        ? 'bg-orange-50 border-[#FF8C42]'
-                        : 'bg-white border-gray-200'
-                        }`}
-                >
-                    <Text
-                        className={`text-[13px] font-medium ${selected ? 'text-orange-700' : 'text-gray-600'}`}
-                    >
+                <View style={[styles.pill, selected && styles.pillSelected]}>
+                    <Text style={[styles.text, selected && styles.textSelected]}>
                         {label}
                     </Text>
                 </View>
@@ -49,3 +43,28 @@ export function SelectionPill({ label, selected, onPress }: SelectionPillProps) 
         </Pressable>
     );
 }
+
+const styles = StyleSheet.create({
+    pill: {
+        minHeight: 40,
+        justifyContent: 'center',
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
+    },
+    pillSelected: {
+        borderColor: Palette.orange,
+        backgroundColor: Palette.orangeSoft,
+    },
+    text: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Palette.inkSoft,
+    },
+    textSelected: {
+        fontWeight: '800',
+        color: Palette.orangeDeep,
+    },
+});

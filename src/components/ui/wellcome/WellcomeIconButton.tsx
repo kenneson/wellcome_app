@@ -1,6 +1,7 @@
 import { AppIcon } from '@/components/ui/icon';
-import { Button } from '@/shared/ui/button';
+import { BorderRadius, Palette } from '@/shared/constants/theme';
 import React from 'react';
+import { Pressable, StyleSheet } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 
 interface WellcomeIconButtonProps {
@@ -16,21 +17,36 @@ export function WellcomeIconButton({
   icon,
   accessibilityLabel,
   onPress,
-  color = '#1F2937',
+  color = Palette.ink,
   danger = false,
   disabled = false,
 }: WellcomeIconButtonProps) {
   return (
-    <Button
-      variant="solid"
-      action={danger ? 'negative' : 'default'}
-      size="lg"
-      isDisabled={disabled}
+    <Pressable
       onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      className="h-12 min-h-12 w-12 rounded-full bg-transparent px-0 data-[active=true]:bg-background-100"
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [styles.button, pressed && !disabled && styles.pressed, disabled && styles.disabled]}
     >
-      <AppIcon name={icon} size={24} color={danger ? '#B42318' : color} />
-    </Button>
+      <AppIcon name={icon} size={24} color={danger ? Palette.danger : color} />
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    backgroundColor: Palette.track,
+  },
+  disabled: {
+    opacity: 0.4,
+  },
+});

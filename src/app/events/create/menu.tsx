@@ -1,17 +1,17 @@
 import { Checkbox } from '@/components/ui/Checkbox';
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
-import { WellcomeBottomBar, WellcomeButton } from '@/components/ui/wellcome';
+import { BrandSheet, WellcomeBottomBar, WellcomeButton } from '@/components/ui/wellcome';
 import { DishInputCard } from '@/components/ui/DishInputCard';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { WizardProgress } from '@/components/ui/WizardProgress';
 import { validateEventStep } from '@/features/create-event/model/eventCreationValidation';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
 import * as Crypto from 'expo-crypto';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 
 export default function EventCreateMenu() {
     const router = useRouter();
@@ -33,55 +33,137 @@ export default function EventCreateMenu() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
+        <View style={styles.screen}>
             <CreateEventHeader saveStatus={creation.saveStatus} />
-            <KeyboardAwareScrollView contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
-                <WizardProgress currentStep={1} />
-                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Monte o cardápio</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">Apresente os pratos na ordem em que serão servidos.</Text>
+            <BrandSheet>
+                <KeyboardAwareScrollView contentContainerStyle={[styles.content, { paddingHorizontal: horizontalPadding }]} keyboardShouldPersistTaps="handled" style={styles.flex}>
+                    <WizardProgress currentStep={1} />
+                    <Text style={styles.title}>Monte o cardápio</Text>
+                    <Text style={styles.subtitle}>Apresente os pratos na ordem em que serão servidos.</Text>
 
-                <View className="bg-gray-50 border border-gray-200 p-4 mb-5" style={{ borderRadius: 8 }}>
-                    <Checkbox label="Serviço em sequência" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
-                    <Text className="text-xs text-gray-500 mt-2 ml-8">Entrada, prato principal e sobremesa servidos em etapas.</Text>
-                </View>
+                    <View style={styles.sequenceCard}>
+                        <Checkbox label="Serviço em sequência" checked={creation.data.isServedInSequence} onChange={creation.setServedInSequence} />
+                        <Text style={styles.sequenceHint}>Entrada, prato principal e sobremesa servidos em etapas.</Text>
+                    </View>
 
-                {creation.data.dishes.map((dish, index) => (
-                    <DishInputCard
-                        key={dish.id}
-                        index={index}
-                        total={creation.data.dishes.length}
-                        dish={dish}
-                        focusName={index === firstInvalidDish}
-                        errors={{ name: errors[`dishes.${index}.name`], category: errors[`dishes.${index}.category`] }}
-                        onUpdate={(updates) => creation.updateDish(dish.id, { ...dish, ...updates })}
-                        onRemove={() => creation.removeDish(dish.id)}
-                        onDuplicate={() => creation.duplicateDish(dish.id)}
-                        onMove={(direction) => creation.moveDish(dish.id, direction)}
-                    />
-                ))}
-                {errors.dishes && <Text className="text-xs text-red-600 mb-3">{errors.dishes}</Text>}
+                    {creation.data.dishes.map((dish, index) => (
+                        <DishInputCard
+                            key={dish.id}
+                            index={index}
+                            total={creation.data.dishes.length}
+                            dish={dish}
+                            focusName={index === firstInvalidDish}
+                            errors={{ name: errors[`dishes.${index}.name`], category: errors[`dishes.${index}.category`] }}
+                            onUpdate={(updates) => creation.updateDish(dish.id, { ...dish, ...updates })}
+                            onRemove={() => creation.removeDish(dish.id)}
+                            onDuplicate={() => creation.duplicateDish(dish.id)}
+                            onMove={(direction) => creation.moveDish(dish.id, direction)}
+                        />
+                    ))}
+                    {errors.dishes && <Text style={styles.error}>{errors.dishes}</Text>}
 
-                <TouchableOpacity
-                    className="flex-row items-center justify-center border border-dashed border-orange-400 bg-orange-50 py-4 mb-6"
-                    style={{ borderRadius: 8 }}
-                    onPress={() => creation.addDish({ id: Crypto.randomUUID(), name: '', description: '', category: '' })}
-                    accessibilityRole="button"
-                >
-                    <Ionicons name="add" size={20} color="#C45D22" />
-                    <Text className="text-[#C45D22] font-bold ml-2">Adicionar prato</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => creation.addDish({ id: Crypto.randomUUID(), name: '', description: '', category: '' })}
+                        accessibilityRole="button"
+                    >
+                        <Ionicons name="add" size={20} color={Palette.orangeDeep} />
+                        <Text style={styles.addButtonText}>Adicionar prato</Text>
+                    </TouchableOpacity>
 
-                <Text className="text-lg font-bold text-[#1A1A1A] mb-3">Informações alimentares</Text>
-                <View className="gap-4 pb-4">
-                    <Checkbox label="Opções veganas e vegetarianas disponíveis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
-                    <Checkbox label="Aceito adaptações por restrições alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
-                    <Checkbox label="Cardápio sujeito a alterações de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
-                </View>
-            </KeyboardAwareScrollView>
+                    <Text style={styles.sectionTitle}>Informações alimentares</Text>
+                    <View style={styles.dietCard}>
+                        <Checkbox label="Opções veganas e vegetarianas disponíveis" checked={creation.data.veganOptions} onChange={creation.setVeganOptions} />
+                        <Checkbox label="Aceito adaptações por restrições alimentares" checked={creation.data.substitutions} onChange={creation.setSubstitutions} />
+                        <Checkbox label="Cardápio sujeito a alterações de ingredientes" checked={creation.data.menuAlterations} onChange={creation.setMenuAlterations} />
+                    </View>
+                </KeyboardAwareScrollView>
+            </BrandSheet>
 
             <WellcomeBottomBar>
                 <WellcomeButton label="Continuar" onPress={() => void handleNext()} />
             </WellcomeBottomBar>
-        </SafeAreaView>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    screen: {
+        flex: 1,
+        backgroundColor: Palette.paper,
+    },
+    flex: {
+        flex: 1,
+    },
+    content: {
+        paddingTop: Spacing.xl,
+        paddingBottom: 120,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '800',
+        letterSpacing: -0.3,
+        color: Palette.ink,
+        marginTop: Spacing.xl,
+    },
+    subtitle: {
+        fontSize: 14,
+        lineHeight: 21,
+        color: Palette.inkSoft,
+        marginTop: Spacing.xs,
+        marginBottom: Spacing.xl,
+    },
+    sequenceCard: {
+        padding: 14,
+        marginBottom: Spacing.xl,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
+    },
+    sequenceHint: {
+        fontSize: 13,
+        lineHeight: 19,
+        color: Palette.inkSoft,
+        marginLeft: 34,
+    },
+    error: {
+        fontSize: 12,
+        color: Palette.danger,
+        marginBottom: Spacing.md,
+    },
+    addButton: {
+        minHeight: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Spacing.sm,
+        marginBottom: Spacing.xxl,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: Palette.orange,
+        backgroundColor: Palette.orangeSoft,
+    },
+    addButtonText: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: Palette.orangeDeep,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginBottom: Spacing.md,
+    },
+    dietCard: {
+        gap: Spacing.xs,
+        paddingHorizontal: 14,
+        paddingVertical: Spacing.sm,
+        marginBottom: Spacing.lg,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
+    },
+});

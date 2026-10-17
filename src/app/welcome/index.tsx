@@ -9,7 +9,6 @@ import {
     ActivityIndicator,
     Alert,
     Animated,
-    Dimensions,
     StyleSheet,
     Text,
     TextInput,
@@ -17,9 +16,9 @@ import {
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandHeader, BrandSheet } from '@/components/ui/wellcome';
+import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 
 const STEPS = [
     { id: 0, title: 'Bem-vindo', icon: 'hand-left' },
@@ -30,6 +29,7 @@ const STEPS = [
 
 export default function WelcomeScreen() {
     const { refetchProfile } = useUserProfile();
+    const insets = useSafeAreaInsets();
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [fadeAnim] = useState(new Animated.Value(1));
@@ -162,9 +162,9 @@ export default function WelcomeScreen() {
                         step >= s.id && styles.progressDotActive
                     ]}>
                         {step > s.id ? (
-                            <Ionicons name="checkmark" size={14} color="#fff" />
+                            <Ionicons name="checkmark" size={14} color={Palette.orangeDeep} />
                         ) : (
-                            <Ionicons name={s.icon as any} size={14} color={step >= s.id ? '#fff' : '#ccc'} />
+                            <Ionicons name={s.icon as any} size={14} color={step >= s.id ? Palette.orangeDeep : '#FFFFFF'} />
                         )}
                     </View>
                     {index < STEPS.length - 1 && (
@@ -184,7 +184,7 @@ export default function WelcomeScreen() {
                 <Image source={{ uri: googleData.avatarUrl }} style={styles.avatarImage} />
             ) : (
                 <View style={styles.iconCircle}>
-                    <Ionicons name="people" size={56} color="#fff" />
+                    <Ionicons name="people" size={52} color={Palette.orangeDeep} />
                 </View>
             )}
             <Text style={styles.welcomeTitle}>
@@ -207,13 +207,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="person-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="person-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Seu nome completo</Text>
                 </View>
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: João Silva"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.full_name}
                     onChangeText={(t) => updateForm('full_name', t)}
                     autoCapitalize="words"
@@ -223,13 +223,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="at-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="at-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Username (único)</Text>
                 </View>
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: joaosilva"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.username}
                     onChangeText={(t) => updateForm('username', t.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                     autoCapitalize="none"
@@ -238,13 +238,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="document-text-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="document-text-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Bio (opcional)</Text>
                 </View>
                 <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Conte um pouco sobre você..."
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.bio}
                     onChangeText={(t) => updateForm('bio', t)}
                     multiline
@@ -262,13 +262,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="briefcase-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="briefcase-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Profissão / Ocupação</Text>
                 </View>
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: Designer, Chef, Estudante..."
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.occupation}
                     onChangeText={(t) => updateForm('occupation', t)}
                     autoCapitalize="words"
@@ -277,13 +277,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="search-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="search-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>O que você busca aqui? (opcional)</Text>
                 </View>
                 <TextInput
                     style={[styles.input, styles.textArea]}
                     placeholder="Ex: Conhecer pessoas, novas experiências gastronômicas..."
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.looking_for}
                     onChangeText={(t) => updateForm('looking_for', t)}
                     multiline
@@ -301,13 +301,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="business-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="business-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Cidade</Text>
                 </View>
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: São Paulo"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.city}
                     onChangeText={(t) => updateForm('city', t)}
                     autoCapitalize="words"
@@ -316,13 +316,13 @@ export default function WelcomeScreen() {
 
             <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
-                    <Ionicons name="location-outline" size={18} color="#FF8C42" />
+                    <Ionicons name="location-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Bairro</Text>
                 </View>
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: Pinheiros"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={Palette.subtle}
                     value={formData.neighborhood}
                     onChangeText={(t) => updateForm('neighborhood', t)}
                     autoCapitalize="words"
@@ -332,10 +332,13 @@ export default function WelcomeScreen() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar style="dark" />
+        <View style={styles.container}>
+            <StatusBar style="light" />
+            <BrandHeader eyebrow="PRIMEIROS PASSOS" title={STEPS[step]?.title ?? 'Bem-vindo'}>
                 {step > 0 && renderProgressIndicator()}
+            </BrandHeader>
 
+            <BrandSheet>
                 <KeyboardAwareScrollView
                     enableOnAndroid={true}
                     extraScrollHeight={40}
@@ -347,21 +350,25 @@ export default function WelcomeScreen() {
                     style={styles.keyboardView}
                 >
                     <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-                        {step === 0 && renderWelcomeStep()}
-                        {step === 1 && renderNameStep()}
-                        {step === 2 && renderBioStep()}
-                        {step === 3 && renderLocationStep()}
+                        <View style={styles.card}>
+                            {step === 0 && renderWelcomeStep()}
+                            {step === 1 && renderNameStep()}
+                            {step === 2 && renderBioStep()}
+                            {step === 3 && renderLocationStep()}
+                        </View>
                     </Animated.View>
                 </KeyboardAwareScrollView>
 
-                <View style={styles.footer}>
+                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
                     {step > 0 && (
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={handleBack}
                             disabled={loading}
+                            accessibilityRole="button"
+                            accessibilityLabel="Voltar"
                         >
-                            <Ionicons name="chevron-back" size={20} color="#666" />
+                            <Ionicons name="chevron-back" size={20} color={Palette.ink} />
                             <Text style={styles.backButtonText}>Voltar</Text>
                         </TouchableOpacity>
                     )}
@@ -374,45 +381,53 @@ export default function WelcomeScreen() {
                         ]}
                         onPress={handleNext}
                         disabled={loading}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: loading, busy: loading }}
                     >
                         {loading ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color="#FFFFFF" />
                         ) : (
                             <>
                                 <Text style={styles.nextButtonText}>
                                     {step === 0 ? 'Vamos começar!' : (step === 3 ? 'Concluir' : 'Continuar')}
                                 </Text>
-                                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
                             </>
                         )}
                     </TouchableOpacity>
                 </View>
-        </SafeAreaView>
+            </BrandSheet>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: Palette.paper,
     },
     keyboardView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: 24,
+        padding: Spacing.xl,
     },
     content: {
         flex: 1,
         justifyContent: 'center',
     },
+    card: {
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: Spacing.xl,
+    },
     progressContainer: {
         flexDirection: 'row',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        paddingVertical: 20,
-        paddingHorizontal: 24,
     },
     progressItem: {
         flexDirection: 'row',
@@ -422,107 +437,107 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#E8E8E8',
+        backgroundColor: Palette.onBrandGlass,
         justifyContent: 'center',
         alignItems: 'center',
     },
     progressDotActive: {
-        backgroundColor: '#FF8C42',
+        backgroundColor: Palette.surface,
     },
     progressLine: {
         width: 40,
         height: 3,
-        backgroundColor: '#E8E8E8',
+        borderRadius: 2,
+        backgroundColor: Palette.onBrandGlass,
         marginHorizontal: 4,
     },
     progressLineActive: {
-        backgroundColor: '#FF8C42',
+        backgroundColor: Palette.surface,
     },
     welcomeSection: {
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: Spacing.sm,
     },
     avatarImage: {
         width: 100,
         height: 100,
         borderRadius: 50,
-        marginBottom: 24,
+        marginBottom: Spacing.xl,
         borderWidth: 3,
-        borderColor: '#FF8C42',
+        borderColor: Palette.orangeSoft,
     },
     iconCircle: {
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#FF8C42',
+        backgroundColor: Palette.orangeSoft,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 24,
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
+        marginBottom: Spacing.xl,
     },
     welcomeTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: 26,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginBottom: Spacing.sm,
         textAlign: 'center',
     },
     welcomeSubtitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#FF8C42',
-        marginBottom: 24,
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: Palette.orangeDeep,
+        marginBottom: Spacing.xl,
     },
     welcomeText: {
         fontSize: 15,
-        color: '#666',
+        color: Palette.inkSoft,
         textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 12,
-        paddingHorizontal: 16,
+        lineHeight: 21,
+        marginBottom: Spacing.md,
     },
     formSection: {
         flex: 1,
-        paddingTop: 20,
     },
     sectionTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: 22,
+        fontWeight: '800',
+        color: Palette.ink,
+        marginBottom: Spacing.sm,
     },
     sectionSubtitle: {
         fontSize: 14,
-        color: '#888',
-        marginBottom: 28,
+        lineHeight: 21,
+        color: Palette.inkSoft,
+        marginBottom: Spacing.xxl,
     },
     inputGroup: {
-        marginBottom: 20,
+        marginBottom: Spacing.xl,
     },
     labelRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 10,
-        gap: 8,
+        marginBottom: Spacing.sm,
+        gap: Spacing.sm,
     },
     label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#444',
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+        textTransform: 'uppercase',
+        color: Palette.inkSoft,
     },
     input: {
-        backgroundColor: '#F8F8F8',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        minHeight: 48,
+        backgroundColor: Palette.surface,
+        borderRadius: BorderRadius.lg,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
         fontSize: 16,
-        color: '#333',
+        color: Palette.ink,
         borderWidth: 1,
-        borderColor: '#EBEBEB',
+        borderColor: Palette.line,
     },
     textArea: {
         minHeight: 90,
@@ -532,38 +547,39 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
+        gap: Spacing.md,
+        paddingHorizontal: Spacing.xl,
+        paddingTop: Spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        backgroundColor: '#fff',
+        borderTopColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
     },
     backButton: {
+        minHeight: 48,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 8,
+        paddingHorizontal: Spacing.lg,
         gap: 4,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
     },
     backButtonText: {
-        fontSize: 16,
-        color: '#666',
-        fontWeight: '500',
+        fontSize: 15,
+        color: Palette.ink,
+        fontWeight: '800',
     },
     nextButton: {
-        backgroundColor: '#FF8C42',
+        minHeight: 48,
+        backgroundColor: Palette.orange,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 14,
         paddingHorizontal: 28,
-        borderRadius: 30,
+        borderRadius: BorderRadius.full,
         gap: 8,
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 4,
+        ...Elevation.floating,
     },
     nextButtonFull: {
         flex: 1,
@@ -574,7 +590,7 @@ const styles = StyleSheet.create({
     },
     nextButtonText: {
         fontSize: 16,
-        color: '#fff',
-        fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontWeight: '800',
     },
 });

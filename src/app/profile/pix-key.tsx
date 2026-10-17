@@ -3,6 +3,8 @@ import { userService } from '@/services/api/UserService';
 import { getEventCreationReturnPath } from '@/features/create-event/model/payoutReturn';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -14,7 +16,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PIX_KEY_TYPES = [
     { label: 'CPF', value: 'CPF' },
@@ -36,10 +37,6 @@ export default function PixKeyScreen() {
 
     const finish = () => returnPath ? router.replace(returnPath as any) : router.back();
 
-    useEffect(() => {
-        loadCurrentKey();
-    }, []);
-
     async function loadCurrentKey() {
         setLoading(true);
         try {
@@ -55,6 +52,12 @@ export default function PixKeyScreen() {
             setLoading(false);
         }
     }
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load on mount
+        loadCurrentKey();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
+    }, []);
 
     async function savePixKey() {
         if (!userId) return;
@@ -91,134 +94,128 @@ export default function PixKeyScreen() {
 
     if (loading) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#FF8C42" />
+            <View style={styles.container}>
+                <BrandStackHeader eyebrow="FINANCEIRO" title="Minha Chave PIX" onBack={finish} />
+                <BrandSheet>
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color={Palette.orange} />
+                    </View>
+                </BrandSheet>
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={finish} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Minha Chave PIX</Text>
-                <View style={{ width: 40 }} />
-            </View>
+        <View style={styles.container}>
+            <BrandStackHeader eyebrow="FINANCEIRO" title="Minha Chave PIX" onBack={finish} />
 
-            <KeyboardAwareScrollView contentContainerStyle={styles.content}>
-                {/* Info Banner */}
-                <View style={styles.infoBanner}>
-                    <Ionicons name="information-circle-outline" size={20} color="#2196F3" />
-                    <Text style={styles.infoText}>
-                        Sua chave PIX será usada para receber os pagamentos das reservas confirmadas.
-                    </Text>
-                </View>
+            <BrandSheet>
+                <KeyboardAwareScrollView contentContainerStyle={styles.content}>
+                    {/* Info Banner */}
+                    <View style={styles.infoBanner}>
+                        <Ionicons name="information-circle-outline" size={20} color={Palette.blue} />
+                        <Text style={styles.infoText}>
+                            Sua chave PIX será usada para receber os pagamentos das reservas confirmadas.
+                        </Text>
+                    </View>
 
-                {/* Key Type Selector */}
-                <Text style={styles.label}>Tipo de Chave</Text>
-                <View style={styles.typeGrid}>
-                    {PIX_KEY_TYPES.map((type) => (
-                        <TouchableOpacity
-                            key={type.value}
-                            style={[styles.typeButton, pixKeyType === type.value && styles.typeButtonActive]}
-                            onPress={() => { setPixKeyType(type.value); setPixKey(''); }}
-                        >
-                            <Text style={[styles.typeButtonText, pixKeyType === type.value && styles.typeButtonTextActive]}>
-                                {type.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                    {/* Key Type Selector */}
+                    <Text style={styles.label}>Tipo de Chave</Text>
+                    <View style={styles.typeGrid}>
+                        {PIX_KEY_TYPES.map((type) => (
+                            <TouchableOpacity
+                                key={type.value}
+                                style={[styles.typeButton, pixKeyType === type.value && styles.typeButtonActive]}
+                                onPress={() => { setPixKeyType(type.value); setPixKey(''); }}
+                                accessibilityRole="radio"
+                                accessibilityState={{ checked: pixKeyType === type.value }}
+                            >
+                                <Text style={[styles.typeButtonText, pixKeyType === type.value && styles.typeButtonTextActive]}>
+                                    {type.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
 
-                {/* Key Input */}
-                <Text style={[styles.label, { marginTop: 24 }]}>Chave PIX</Text>
-                <TextInput
-                    style={styles.input}
-                    value={pixKey}
-                    onChangeText={setPixKey}
-                    placeholder={getPlaceholder()}
-                    placeholderTextColor="#aaa"
-                    autoCapitalize="none"
-                    keyboardType={pixKeyType === 'PHONE' ? 'phone-pad' : 'default'}
-                />
+                    {/* Key Input */}
+                    <Text style={[styles.label, styles.labelSpaced]}>Chave PIX</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={pixKey}
+                        onChangeText={setPixKey}
+                        placeholder={getPlaceholder()}
+                        placeholderTextColor={Palette.subtle}
+                        autoCapitalize="none"
+                        keyboardType={pixKeyType === 'PHONE' ? 'phone-pad' : 'default'}
+                    />
 
-                <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={savePixKey}
-                    disabled={saving}
-                >
-                    {saving ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.saveButtonText}>Salvar Chave PIX</Text>
-                    )}
-                </TouchableOpacity>
-            </KeyboardAwareScrollView>
-        </SafeAreaView>
+                    <TouchableOpacity
+                        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                        onPress={savePixKey}
+                        disabled={saving}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: saving, busy: saving }}
+                    >
+                        {saving ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.saveButtonText}>Salvar Chave PIX</Text>
+                        )}
+                    </TouchableOpacity>
+                </KeyboardAwareScrollView>
+            </BrandSheet>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9F9F9' },
+    container: { flex: 1, backgroundColor: Palette.paper },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    backButton: { width: 40, height: 40, justifyContent: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-    content: { padding: 24 },
+    content: { padding: Spacing.xl },
     infoBanner: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#E3F2FD',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 28,
+        backgroundColor: Palette.blueSoft,
+        borderRadius: 22,
+        padding: 14,
+        marginBottom: Spacing.xxl,
         gap: 10,
     },
-    infoText: { flex: 1, fontSize: 14, color: '#1565C0', lineHeight: 20 },
-    label: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 10 },
+    infoText: { flex: 1, fontSize: 14, color: Palette.blue, lineHeight: 21 },
+    label: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', color: Palette.inkSoft, marginBottom: 10 },
+    labelSpaced: { marginTop: Spacing.xxl },
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     typeButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 24,
-        borderWidth: 1.5,
-        borderColor: '#ddd',
-        backgroundColor: '#fff',
+        minHeight: 44,
+        justifyContent: 'center',
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
     },
-    typeButtonActive: { borderColor: '#FF8C42', backgroundColor: '#FFF3E0' },
-    typeButtonText: { fontSize: 14, color: '#666', fontWeight: '500' },
-    typeButtonTextActive: { color: '#FF8C42', fontWeight: '700' },
+    typeButtonActive: { borderColor: Palette.orange, backgroundColor: Palette.orangeSoft },
+    typeButtonText: { fontSize: 14, color: Palette.inkSoft, fontWeight: '700' },
+    typeButtonTextActive: { color: Palette.orangeDeep, fontWeight: '800' },
     input: {
-        backgroundColor: '#fff',
-        borderWidth: 1.5,
-        borderColor: '#ddd',
-        borderRadius: 12,
-        padding: 14,
+        minHeight: 48,
+        backgroundColor: Palette.surface,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
         fontSize: 16,
-        color: '#333',
-        marginBottom: 24,
+        color: Palette.ink,
+        marginBottom: Spacing.xxl,
     },
     saveButton: {
-        backgroundColor: '#FF8C42',
-        borderRadius: 12,
-        paddingVertical: 16,
+        backgroundColor: Palette.orange,
+        borderRadius: BorderRadius.full,
+        minHeight: 52,
+        justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#FF8C42',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
     },
-    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    saveButtonDisabled: { opacity: 0.6 },
+    saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
 });

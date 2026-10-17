@@ -1,5 +1,5 @@
 import { CreateEventHeader } from '@/components/ui/CreateEventHeader';
-import { WellcomeBottomBar, WellcomeButton, WellcomeField } from '@/components/ui/wellcome';
+import { BrandSheet, WellcomeBottomBar, WellcomeButton, WellcomeField } from '@/components/ui/wellcome';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { LocationMap } from '@/components/ui/LocationMap';
 import { SelectionSection } from '@/components/ui/SelectionSection';
@@ -8,11 +8,11 @@ import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView
 import { validateEventStep } from '@/features/create-event/model/eventCreationValidation';
 import { locationService } from '@/services/api/LocationService';
 import { useEventCreation } from '@/shared/context/EventCreationContext';
+import { Palette, Spacing } from '@/shared/constants/theme';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Text, TextInput, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Linking, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 const FACILITIES = [
     'Estacionamento para visitantes', 'Edifício com elevador', 'Ar condicionado',
@@ -89,18 +89,19 @@ export default function EventCreateLocation() {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF' }} edges={['top', 'bottom']}>
+        <View style={styles.screen}>
             <CreateEventHeader saveStatus={saveStatus} />
+            <BrandSheet>
             <KeyboardAwareScrollView
-                contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 120 }}
+                contentContainerStyle={[styles.content, { paddingHorizontal: horizontalPadding }]}
                 keyboardShouldPersistTaps="handled"
-                style={{ flex: 1 }}
+                style={styles.flex}
             >
                 <WizardProgress currentStep={2} />
-                <Text className="text-2xl font-extrabold text-[#1A1A1A] mt-3">Onde será o evento?</Text>
-                <Text className="text-sm text-gray-500 mt-1 mb-5">O endereço exato só será liberado para participantes autorizados.</Text>
+                <Text style={styles.title}>Onde será o evento?</Text>
+                <Text style={styles.subtitle}>O endereço exato só será liberado para participantes autorizados.</Text>
 
-                <View className="mb-4">
+                <View style={styles.gpsButton}>
                     <WellcomeButton
                         label="Usar localização atual"
                         icon="location.fill"
@@ -110,7 +111,7 @@ export default function EventCreateLocation() {
                     />
                 </View>
 
-                <View className="mb-5">
+                <View style={styles.searchButton}>
                     <WellcomeButton
                         label="Buscar endereço"
                         icon="search"
@@ -121,9 +122,9 @@ export default function EventCreateLocation() {
 
                 <WellcomeField label="Endereço completo" error={!data.location.address && error ? error : undefined}>
                     <TextInput
-                        className="min-h-[76px] px-4 py-3 text-base text-[#1A1A1A]"
+                        style={[styles.input, styles.addressInput]}
                         placeholder="Busque um endereço ou use o GPS"
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor={Palette.subtle}
                         value={data.location.address}
                         onChangeText={(address) => updateLocation({
                             address,
@@ -139,12 +140,12 @@ export default function EventCreateLocation() {
                 </WellcomeField>
 
                 {data.location.address ? (
-                    <View className="flex-row gap-3">
+                    <View style={styles.row}>
                         <WellcomeField label="Cidade" className="flex-1">
                             <TextInput
-                                className="min-h-12 px-4 py-3 text-base text-[#1A1A1A]"
+                                style={styles.input}
                                 placeholder="Cidade"
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor={Palette.subtle}
                                 value={data.location.city}
                                 onChangeText={(city) => updateLocation({ city, confirmed: false })}
                                 autoCapitalize="words"
@@ -152,9 +153,9 @@ export default function EventCreateLocation() {
                         </WellcomeField>
                         <WellcomeField label="Estado" className="w-[34%]">
                             <TextInput
-                                className="min-h-12 px-4 py-3 text-base uppercase text-[#1A1A1A]"
+                                style={[styles.input, styles.uppercase]}
                                 placeholder="UF"
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor={Palette.subtle}
                                 value={data.location.state}
                                 onChangeText={(state) => updateLocation({ state: state.toUpperCase().slice(0, 2), confirmed: false })}
                                 autoCapitalize="characters"
@@ -165,7 +166,7 @@ export default function EventCreateLocation() {
                 ) : null}
 
                 {data.location.latitude !== null && data.location.longitude !== null ? (
-                    <View className="mb-5">
+                    <View style={styles.map}>
                         <LocationMap
                             latitude={data.location.latitude}
                             longitude={data.location.longitude}
@@ -175,15 +176,16 @@ export default function EventCreateLocation() {
                     </View>
                 ) : null}
 
-                {!!error && <Text className="text-sm text-red-600 mb-4" accessibilityRole="alert">{error}</Text>}
+                {!!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
 
-                <View className="mb-6">
+                <View style={styles.section}>
                     <SelectionSection title="Facilidades do local" items={FACILITIES} selectedItems={data.location.facilities} onSelect={(item) => toggleListValue('facilities', item)} isMultiSelect variant="pill" />
                 </View>
-                <View className="mb-6">
+                <View style={styles.section}>
                     <SelectionSection title="Regras do local" items={RULES} selectedItems={data.location.rules} onSelect={(item) => toggleListValue('rules', item)} isMultiSelect variant="pill" />
                 </View>
             </KeyboardAwareScrollView>
+            </BrandSheet>
 
             <WellcomeBottomBar>
                 <WellcomeButton label="Continuar" onPress={() => void handleNext()} />
@@ -199,6 +201,69 @@ export default function EventCreateLocation() {
                 asModal
                 placeholder="Rua, número, bairro ou local"
             />
-        </SafeAreaView>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    screen: {
+        flex: 1,
+        backgroundColor: Palette.paper,
+    },
+    flex: {
+        flex: 1,
+    },
+    content: {
+        paddingTop: Spacing.xl,
+        paddingBottom: 120,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '800',
+        letterSpacing: -0.3,
+        color: Palette.ink,
+        marginTop: Spacing.xl,
+    },
+    subtitle: {
+        fontSize: 14,
+        lineHeight: 21,
+        color: Palette.inkSoft,
+        marginTop: Spacing.xs,
+        marginBottom: Spacing.xl,
+    },
+    gpsButton: {
+        marginBottom: Spacing.md,
+    },
+    searchButton: {
+        marginBottom: Spacing.xl,
+    },
+    input: {
+        minHeight: 48,
+        paddingHorizontal: Spacing.lg,
+        paddingVertical: Spacing.md,
+        fontSize: 15,
+        color: Palette.ink,
+    },
+    addressInput: {
+        minHeight: 76,
+    },
+    uppercase: {
+        textTransform: 'uppercase',
+    },
+    row: {
+        flexDirection: 'row',
+        gap: Spacing.md,
+    },
+    map: {
+        marginBottom: Spacing.xl,
+    },
+    error: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: Palette.danger,
+        marginBottom: Spacing.lg,
+    },
+    section: {
+        marginBottom: Spacing.xxl,
+    },
+});

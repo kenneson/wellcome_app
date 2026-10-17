@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { Dish } from '@/entities/event/model/types';
 import { Input } from '@/components/ui/Input';
@@ -30,49 +31,49 @@ export function DishInputCard({ index, total, dish, errors, onUpdate, onRemove, 
 
     useEffect(() => {
         if (!focusName) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- expand the card when it receives focus from validation
         setExpanded(true);
         requestAnimationFrame(() => nameRef.current?.focus());
     }, [focusName]);
 
     return (
-        <View className="border border-gray-200 mb-3 bg-white overflow-hidden" style={{ borderRadius: 8 }}>
+        <View style={styles.card}>
             <TouchableOpacity
-                className="flex-row items-center px-4 py-3"
+                style={styles.summary}
                 onPress={() => setExpanded((value) => !value)}
                 accessibilityRole="button"
                 accessibilityLabel={`${expanded ? 'Recolher' : 'Expandir'} prato ${index + 1}`}
             >
-                <View className="w-7 h-7 bg-orange-100 items-center justify-center mr-3" style={{ borderRadius: 8 }}>
-                    <Text className="text-orange-700 text-xs font-bold">{index + 1}</Text>
+                <View style={styles.indexBadge}>
+                    <Text style={styles.indexText}>{index + 1}</Text>
                 </View>
-                <View className="flex-1">
-                    <Text className="text-base font-bold text-[#1A1A1A]" numberOfLines={1}>{dish.name || `Prato ${index + 1}`}</Text>
-                    <Text className="text-xs text-gray-500 mt-0.5">{categoryLabel || 'Categoria pendente'}</Text>
+                <View style={styles.summaryText}>
+                    <Text style={styles.dishName} numberOfLines={1}>{dish.name || `Prato ${index + 1}`}</Text>
+                    <Text style={[styles.dishCategory, !categoryLabel && styles.dishCategoryPending]}>{categoryLabel || 'Categoria pendente'}</Text>
                 </View>
-                <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color="#73787E" />
+                <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={Palette.muted} />
             </TouchableOpacity>
 
             {expanded && (
-                <View className="px-4 pb-4 border-t border-gray-100 pt-4">
-                    <Text className="text-xs font-bold text-gray-600 mb-2">CATEGORIA</Text>
-                    <View className="flex-row flex-wrap gap-2 mb-1">
+                <View style={styles.body}>
+                    <Text style={styles.sectionLabel}>CATEGORIA</Text>
+                    <View style={styles.chips}>
                         {CATEGORIES.map((category) => {
                             const selected = dish.category === category.value;
                             return (
                                 <TouchableOpacity
                                     key={category.value}
                                     onPress={() => onUpdate({ category: category.value })}
-                                    className={`px-3 py-2 border ${selected ? 'bg-[#FF8C42] border-[#FF8C42]' : 'bg-white border-gray-300'}`}
-                                    style={{ borderRadius: 8 }}
+                                    style={[styles.chip, selected && styles.chipSelected]}
                                     accessibilityRole="radio"
                                     accessibilityState={{ selected }}
                                 >
-                                    <Text className={`text-xs font-bold ${selected ? 'text-white' : 'text-gray-700'}`}>{category.label}</Text>
+                                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{category.label}</Text>
                                 </TouchableOpacity>
                             );
                         })}
                     </View>
-                    {errors?.category && <Text className="text-xs text-red-600 mb-3">{errors.category}</Text>}
+                    {errors?.category && <Text style={[styles.error, styles.categoryError]}>{errors.category}</Text>}
 
                     <Input
                         ref={nameRef}
@@ -81,10 +82,11 @@ export function DishInputCard({ index, total, dish, errors, onUpdate, onRemove, 
                         value={dish.name}
                         maxLength={80}
                         onChangeText={(name) => onUpdate({ name })}
-                        containerClassName="mb-3"
-                        className={`bg-gray-50 rounded-lg ${errors?.name ? 'border-red-400' : 'border-gray-200'}`}
+                        containerClassName="mb-3 mt-3"
+                        placeholderTextColor={Palette.subtle}
+                        style={[styles.input, errors?.name && styles.inputError]}
                     />
-                    {errors?.name && <Text className="text-xs text-red-600 -mt-2 mb-3">{errors.name}</Text>}
+                    {errors?.name && <Text style={[styles.error, styles.nameError]}>{errors.name}</Text>}
                     <Input
                         label="Descrição opcional"
                         placeholder="Ingredientes e modo de preparo"
@@ -93,10 +95,11 @@ export function DishInputCard({ index, total, dish, errors, onUpdate, onRemove, 
                         onChangeText={(description) => onUpdate({ description })}
                         multiline
                         textAlignVertical="top"
-                        className="h-[88px] bg-gray-50 border-gray-200 rounded-lg"
+                        placeholderTextColor={Palette.subtle}
+                        style={[styles.input, styles.inputMultiline]}
                     />
 
-                    <View className="flex-row justify-end gap-1 mt-3">
+                    <View style={styles.toolbar}>
                         <IconButton icon="arrow-up" label="Mover prato para cima" disabled={index === 0} onPress={() => onMove(-1)} />
                         <IconButton icon="arrow-down" label="Mover prato para baixo" disabled={index === total - 1} onPress={() => onMove(1)} />
                         <IconButton icon="copy-outline" label="Duplicar prato" onPress={onDuplicate} />
@@ -111,14 +114,145 @@ export function DishInputCard({ index, total, dish, errors, onUpdate, onRemove, 
 function IconButton({ icon, label, onPress, disabled, danger }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
     return (
         <TouchableOpacity
-            className="w-11 h-11 items-center justify-center"
+            style={styles.iconButton}
             onPress={onPress}
             disabled={disabled}
             accessibilityRole="button"
             accessibilityLabel={label}
             accessibilityState={{ disabled }}
         >
-            <Ionicons name={icon} size={20} color={disabled ? '#D1D5DB' : danger ? '#B33A34' : '#5D646A'} />
+            <Ionicons name={icon} size={20} color={disabled ? Palette.subtle : danger ? Palette.danger : Palette.inkSoft} />
         </TouchableOpacity>
     );
 }
+
+const styles = StyleSheet.create({
+    card: {
+        marginBottom: Spacing.md,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        backgroundColor: Palette.surface,
+        overflow: 'hidden',
+    },
+    summary: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.md,
+        minHeight: 56,
+        paddingHorizontal: 14,
+        paddingVertical: Spacing.md,
+    },
+    indexBadge: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: Palette.orangeSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    indexText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: Palette.orangeDeep,
+    },
+    summaryText: {
+        flex: 1,
+        gap: 2,
+    },
+    dishName: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: Palette.ink,
+    },
+    dishCategory: {
+        fontSize: 13,
+        color: Palette.inkSoft,
+    },
+    dishCategoryPending: {
+        color: Palette.muted,
+    },
+    body: {
+        paddingHorizontal: 14,
+        paddingTop: 14,
+        paddingBottom: 14,
+        borderTopWidth: 1,
+        borderTopColor: Palette.lineSoft,
+    },
+    sectionLabel: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+        color: Palette.inkSoft,
+        marginBottom: Spacing.sm,
+    },
+    chips: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: Spacing.sm,
+        marginBottom: Spacing.xs,
+    },
+    chip: {
+        minHeight: 36,
+        justifyContent: 'center',
+        paddingHorizontal: 14,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
+    },
+    chipSelected: {
+        backgroundColor: Palette.orange,
+        borderColor: Palette.orange,
+    },
+    chipText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: Palette.inkSoft,
+    },
+    chipTextSelected: {
+        color: '#FFFFFF',
+    },
+    input: {
+        minHeight: 48,
+        height: undefined,
+        paddingHorizontal: 14,
+        paddingVertical: Spacing.md,
+        fontSize: 15,
+        color: Palette.ink,
+        backgroundColor: Palette.surface,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+    },
+    inputError: {
+        borderColor: Palette.danger,
+    },
+    inputMultiline: {
+        minHeight: 88,
+    },
+    error: {
+        fontSize: 12,
+        color: Palette.danger,
+    },
+    categoryError: {
+        marginTop: Spacing.xs,
+    },
+    nameError: {
+        marginTop: -Spacing.sm,
+        marginBottom: Spacing.md,
+    },
+    toolbar: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: Spacing.xs,
+        marginTop: Spacing.md,
+    },
+    iconButton: {
+        width: 44,
+        height: 44,
+        borderRadius: BorderRadius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});

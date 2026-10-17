@@ -1,5 +1,6 @@
 import { moderationService, ReportReason, ReportTargetType } from '@/services/api/ModerationService';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -50,19 +51,21 @@ export function ReportSheet({ visible, onClose, targetType, targetId }: ReportSh
                         style={styles.option}
                         onPress={() => submit(r.value)}
                         disabled={submitting}
+                        accessibilityRole="button"
+                        accessibilityLabel={r.label}
                     >
                         <Text style={styles.optionText}>{r.label}</Text>
-                        <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                        <Ionicons name="chevron-forward" size={18} color={Palette.muted} />
                     </TouchableOpacity>
                 ))}
 
                 {submitting && (
                     <View style={styles.loading}>
-                        <ActivityIndicator color="#FF8C42" />
+                        <ActivityIndicator color={Palette.orange} />
                     </View>
                 )}
 
-                <TouchableOpacity style={styles.cancel} onPress={onClose} disabled={submitting}>
+                <TouchableOpacity style={styles.cancel} onPress={onClose} disabled={submitting} accessibilityRole="button">
                     <Text style={styles.cancelText}>Cancelar</Text>
                 </TouchableOpacity>
             </View>
@@ -71,35 +74,48 @@ export function ReportSheet({ visible, onClose, targetType, targetId }: ReportSh
 }
 
 const styles = StyleSheet.create({
-    backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    backdrop: { flex: 1, backgroundColor: Palette.scrim },
     sheet: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingHorizontal: 20,
-        paddingTop: 12,
-        paddingBottom: 32,
+        backgroundColor: Palette.paper,
+        borderTopLeftRadius: BorderRadius.sheet,
+        borderTopRightRadius: BorderRadius.sheet,
+        paddingHorizontal: Spacing.xl,
+        paddingTop: Spacing.md,
+        paddingBottom: Spacing.xxxl,
     },
     handle: {
         alignSelf: 'center',
         width: 40,
         height: 4,
         borderRadius: 2,
-        backgroundColor: '#E5E7EB',
-        marginBottom: 16,
+        backgroundColor: Palette.line,
+        marginBottom: Spacing.lg,
     },
-    title: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-    subtitle: { fontSize: 14, color: '#6B7280', marginTop: 4, marginBottom: 12 },
+    title: { fontSize: 20, fontWeight: '800', color: Palette.ink },
+    subtitle: { fontSize: 14, color: Palette.inkSoft, marginTop: 4, marginBottom: Spacing.md },
     option: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        minHeight: 52,
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.sm,
+        backgroundColor: Palette.surface,
+        borderRadius: BorderRadius.lg,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
     },
-    optionText: { fontSize: 15, color: '#1A1A1A' },
-    loading: { paddingVertical: 12 },
-    cancel: { marginTop: 16, alignItems: 'center', paddingVertical: 12 },
-    cancelText: { fontSize: 15, fontWeight: '600', color: '#6B7280' },
+    optionText: { fontSize: 15, fontWeight: '600', color: Palette.ink },
+    loading: { paddingVertical: Spacing.md },
+    cancel: {
+        marginTop: Spacing.sm,
+        minHeight: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
+    },
+    cancelText: { fontSize: 15, fontWeight: '800', color: Palette.ink },
 });

@@ -1,11 +1,12 @@
 import { reviewService } from '@/services/api/ReviewService';
 import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReviewEventScreen() {
     const { id } = useLocalSearchParams();
@@ -46,63 +47,107 @@ export default function ReviewEventScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
-            <KeyboardAwareScrollView
-                enableOnAndroid={true}
-                extraScrollHeight={40}
-                extraHeight={120}
-                enableResetScrollToCoords={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ padding: 24, flexGrow: 1 }}
-                showsVerticalScrollIndicator={false}
-                style={{ flex: 1 }}
-            >
-            <View className="flex-row items-center mb-6">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                    <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-                </TouchableOpacity>
-                <Text className="text-xl font-bold text-[#1A1A1A]">Avaliar Evento</Text>
-            </View>
+        <View style={styles.screen}>
+            <BrandStackHeader eyebrow="AVALIAÇÃO" title="Avaliar evento" backIcon="close" />
+            <BrandSheet>
+                <KeyboardAwareScrollView
+                    enableOnAndroid={true}
+                    extraScrollHeight={40}
+                    extraHeight={120}
+                    enableResetScrollToCoords={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.content}
+                    showsVerticalScrollIndicator={false}
+                    style={{ flex: 1 }}
+                >
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Como foi sua experiência?</Text>
+                        <View style={styles.stars}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <TouchableOpacity
+                                    key={star}
+                                    onPress={() => setRating(star)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${star} ${star === 1 ? 'estrela' : 'estrelas'}`}
+                                    accessibilityState={{ selected: star <= rating }}
+                                    hitSlop={4}
+                                >
+                                    <Ionicons
+                                        name={star <= rating ? 'star' : 'star-outline'}
+                                        size={40}
+                                        color={star <= rating ? Palette.star : Palette.subtle}
+                                    />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
 
-            <View className="mb-8 items-center">
-                <Text className="text-lg text-gray-600 mb-4">Como foi sua experiência?</Text>
-                <View className="flex-row space-x-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                            <Ionicons
-                                name={star <= rating ? "star" : "star-outline"}
-                                size={40}
-                                color="#FF8C42"
-                            />
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
+                    <View style={styles.field}>
+                        <Text style={styles.label}>COMENTÁRIO (OPCIONAL)</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Conte mais sobre o evento..."
+                            placeholderTextColor={Palette.subtle}
+                            multiline
+                            textAlignVertical="top"
+                            value={comment}
+                            onChangeText={setComment}
+                        />
+                    </View>
 
-            <View className="mb-6">
-                <Text className="text-base font-bold text-[#1A1A1A] mb-2">Comentário (opcional)</Text>
-                <TextInput
-                    className="bg-gray-50 p-4 rounded-xl text-base text-[#1A1A1A] h-32"
-                    placeholder="Conte mais sobre o evento..."
-                    multiline
-                    textAlignVertical="top"
-                    value={comment}
-                    onChangeText={setComment}
-                />
-            </View>
-
-            <TouchableOpacity
-                className={`w-full py-4 rounded-xl items-center ${submitting ? 'bg-gray-300' : 'bg-[#FF8C42]'}`}
-                onPress={handleSubmit}
-                disabled={submitting}
-            >
-                {submitting ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text className="text-white font-bold text-base">Enviar Avaliação</Text>
-                )}
-            </TouchableOpacity>
-            </KeyboardAwareScrollView>
-        </SafeAreaView>
+                    <TouchableOpacity
+                        style={[styles.button, submitting && styles.buttonDisabled]}
+                        onPress={handleSubmit}
+                        disabled={submitting}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: submitting }}
+                    >
+                        {submitting ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.buttonText}>Enviar avaliação</Text>
+                        )}
+                    </TouchableOpacity>
+                </KeyboardAwareScrollView>
+            </BrandSheet>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    screen: { flex: 1, backgroundColor: Palette.paper },
+    content: { padding: Spacing.xl, paddingBottom: Spacing.xxxl * 2, gap: Spacing.lg, flexGrow: 1 },
+    card: {
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        padding: Spacing.xl,
+        alignItems: 'center',
+        gap: Spacing.lg,
+    },
+    cardTitle: { fontSize: 18, fontWeight: '800', color: Palette.ink, textAlign: 'center' },
+    stars: { flexDirection: 'row', gap: Spacing.sm },
+    field: { gap: Spacing.sm },
+    label: { fontSize: 12, fontWeight: '800', letterSpacing: 0.8, color: Palette.muted },
+    input: {
+        backgroundColor: Palette.surface,
+        borderWidth: 1,
+        borderColor: Palette.line,
+        borderRadius: BorderRadius.lg,
+        minHeight: 128,
+        padding: Spacing.lg,
+        fontSize: 15,
+        color: Palette.ink,
+    },
+    button: {
+        minHeight: 48,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.orange,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: Spacing.xxl,
+    },
+    buttonDisabled: { opacity: 0.6 },
+    buttonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+});

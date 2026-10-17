@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 
 interface WizardProgressProps { currentStep: number; }
 
@@ -12,6 +13,8 @@ const steps = [
     { label: 'Revisão', icon: 'checkmark.circle' },
 ];
 
+const DOT_SIZE = 24;
+
 export function getWizardProgressPercentage(currentStep: number) {
     const safeStep = Math.max(0, Math.min(currentStep, steps.length - 1));
     return (safeStep / (steps.length - 1)) * 100;
@@ -20,39 +23,38 @@ export function getWizardProgressPercentage(currentStep: number) {
 export function WizardProgress({ currentStep }: WizardProgressProps) {
     const safeStep = Math.max(0, Math.min(currentStep, steps.length - 1));
     return (
-        <View className="px-1 py-3 bg-white" accessibilityLabel={`Etapa ${safeStep + 1} de ${steps.length}`}>
-            <Text className="text-xs text-gray-500 font-semibold mb-3">Etapa {safeStep + 1} de {steps.length}</Text>
-            <View className="flex-row items-center justify-between relative">
-                {/* Background Line */}
-                <View className="absolute top-3 left-0 right-0 h-[2px] bg-gray-200 z-0" />
-
-                {/* Active Line Progress */}
-                <View
-                    className="absolute top-3 left-0 h-[2px] bg-[#FF8C42] z-0"
-                    style={{ width: `${getWizardProgressPercentage(safeStep)}%` }}
-                />
+        <View style={styles.container} accessibilityLabel={`Etapa ${safeStep + 1} de ${steps.length}`}>
+            <View style={styles.headerRow}>
+                <Text style={styles.stepLabel}>ETAPA {safeStep + 1} DE {steps.length}</Text>
+                <Text style={styles.currentLabel}>{steps[safeStep].label}</Text>
+            </View>
+            <View style={styles.stepsRow}>
+                {/* Track spans from the center of the first dot to the center of the last one. */}
+                <View style={styles.trackArea} pointerEvents="none">
+                    <View style={styles.track} />
+                    <View style={[styles.trackFill, { width: `${getWizardProgressPercentage(safeStep)}%` }]} />
+                </View>
 
                 {steps.map((step, index) => {
                     const isCompleted = index < safeStep;
                     const isCurrent = index === safeStep;
 
                     return (
-                        <View key={index} className="items-center z-10 flex-1">
+                        <View key={step.label} style={styles.step}>
                             <View
-                                className={`w-6 h-6 rounded-full items-center justify-center border-2 mb-1 bg-white ${isCompleted
-                                        ? 'bg-[#FF8C42] border-[#FF8C42]'
-                                        : isCurrent
-                                            ? 'border-[#FF8C42]'
-                                            : 'border-gray-200'
-                                    }`}
+                                style={[
+                                    styles.dot,
+                                    isCompleted && styles.dotCompleted,
+                                    isCurrent && styles.dotCurrent,
+                                ]}
                             >
                                 {isCompleted ? (
-                                    <IconSymbol name="checkmark" size={14} color="#FFF" />
+                                    <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
                                 ) : isCurrent ? (
-                                    <View className="w-2.5 h-2.5 rounded-full bg-[#FF8C42]" />
+                                    <View style={styles.dotInner} />
                                 ) : null}
                             </View>
-                            <Text className={`text-[10px] font-medium ${isCurrent || isCompleted ? 'text-[#1A1A1A]' : 'text-gray-400'}`}>
+                            <Text style={[styles.label, (isCurrent || isCompleted) && styles.labelActive]}>
                                 {step.label}
                             </Text>
                         </View>
@@ -62,3 +64,98 @@ export function WizardProgress({ currentStep }: WizardProgressProps) {
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        backgroundColor: Palette.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: Palette.lineSoft,
+        paddingHorizontal: Spacing.sm,
+        paddingTop: Spacing.md,
+        paddingBottom: Spacing.md,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: Spacing.sm,
+        marginBottom: Spacing.md,
+    },
+    stepLabel: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+        color: Palette.orangeDeep,
+    },
+    currentLabel: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: Palette.ink,
+    },
+    stepsRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    trackArea: {
+        position: 'absolute',
+        top: DOT_SIZE / 2 - 1,
+        left: '10%',
+        right: '10%',
+        height: 2,
+    },
+    track: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.track,
+    },
+    trackFill: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        borderRadius: BorderRadius.full,
+        backgroundColor: Palette.orange,
+    },
+    step: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
+    },
+    dot: {
+        width: DOT_SIZE,
+        height: DOT_SIZE,
+        borderRadius: DOT_SIZE / 2,
+        borderWidth: 2,
+        borderColor: Palette.line,
+        backgroundColor: Palette.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dotCompleted: {
+        backgroundColor: Palette.orange,
+        borderColor: Palette.orange,
+    },
+    dotCurrent: {
+        borderColor: Palette.orange,
+    },
+    dotInner: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: Palette.orange,
+    },
+    label: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Palette.muted,
+    },
+    labelActive: {
+        fontWeight: '800',
+        color: Palette.ink,
+    },
+});

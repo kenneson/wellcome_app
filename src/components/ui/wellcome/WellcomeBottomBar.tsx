@@ -1,6 +1,6 @@
-import { Box } from '@/shared/ui/box';
+import { Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import React from 'react';
-import { useWindowDimensions } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function WellcomeBottomBar({ children }: { children: React.ReactNode }) {
@@ -9,11 +9,22 @@ export function WellcomeBottomBar({ children }: { children: React.ReactNode }) {
   const horizontalPadding = width < 375 ? 16 : width >= 414 ? 24 : 20;
 
   return (
-    <Box
-      className="absolute bottom-0 left-0 right-0 border-t border-outline-100 bg-white pt-3"
-      style={{ paddingBottom: Math.max(insets.bottom, 16), paddingHorizontal: horizontalPadding }}
-    >
+    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 16), paddingHorizontal: horizontalPadding }]}>
       {children}
-    </Box>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: Spacing.md,
+    backgroundColor: Palette.surface,
+    borderTopWidth: 1,
+    borderTopColor: Palette.lineSoft,
+    ...Elevation.floating,
+  },
+});
