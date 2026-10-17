@@ -131,7 +131,7 @@ export default function Home() {
           <a href="/termos-de-uso">Termos de Uso</a>
           <a href="/politica-de-privacidade">Privacidade</a>
           <a href="/exclusao-de-conta">Excluir conta</a>
-          <a href="/protecao-wellcome">ProteÃ§Ã£o Wellcome</a>
+          <a href="/protecao-wellcome">Proteção Wellcome</a>
           <a href="mailto:oi@wellcome.app">oi@wellcome.app</a>
         </div>
       </footer>
