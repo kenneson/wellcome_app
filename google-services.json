@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:83047228102:android:345cfde681ba36917e2dc7",
+        "android_client_info": {
+          "package_name": "br.com.wellcomeapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcMdtQNbmix48nwxWCsbkBQ79UxFVso3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:83047228102:android:b79a8e95106615b17e2dc7",
         "android_client_info": {
           "package_name": "com.wellcome.app"
