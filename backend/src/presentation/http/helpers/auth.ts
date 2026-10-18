@@ -61,7 +61,10 @@ function getBearerToken(request: FastifyRequest): string {
 }
 
 export async function getAuthenticatedUserContext(request: FastifyRequest): Promise<AuthenticatedUserContext> {
-    return resolveAuthenticatedUserContext(getBearerToken(request));
+    const context = await resolveAuthenticatedUserContext(getBearerToken(request));
+    // Lets the audit trail attribute the request to the verified user.
+    request.authContext = context;
+    return context;
 }
 
 export async function getAuthenticatedUserId(request: FastifyRequest): Promise<string> {

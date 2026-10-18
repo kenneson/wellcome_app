@@ -107,4 +107,39 @@ describe('AdminController', () => {
         expect(reply.code).toHaveBeenCalledWith(409);
         expect(reply.send).toHaveBeenCalledWith({ message: 'Only pending KYC requests can be reviewed' });
     });
+
+    describe('host funds settlement', () => {
+        const report = { hostsProcessed: 1, releasedAmount: 90, releaseFailures: 0, stalledReleases: 0, violations: [] };
+        const settlementJob = { run: jest.fn(), latestReport: report as any };
+        const settlementController = new AdminController(undefined, settlementJob);
+
+        it('returns the latest report to admins', async () => {
+            const reply = createReply();
+
+            await settlementController.settlementReport({} as any, reply as any);
+
+            expect(reply.send).toHaveBeenCalledWith({ report });
+        });
+
+        it('runs the job on demand', async () => {
+            settlementJob.run.mockResolvedValue(report);
+            const reply = createReply();
+
+            await settlementController.runSettlement({} as any, reply as any);
+
+            expect(settlementJob.run).toHaveBeenCalledTimes(1);
+            expect(reply.send).toHaveBeenCalledWith({ report });
+        });
+
+        it('requires an admin', async () => {
+            const { ForbiddenRequestError } = jest.requireMock('../../helpers/auth');
+            requireAdminUserMock.mockRejectedValue(new ForbiddenRequestError('Admin access is required'));
+            const reply = createReply();
+
+            await settlementController.runSettlement({} as any, reply as any);
+
+            expect(reply.code).toHaveBeenCalledWith(403);
+            expect(settlementJob.run).not.toHaveBeenCalled();
+        });
+    });
 });
