@@ -161,12 +161,9 @@ export default function EventDetailsScreen() {
 
         if (url) {
             try {
-                const supported = await Linking.canOpenURL(url);
-                if (supported) {
-                    await Linking.openURL(url);
-                } else {
-                    Alert.alert('Erro', 'Não foi possível abrir o mapa.');
-                }
+                // canOpenURL returns false for geo: on Android 11+ unless the scheme is
+                // declared in <queries>, so open directly and let the catch handle failures.
+                await Linking.openURL(url);
             } catch (error) {
                 Alert.alert('Erro', 'Ocorreu um erro ao tentar abrir o mapa.');
             }
@@ -660,7 +657,7 @@ export default function EventDetailsScreen() {
                         <Text style={styles.sectionTitle}>Sobre o local</Text>
 
                         <View style={styles.mapBox}>
-                            {mapCoordinate ? (
+                            {mapCoordinate && Platform.OS !== 'android' ? (
                                 <>
                                     <MapView
                                         style={{ width: '100%', height: '100%' }}
@@ -674,7 +671,6 @@ export default function EventDetailsScreen() {
                                         rotateEnabled={false}
                                         pitchEnabled={false}
                                         toolbarEnabled={false}
-                                        liteMode={Platform.OS === 'android'}
                                         onPress={openMaps}
                                         accessibilityLabel="Mapa do local do evento"
                                     >
@@ -698,10 +694,10 @@ export default function EventDetailsScreen() {
                                     activeOpacity={0.9}
                                     onPress={openMaps}
                                     accessibilityRole="button"
-                                    accessibilityLabel="Local exato disponível após confirmação"
+                                    accessibilityLabel={mapCoordinate ? 'Abrir local no aplicativo de mapas' : 'Local exato disponível após confirmação'}
                                 >
-                                    <Ionicons name="map" size={36} color={Palette.subtle} />
-                                    <Text style={styles.mapPlaceholderText}>Local exato disponível após confirmação</Text>
+                                    <Ionicons name="map" size={36} color={mapCoordinate ? Palette.orangeDeep : Palette.subtle} />
+                                    <Text style={styles.mapPlaceholderText}>{mapCoordinate ? 'Toque para abrir no mapa' : 'Local exato disponível após confirmação'}</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
