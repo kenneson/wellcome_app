@@ -70,11 +70,11 @@ export default function RegisterScreen() {
                 });
                 if (error) {
                     Alert.alert('Sucesso', 'Cadastro realizado! Faça login para continuar.');
-                    router.replace('/auth/login');
+                    router.dismissTo('/auth/login');
                 }
             } else {
                 Alert.alert('Sucesso', 'Verifique seu e-mail para confirmar o cadastro!');
-                router.replace('/auth/login');
+                router.dismissTo('/auth/login');
             }
 
         } catch (error) {
@@ -342,7 +342,7 @@ export default function RegisterScreen() {
 
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>Já tem uma conta? </Text>
-                            <Link href="/auth/login" asChild>
+                            <Link href="/auth/login" dismissTo asChild>
                                 <TouchableOpacity accessibilityRole="button" hitSlop={8}>
                                     <Text style={styles.loginText}>Entre</Text>
                                 </TouchableOpacity>
