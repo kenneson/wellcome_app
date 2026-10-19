@@ -3,6 +3,12 @@
     "name": "wellcome",
     "slug": "wellcome",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/16e12c42-0909-4649-a825-ee3e2136b7a6"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "wellcome",

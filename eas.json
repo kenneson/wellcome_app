@@ -5,10 +5,12 @@
   },
   "build": {
     "development": {
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "channel": "preview",
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://wellcome-backend.igpqhp.easypanel.host",
@@ -20,6 +22,7 @@
       }
     },
     "production": {
+      "channel": "production",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://wellcome-backend.igpqhp.easypanel.host",
