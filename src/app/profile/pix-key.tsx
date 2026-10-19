@@ -17,6 +17,7 @@ import {
     View,
 } from 'react-native';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { validatePixKey } from '@/shared/lib/validation';
 
 const PIX_KEY_TYPES = [
     { label: 'CPF', value: 'CPF' },
@@ -62,8 +63,9 @@ export default function PixKeyScreen() {
 
     async function savePixKey() {
         if (!userId) return;
-        if (!pixKey.trim()) {
-            Alert.alert('Atenção', 'Por favor, informe a chave PIX.');
+        const pixKeyError = validatePixKey(pixKeyType, pixKey);
+        if (pixKeyError) {
+            Alert.alert('Atenção', pixKeyError);
             return;
         }
         setSaving(true);

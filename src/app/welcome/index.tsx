@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandHeader, BrandSheet } from '@/components/ui/wellcome';
 import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { firstError, onboardingSteps, validateForm } from '@/shared/lib/validation';
 
 const STEPS = [
     { id: 0, title: 'Bem-vindo', icon: 'hand-left' },
@@ -89,18 +90,16 @@ export default function WelcomeScreen() {
         if (step === 0) {
             animateTransition(1);
         } else if (step === 1) {
-            if (!formData.full_name.trim()) {
-                Alert.alert('Atenção', 'Por favor, informe seu nome.');
-                return;
-            }
-            if (!formData.username.trim() || formData.username.length < 3) {
-                Alert.alert('Atenção', 'Por favor, informe um username com pelo menos 3 caracteres.');
+            const validation = validateForm(onboardingSteps.identity, formData);
+            if (!validation.success) {
+                Alert.alert('Atenção', firstError(validation.errors));
                 return;
             }
             animateTransition(2);
         } else if (step === 2) {
-            if (!formData.occupation.trim()) {
-                Alert.alert('Atenção', 'Por favor, informe sua ocupação.');
+            const validation = validateForm(onboardingSteps.occupation, formData);
+            if (!validation.success) {
+                Alert.alert('Atenção', firstError(validation.errors));
                 return;
             }
             animateTransition(3);
@@ -116,12 +115,9 @@ export default function WelcomeScreen() {
     };
 
     const handleSubmit = async () => {
-        if (!formData.city.trim()) {
-            Alert.alert('Atenção', 'Por favor, informe sua cidade.');
-            return;
-        }
-        if (!formData.neighborhood.trim()) {
-            Alert.alert('Atenção', 'Por favor, informe seu bairro.');
+        const validation = validateForm(onboardingSteps.location, formData);
+        if (!validation.success) {
+            Alert.alert('Atenção', firstError(validation.errors));
             return;
         }
 

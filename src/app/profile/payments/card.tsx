@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { cardSchema, firstError, validateForm } from '@/shared/lib/validation';
 
 export default function AddPaymentCardScreen() {
     const router = useRouter();
@@ -44,6 +45,11 @@ export default function AddPaymentCardScreen() {
     }, [router]);
 
     const saveCard = async () => {
+        const validation = validateForm(cardSchema(), { holderName, number, expiryMonth, expiryYear, ccv });
+        if (!validation.success) {
+            Alert.alert('Revise o cartão', firstError(validation.errors));
+            return;
+        }
         const month = Number(expiryMonth);
         let year = Number(expiryYear);
         if (expiryYear.length === 2) year += 2000;
@@ -51,7 +57,7 @@ export default function AddPaymentCardScreen() {
         setSaving(true);
         try {
             await paymentService.addCard({
-                holderName,
+                holderName: validation.data.holderName,
                 number: onlyDigits(number),
                 expiryMonth: month,
                 expiryYear: year,

@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { billingProfileSchema, firstError, validateForm } from '@/shared/lib/validation';
 
 export default function PaymentsProfileScreen() {
     const router = useRouter();
@@ -81,16 +82,24 @@ export default function PaymentsProfileScreen() {
     };
 
     const saveProfile = async () => {
-        if (mode === 'card' && (!onlyDigits(postalCode) || !addressNumber.trim())) {
-            Alert.alert('Endereço necessário', 'Informe CEP e número para cadastrar um cartão.');
+        const validation = validateForm(billingProfileSchema(mode === 'card'), {
+            fullName,
+            cpf,
+            email,
+            mobilePhone,
+            postalCode,
+            addressNumber,
+        });
+        if (!validation.success) {
+            Alert.alert('Revise os dados', firstError(validation.errors));
             return;
         }
         setSaving(true);
         try {
             await paymentService.saveBillingProfile({
-                fullName,
+                fullName: validation.data.fullName,
                 cpfCnpj: onlyDigits(cpf),
-                email,
+                email: validation.data.email,
                 mobilePhone: onlyDigits(mobilePhone),
                 postalCode: onlyDigits(postalCode) || undefined,
                 addressNumber: addressNumber.trim() || undefined,

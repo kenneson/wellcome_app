@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { firstError, profileSchema, validateForm } from '@/shared/lib/validation';
 
 const lookingForOptions = [
     { label: 'Participar', value: 'comer', icon: 'restaurant-outline' },
@@ -115,8 +116,9 @@ export default function EditProfileScreen() {
 
     const saveProfile = async () => {
         if (!userId || saving) return;
-        if (!fullName.trim() || !occupation.trim() || !lookingFor || !city.trim() || !neighborhood.trim()) {
-            Alert.alert('Revise os dados', 'Preencha nome, ocupação, objetivo, cidade e bairro para continuar.');
+        const validation = validateForm(profileSchema, { fullName, occupation, lookingFor, city, neighborhood, phoneNumber });
+        if (!validation.success) {
+            Alert.alert('Revise os dados', firstError(validation.errors));
             return;
         }
 
