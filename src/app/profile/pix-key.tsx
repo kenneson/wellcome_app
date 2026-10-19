@@ -16,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const PIX_KEY_TYPES = [
     { label: 'CPF', value: 'CPF' },
@@ -75,7 +76,7 @@ export default function PixKeyScreen() {
                 { text: 'OK', onPress: finish }
             ]);
         } catch (e: any) {
-            Alert.alert('Erro', e.message || 'Não foi possível salvar a chave PIX.');
+            Alert.alert('Erro', friendlyErrorMessage(e, 'Não foi possível salvar a chave PIX.'));
         } finally {
             setSaving(false);
         }

@@ -16,6 +16,7 @@ import {
     View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 export default function PaymentsProfileScreen() {
     const router = useRouter();
@@ -53,7 +54,7 @@ export default function PaymentsProfileScreen() {
             setAddressNumber(profile?.addressNumber || '');
             setAddressComplement(profile?.addressComplement || '');
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Não foi possível carregar seus pagamentos.');
+            Alert.alert('Erro', friendlyErrorMessage(error, 'Não foi possível carregar seus pagamentos.'));
         } finally {
             setLoading(false);
         }
@@ -99,7 +100,7 @@ export default function PaymentsProfileScreen() {
             Alert.alert('Dados salvos', 'Seu perfil de cobrança foi atualizado.');
             await loadWallet();
         } catch (error: any) {
-            Alert.alert('Não foi possível salvar', error.message);
+            Alert.alert('Não foi possível salvar', friendlyErrorMessage(error));
         } finally {
             setSaving(false);
         }
@@ -116,7 +117,7 @@ export default function PaymentsProfileScreen() {
                         await paymentService.deleteCard(cardId);
                         await loadWallet();
                     } catch (error: any) {
-                        Alert.alert('Erro', error.message);
+                        Alert.alert('Erro', friendlyErrorMessage(error));
                     }
                 },
             },
@@ -128,7 +129,7 @@ export default function PaymentsProfileScreen() {
             await paymentService.setDefaultCard(cardId);
             await loadWallet();
         } catch (error: any) {
-            Alert.alert('Erro', error.message);
+            Alert.alert('Erro', friendlyErrorMessage(error));
         }
     };
 

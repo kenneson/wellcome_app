@@ -15,6 +15,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const CONFIRMATION_TEXT = 'EXCLUIR';
 
@@ -51,7 +52,7 @@ export default function DeleteAccountScreen() {
                                 }
                             ]);
                         } catch (error: any) {
-                            Alert.alert('Não foi possível excluir', error?.message || 'Tente novamente em alguns minutos.');
+                            Alert.alert('Não foi possível excluir', friendlyErrorMessage(error, 'Tente novamente em alguns minutos.'));
                         } finally {
                             setIsDeleting(false);
                         }

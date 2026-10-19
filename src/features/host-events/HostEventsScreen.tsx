@@ -23,6 +23,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 type DashboardFilter = 'overview' | 'attention' | 'upcoming' | 'drafts' | 'past';
 
@@ -267,7 +268,7 @@ export default function HostEventsScreen() {
                                 Alert.alert('Evento cancelado', `Taxa de cancelamento debitada: R$ ${result.cancellationFee.toFixed(2).replace('.', ',')}.`);
                             }
                         } catch (error: any) {
-                            Alert.alert('Não foi possível cancelar', error?.message || 'Tente novamente.');
+                            Alert.alert('Não foi possível cancelar', friendlyErrorMessage(error, 'Tente novamente.'));
                         }
                     },
                 },
@@ -289,7 +290,7 @@ export default function HostEventsScreen() {
                         await eventDraftService.removeLocal(draft.id);
                         setDrafts((current) => current.filter((item) => item.id !== draft.id));
                     } catch (error: any) {
-                        Alert.alert('Não foi possível excluir', error?.message || 'Tente novamente.');
+                        Alert.alert('Não foi possível excluir', friendlyErrorMessage(error, 'Tente novamente.'));
                     }
                 },
             },

@@ -3,6 +3,7 @@ import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const REASONS: { value: ReportReason; label: string }[] = [
     { value: 'SPAM', label: 'Spam' },
@@ -31,7 +32,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId }: ReportSh
             onClose();
             Alert.alert('Denúncia enviada', 'Obrigado. Nossa equipe vai analisar o conteúdo.');
         } catch (error: any) {
-            Alert.alert('Erro', error?.message || 'Não foi possível enviar a denúncia.');
+            Alert.alert('Erro', friendlyErrorMessage(error, 'Não foi possível enviar a denúncia.'));
         } finally {
             setSubmitting(false);
         }

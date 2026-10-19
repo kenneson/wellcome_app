@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const STEP_ROUTES = ['/events/create', '/events/create/menu', '/events/create/location', '/events/create/details'] as const;
 
@@ -94,7 +95,7 @@ export default function EventCreateReview() {
             } else if (apiError.code === 'INVALID_EVENT') {
                 Alert.alert('Revise o evento', apiError.message, [{ text: 'Corrigir', onPress: () => goToFirstError(apiError.fieldErrors) }]);
             } else {
-                Alert.alert('Não foi possível publicar', apiError.message || 'Tente novamente em instantes.');
+                Alert.alert('Não foi possível publicar', friendlyErrorMessage(apiError, 'Tente novamente em instantes.'));
             }
         } finally {
             setSubmitting(false);

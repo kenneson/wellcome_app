@@ -19,6 +19,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 export default function ConversationScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +47,7 @@ export default function ConversationScreen() {
             setMessages(messageData);
             void chatService.markRead(id);
         } catch (error: any) {
-            if (!silent) Alert.alert('Mensagens', error?.message || 'Não foi possível carregar a conversa.');
+            if (!silent) Alert.alert('Mensagens', friendlyErrorMessage(error, 'Não foi possível carregar a conversa.'));
         } finally {
             setLoading(false);
         }
@@ -69,7 +70,7 @@ export default function ConversationScreen() {
             requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
         } catch (error: any) {
             setDraft(body);
-            Alert.alert('Não foi possível enviar', error?.message || 'Tente novamente.');
+            Alert.alert('Não foi possível enviar', friendlyErrorMessage(error, 'Tente novamente.'));
         } finally {
             setSending(false);
         }

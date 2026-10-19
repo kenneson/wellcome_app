@@ -13,6 +13,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BrandSheet, BrandStackHeader, HeaderIconButton } from '@/components/ui/wellcome';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 type EventFilter = 'todos' | 'pendentes' | 'ativos' | 'concluidos' | 'rascunhos';
 
@@ -80,7 +81,7 @@ export default function MyEventsScreen() {
             setEvents(formattedEvents);
             setDrafts(await draftRequest);
         } catch (error: any) {
-            Alert.alert('Erro', error.message);
+            Alert.alert('Erro', friendlyErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -104,7 +105,7 @@ export default function MyEventsScreen() {
                             await eventService.deleteEvent(id);
                             setEvents(prev => prev.filter(e => e.id !== id));
                         } catch (e: any) {
-                            Alert.alert('Erro ao excluir', e.message);
+                            Alert.alert('Erro ao excluir', friendlyErrorMessage(e));
                         }
                     }
                 }
@@ -126,7 +127,7 @@ export default function MyEventsScreen() {
                         await eventDraftService.removeLocal(item.id);
                         setDrafts((current) => current.filter((draft) => draft.id !== item.id));
                     } catch (error: any) {
-                        Alert.alert('Não foi possível excluir', error.message || 'Tente novamente.');
+                        Alert.alert('Não foi possível excluir', friendlyErrorMessage(error, 'Tente novamente.'));
                     }
                 },
             },

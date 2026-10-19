@@ -13,6 +13,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 export default function EventRegistrationsScreen() {
     const { id, tab } = useLocalSearchParams();
@@ -74,7 +75,7 @@ export default function EventRegistrationsScreen() {
             const conversation = await chatService.open(id as string, guestId);
             router.push(`/messages/${conversation.id}` as any);
         } catch (error: any) {
-            Alert.alert('Não foi possível abrir o chat', error?.message || 'Tente novamente.');
+            Alert.alert('Não foi possível abrir o chat', friendlyErrorMessage(error, 'Tente novamente.'));
         }
     }
 

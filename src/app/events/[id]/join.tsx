@@ -10,6 +10,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 export default function JoinEventScreen() {
     const { id } = useLocalSearchParams();
@@ -146,7 +147,7 @@ export default function JoinEventScreen() {
                     [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
                 );
             } else {
-                Alert.alert('Erro', error.message || 'Falha ao solicitar inscrição.');
+                Alert.alert('Erro', friendlyErrorMessage(error, 'Falha ao solicitar inscrição.'));
             }
         } finally {
             setSubmitting(false);

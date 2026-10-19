@@ -20,6 +20,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const lookingForOptions = [
     { label: 'Participar', value: 'comer', icon: 'restaurant-outline' },
@@ -69,7 +70,7 @@ export default function EditProfileScreen() {
             setPhoneNumber(profile.phoneNumber || '');
             setDietaryRestriction(Array.isArray(profile.dietaryRestrictions) ? profile.dietaryRestrictions.join(', ') : '');
         } catch (error: any) {
-            Alert.alert('Erro ao carregar perfil', error.message);
+            Alert.alert('Erro ao carregar perfil', friendlyErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -106,7 +107,7 @@ export default function EditProfileScreen() {
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
             setAvatarUrl(publicUrl);
         } catch (error: any) {
-            Alert.alert('Erro no upload', error.message);
+            Alert.alert('Erro no upload', friendlyErrorMessage(error));
         } finally {
             setSaving(false);
         }

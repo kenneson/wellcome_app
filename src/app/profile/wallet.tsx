@@ -16,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const PIX_KEY_TYPE_LABELS: Record<string, string> = {
     CPF: 'CPF',
@@ -110,7 +111,7 @@ export default function WalletScreen() {
                                 [{ text: 'OK', onPress: () => loadData() }]
                             );
                         } catch (e: any) {
-                            Alert.alert('Erro', e.message || 'Não foi possível solicitar o saque.');
+                            Alert.alert('Erro', friendlyErrorMessage(e, 'Não foi possível solicitar o saque.'));
                         } finally {
                             setRequesting(false);
                         }

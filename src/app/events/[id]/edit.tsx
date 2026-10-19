@@ -12,6 +12,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 // Reusing constants from create flow (ideally should be shared)
 const EVENT_TYPES = [
@@ -93,7 +94,7 @@ function EditEventForm() {
             Alert.alert('Sucesso', 'Evento atualizado com sucesso!');
             router.back();
         } catch (error: any) {
-            Alert.alert('Erro', error.message);
+            Alert.alert('Erro', friendlyErrorMessage(error));
         } finally {
             setSaving(false);
         }

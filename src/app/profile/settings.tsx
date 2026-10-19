@@ -15,6 +15,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -47,7 +48,7 @@ export default function SettingsScreen() {
                         if (error) throw error;
                         router.replace('/auth/login');
                     } catch (error: any) {
-                        Alert.alert('Erro ao sair', error?.message || 'Tente novamente.');
+                        Alert.alert('Erro ao sair', friendlyErrorMessage(error, 'Tente novamente.'));
                     } finally {
                         setSigningOut(false);
                     }
@@ -84,7 +85,7 @@ export default function SettingsScreen() {
             if (!response.ok) throw new Error('Falha ao enviar notificação.');
             Alert.alert('Notificação enviada', 'Verifique seu dispositivo.');
         } catch (error: any) {
-            Alert.alert('Não foi possível testar', error?.message || 'Erro de conexão.');
+            Alert.alert('Não foi possível testar', friendlyErrorMessage(error, 'Erro de conexão.'));
         } finally {
             setTestingNotification(false);
         }

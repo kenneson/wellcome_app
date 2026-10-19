@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 type PaymentMethod = 'pix' | 'card';
 
@@ -89,7 +90,7 @@ export default function PaymentScreen() {
             }
         } catch (error: any) {
             if (showFeedback && !String(error.message).includes('not found')) {
-                Alert.alert('Erro', error.message || 'Falha ao consultar o pagamento.');
+                Alert.alert('Erro', friendlyErrorMessage(error, 'Falha ao consultar o pagamento.'));
             }
         } finally {
             if (showFeedback) setChecking(false);
@@ -127,7 +128,7 @@ export default function PaymentScreen() {
             });
             await checkPaymentStatus(false);
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Não foi possível preparar o pagamento.');
+            Alert.alert('Erro', friendlyErrorMessage(error, 'Não foi possível preparar o pagamento.'));
         } finally {
             setLoading(false);
         }
@@ -180,7 +181,7 @@ export default function PaymentScreen() {
             if (result.paid) await confirmPaymentAndRefreshApproval();
             else startPolling();
         } catch (error: any) {
-            Alert.alert('Não foi possível gerar o Pix', error.message);
+            Alert.alert('Não foi possível gerar o Pix', friendlyErrorMessage(error));
         } finally {
             setProcessing(false);
         }
@@ -205,7 +206,7 @@ export default function PaymentScreen() {
                 Alert.alert('Pagamento em análise', 'Avisaremos assim que o cartão for confirmado.');
             }
         } catch (error: any) {
-            Alert.alert('Pagamento não aprovado', error.message || 'Tente outro cartão ou pague com Pix.');
+            Alert.alert('Pagamento não aprovado', friendlyErrorMessage(error, 'Tente outro cartão ou pague com Pix.'));
         } finally {
             setProcessing(false);
         }

@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 export default function PublicProfileScreen() {
     const { id } = useLocalSearchParams();
@@ -70,7 +71,7 @@ export default function PublicProfileScreen() {
                 isBlocked ? '' : 'Você não verá mais o conteúdo desse usuário.',
             );
         } catch (error: any) {
-            Alert.alert('Erro', error?.message || 'Não foi possível concluir a ação.');
+            Alert.alert('Erro', friendlyErrorMessage(error, 'Não foi possível concluir a ação.'));
         }
     }
 

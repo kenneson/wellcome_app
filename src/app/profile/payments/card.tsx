@@ -16,6 +16,7 @@ import {
     View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 export default function AddPaymentCardScreen() {
     const router = useRouter();
@@ -38,7 +39,7 @@ export default function AddPaymentCardScreen() {
                     ]);
                 }
             })
-            .catch((error) => Alert.alert('Erro', error.message))
+            .catch((error) => Alert.alert('Erro', friendlyErrorMessage(error)))
             .finally(() => setCheckingProfile(false));
     }, [router]);
 
@@ -76,7 +77,7 @@ export default function AddPaymentCardScreen() {
         } catch (error: any) {
             setNumber('');
             setCcv('');
-            Alert.alert('Não foi possível cadastrar', error.message);
+            Alert.alert('Não foi possível cadastrar', friendlyErrorMessage(error));
         } finally {
             setSaving(false);
         }

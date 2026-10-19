@@ -23,6 +23,7 @@ import { ActivityIndicator, Alert, Linking, Platform, Share, StyleSheet, Text, T
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker } from 'react-native-maps';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 // Map facilities/rules to icons/labels
 const FACILITY_ICONS: Record<string, { icon: string, label: string }> = {
@@ -139,7 +140,7 @@ export default function EventDetailsScreen() {
             await fetchEventDetails();
             router.push(`/events/${id}/join`);
         } catch (error: any) {
-            Alert.alert('Erro', error?.message || 'Não foi possível liberar a vaga vencida.');
+            Alert.alert('Erro', friendlyErrorMessage(error, 'Não foi possível liberar a vaga vencida.'));
         } finally {
             setJoining(false);
         }
@@ -180,7 +181,7 @@ export default function EventDetailsScreen() {
             const conversation = await chatService.open(event.id);
             router.push(`/messages/${conversation.id}` as any);
         } catch (error: any) {
-            Alert.alert('Não foi possível abrir o chat', error?.message || 'Tente novamente.');
+            Alert.alert('Não foi possível abrir o chat', friendlyErrorMessage(error, 'Tente novamente.'));
         } finally {
             setJoining(false);
         }
@@ -211,7 +212,7 @@ export default function EventDetailsScreen() {
             Alert.alert('Sucesso', 'Sua avaliação foi enviada!');
             await fetchEventDetails();
         } catch (error: any) {
-            Alert.alert('Erro', error.message || 'Não foi possível enviar a avaliação');
+            Alert.alert('Erro', friendlyErrorMessage(error, 'Não foi possível enviar a avaliação'));
         } finally {
             setSubmittingReview(false);
         }

@@ -19,6 +19,7 @@ import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandHeader, BrandSheet } from '@/components/ui/wellcome';
 import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 
 const STEPS = [
     { id: 0, title: 'Bem-vindo', icon: 'hand-left' },
@@ -147,7 +148,7 @@ export default function WelcomeScreen() {
             // Layout will automatically redirect to (tabs) once isProfileComplete becomes true
         } catch (error: any) {
             console.error('Profile save error:', error);
-            Alert.alert('Erro ao salvar', error.message || 'Não foi possível salvar seu perfil. Tente novamente.');
+            Alert.alert('Erro ao salvar', friendlyErrorMessage(error, 'Não foi possível salvar seu perfil. Tente novamente.'));
         } finally {
             setLoading(false);
         }
