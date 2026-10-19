@@ -117,11 +117,13 @@ export default function RootLayout() {
   // 3. Handle Navigation Protection
   const currentSegment = segments[0] as string;
   const inAuthGroup = currentSegment === 'auth';
+  // Legal documents are linked from the sign-up screen, so they must open without a session.
+  const isPublicRoute = currentSegment === 'legal';
 
   useEffect(() => {
     if (!initialized) return;
 
-    if (!session && !inAuthGroup) {
+    if (!session && !inAuthGroup && !isPublicRoute) {
       // Not logged in -> go to login
       router.replace('/auth/login');
       return;
@@ -147,13 +149,13 @@ export default function RootLayout() {
         router.replace('/(tabs)');
       }
     }
-  }, [currentSegment, initialized, session, segments, isProfileComplete, inAuthGroup, router]);
+  }, [currentSegment, initialized, session, segments, isProfileComplete, inAuthGroup, isPublicRoute, router]);
 
   if (
     !initialized ||
     (session && profileCheckLoading) ||
     (session && isProfileComplete === null) ||
-    (!session && !inAuthGroup) ||
+    (!session && !inAuthGroup && !isPublicRoute) ||
     (session && inAuthGroup)
   ) {
     return <AppLoadingScreen />;
