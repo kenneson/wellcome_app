@@ -16,6 +16,7 @@ import {
     View,
 } from 'react-native';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { resetToLogin } from '@/shared/lib/navigation';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -46,7 +47,7 @@ export default function SettingsScreen() {
                     try {
                         const { error } = await supabase.auth.signOut();
                         if (error) throw error;
-                        router.replace('/auth/login');
+                        resetToLogin();
                     } catch (error: any) {
                         Alert.alert('Erro ao sair', friendlyErrorMessage(error, 'Tente novamente.'));
                     } finally {

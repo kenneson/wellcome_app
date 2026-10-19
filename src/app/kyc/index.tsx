@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
 import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
+import { goHome } from '@/shared/lib/navigation';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 
@@ -53,7 +54,7 @@ export default function KycVerificationScreen() {
     const [kycResult, setKycResult] = useState<KycResult | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const returnPath = getEventCreationReturnPath(params.returnTo, params.draftId);
-    const finish = () => returnPath ? router.replace(returnPath as any) : router.replace('/(tabs)');
+    const finish = () => returnPath ? router.dismissTo(returnPath as any) : goHome();
 
     useEffect(() => {
         const init = async () => {

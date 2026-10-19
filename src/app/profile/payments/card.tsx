@@ -36,7 +36,7 @@ export default function AddPaymentCardScreen() {
             .then((wallet) => {
                 if (!wallet.cardReady) {
                     Alert.alert('Complete seus dados', 'Informe CEP e número antes de cadastrar um cartão.', [
-                        { text: 'Continuar', onPress: () => router.replace('/profile/payments' as any) },
+                        { text: 'Continuar', onPress: () => router.dismissTo('/profile/payments' as any) },
                     ]);
                 }
             })
@@ -71,14 +71,14 @@ export default function AddPaymentCardScreen() {
             setExpiryYear('');
 
             if (eventId && bookingId) {
-                router.replace({
+                router.dismissTo({
                     pathname: '/events/[id]/payment',
                     params: { id: String(eventId), bookingId: String(bookingId) },
                 } as any);
                 return;
             }
             Alert.alert('Cartão adicionado', 'O cartão já pode ser usado nos pagamentos.', [
-                { text: 'OK', onPress: () => router.replace('/profile/payments' as any) },
+                { text: 'OK', onPress: () => router.dismissTo('/profile/payments' as any) },
             ]);
         } catch (error: any) {
             setNumber('');

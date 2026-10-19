@@ -73,7 +73,7 @@ export default function PaymentsProfileScreen() {
                 params: { eventId: String(eventId), bookingId: String(bookingId) },
             } as any);
         } else {
-            router.replace({
+            router.dismissTo({
                 pathname: '/events/[id]/payment',
                 params: { id: String(eventId), bookingId: String(bookingId) },
             } as any);

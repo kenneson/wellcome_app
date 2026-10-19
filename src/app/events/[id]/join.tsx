@@ -35,7 +35,7 @@ export default function JoinEventScreen() {
                 Alert.alert(
                     'Inscrições encerradas',
                     'O prazo para participar deste evento terminou.',
-                    [{ text: 'OK', onPress: () => router.replace(`/events/${id}`) }]
+                    [{ text: 'OK', onPress: () => router.dismissTo(`/events/${id}`) }]
                 );
                 return;
             }
@@ -104,7 +104,7 @@ export default function JoinEventScreen() {
                 Alert.alert(
                     'Você entrou na lista de espera',
                     'Avisaremos quando uma vaga for liberada. Depois, você paga para reservar a vaga e aguarda a aprovação do anfitrião, quando exigida.',
-                    [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
+                    [{ text: 'OK', onPress: () => router.dismissTo(`/events/${event.id}`) }]
                 );
                 return;
             }
@@ -113,7 +113,7 @@ export default function JoinEventScreen() {
                 Alert.alert(
                     'Solicitação enviada',
                     'O anfitrião analisará sua solicitação. Avisaremos quando houver uma resposta.',
-                    [{ text: 'OK', onPress: () => router.replace(`/events/${event.id}`) }]
+                    [{ text: 'OK', onPress: () => router.dismissTo(`/events/${event.id}`) }]
                 );
                 return;
             }
@@ -128,13 +128,13 @@ export default function JoinEventScreen() {
                 Alert.alert(
                     'Solicitação Enviada',
                     'Sua inscrição foi enviada e aguarda aprovação do anfitrião. Você será notificado assim que houver uma resposta.',
-                    [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
+                    [{ text: 'OK', onPress: () => router.dismissTo(`/events/${event.id}`) }]
                 );
             } else {
                 Alert.alert(
                     'Inscrição Confirmada!',
                     'Sua presença foi confirmada no evento!',
-                    [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
+                    [{ text: 'OK', onPress: () => router.dismissTo(`/events/${event.id}`) }]
                 );
             }
 
@@ -144,7 +144,7 @@ export default function JoinEventScreen() {
                 Alert.alert(
                     'Já Solicitado',
                     'Você já enviou uma solicitação para este evento.',
-                    [{ text: 'OK', onPress: () => router.push(`/events/${event.id}`) }]
+                    [{ text: 'OK', onPress: () => router.dismissTo(`/events/${event.id}`) }]
                 );
             } else {
                 Alert.alert('Erro', friendlyErrorMessage(error, 'Falha ao solicitar inscrição.'));

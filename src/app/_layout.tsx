@@ -18,6 +18,7 @@ import { usePushNotifications } from '@/shared/hooks/usePushNotifications';
 import { queryClient } from '@/shared/lib/react-query';
 import { GluestackUIProvider } from '@/shared/ui/gluestack-ui-provider';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { goHome, resetToLogin } from '@/shared/lib/navigation';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -125,12 +126,12 @@ export default function RootLayout() {
 
     if (!session && !inAuthGroup && !isPublicRoute) {
       // Not logged in -> go to login
-      router.replace('/auth/login');
+      resetToLogin();
       return;
     }
 
     if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+      goHome();
       return;
     }
 
@@ -146,7 +147,7 @@ export default function RootLayout() {
     // KYC is required only for financial host actions, not general app access.
     else if (session && isProfileComplete === true) {
       if (currentSegment === 'welcome') {
-        router.replace('/(tabs)');
+        goHome();
       }
     }
   }, [currentSegment, initialized, session, segments, isProfileComplete, inAuthGroup, isPublicRoute, router]);

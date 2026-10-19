@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { goHome } from '@/shared/lib/navigation';
 
 const STEP_ROUTES = ['/events/create', '/events/create/menu', '/events/create/location', '/events/create/details'] as const;
 
@@ -42,7 +43,7 @@ export default function EventCreateReview() {
 
     const goToFirstError = (fieldErrors: Record<string, string>) => {
         const step = firstInvalidStep(fieldErrors);
-        if (step < 4) router.replace(STEP_ROUTES[step] as any);
+        if (step < 4) router.dismissTo(STEP_ROUTES[step] as any);
     };
 
     const openPayoutSetup = (path: '/profile/pix-key' | '/kyc') => {
@@ -57,7 +58,7 @@ export default function EventCreateReview() {
 
     const goToFeed = () => {
         setPublishedEvent(null);
-        router.replace('/(tabs)');
+        goHome();
     };
 
     const viewPublishedEvent = () => {
@@ -124,12 +125,12 @@ export default function EventCreateReview() {
                         </View>
                     </View>
 
-                    <ReviewSection title="Experiência" onEdit={() => router.push('/events/create')}>
+                    <ReviewSection title="Experiência" onEdit={() => router.dismissTo('/events/create')}>
                         <ReviewLine label="Tipo" value={creation.data.eventType || 'Pendente'} />
                         <ReviewLine label="Culinárias" value={creation.data.cuisineTypes.join(', ') || 'Pendentes'} />
                     </ReviewSection>
 
-                    <ReviewSection title="Cardápio" onEdit={() => router.push('/events/create/menu')}>
+                    <ReviewSection title="Cardápio" onEdit={() => router.dismissTo('/events/create/menu')}>
                         {creation.data.dishes.map((dish, index) => (
                             <View key={dish.id} style={styles.dishRow}>
                                 <Text style={styles.dishName}>{index + 1}. {dish.name || 'Prato pendente'}</Text>
@@ -139,7 +140,7 @@ export default function EventCreateReview() {
                         <ReviewLine label="Serviço" value={creation.data.isServedInSequence ? 'Em sequência' : 'Livre'} />
                     </ReviewSection>
 
-                    <ReviewSection title="Local" onEdit={() => router.push('/events/create/location')}>
+                    <ReviewSection title="Local" onEdit={() => router.dismissTo('/events/create/location')}>
                         <Text style={styles.addressText}>{creation.data.location.address || 'Endereço pendente'}</Text>
                         <Text style={styles.addressMeta}>{[creation.data.location.city, creation.data.location.state].filter(Boolean).join(' - ') || 'Cidade pendente'}</Text>
                         <View style={[styles.pinPill, creation.data.location.confirmed ? styles.pinPillOk : styles.pinPillPending]}>
@@ -148,7 +149,7 @@ export default function EventCreateReview() {
                         </View>
                     </ReviewSection>
 
-                    <ReviewSection title="Data e valor" onEdit={() => router.push('/events/create/details')}>
+                    <ReviewSection title="Data e valor" onEdit={() => router.dismissTo('/events/create/details')}>
                         <ReviewLine label="Início" value={eventDate ? eventDate.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }) : 'Pendente'} />
                         <ReviewLine label="Término" value={creation.data.details.endTime ? creation.data.details.endTime.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }) : 'Pendente'} />
                         <ReviewLine label="Inscrições até" value={creation.data.details.registrationDeadline ? creation.data.details.registrationDeadline.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }) : 'Até o início'} />

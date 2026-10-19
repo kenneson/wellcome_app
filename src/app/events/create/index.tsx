@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { goHome } from '@/shared/lib/navigation';
 
 const EVENT_TYPES = ['Café da manhã', 'Brunch', 'Almoço', 'Lanche', 'Jantar', 'Degustação', 'Pic-nic', 'Coquetel', 'Outro'] as const;
 const CUISINE_TYPES = [
@@ -63,11 +64,11 @@ export default function EventCreateEssentials() {
 
     const handleExit = () => Alert.alert('Sair da criação?', 'Seu rascunho está salvo e poderá ser retomado em Meus eventos.', [
         { text: 'Continuar editando', style: 'cancel' },
-        { text: 'Sair', onPress: () => router.replace('/(tabs)') },
+        { text: 'Sair', onPress: () => goHome() },
         {
             text: 'Excluir rascunho',
             style: 'destructive',
-            onPress: () => void creation.discardDraft().then(() => router.replace('/(tabs)')),
+            onPress: () => void creation.discardDraft().then(() => goHome()),
         },
     ]);
 

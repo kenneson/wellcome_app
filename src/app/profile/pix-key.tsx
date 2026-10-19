@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 import { validatePixKey } from '@/shared/lib/validation';
+import { resetToLogin } from '@/shared/lib/navigation';
 
 const PIX_KEY_TYPES = [
     { label: 'CPF', value: 'CPF' },
@@ -37,13 +38,13 @@ export default function PixKeyScreen() {
     const [pixKeyType, setPixKeyType] = useState('CPF');
     const returnPath = getEventCreationReturnPath(params.returnTo, params.draftId);
 
-    const finish = () => returnPath ? router.replace(returnPath as any) : router.back();
+    const finish = () => returnPath ? router.dismissTo(returnPath as any) : router.back();
 
     async function loadCurrentKey() {
         setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { router.replace('/auth/login'); return; }
+            if (!session) { resetToLogin(); return; }
             setUserId(session.user.id);
             const profile = await userService.getProfile(session.user.id);
             if (profile.pixKey) setPixKey(profile.pixKey);

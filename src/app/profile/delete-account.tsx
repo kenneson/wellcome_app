@@ -4,7 +4,6 @@ import { supabase } from '@/shared/lib/supabase';
 import { AppIcon as Ionicons } from '@/components/ui/icon';
 import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
@@ -16,11 +15,11 @@ import {
     View
 } from 'react-native';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { resetToLogin } from '@/shared/lib/navigation';
 
 const CONFIRMATION_TEXT = 'EXCLUIR';
 
 export default function DeleteAccountScreen() {
-    const router = useRouter();
     const [confirmationText, setConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -48,7 +47,7 @@ export default function DeleteAccountScreen() {
                             Alert.alert('Conta excluída', 'Sua conta foi removida com sucesso.', [
                                 {
                                     text: 'OK',
-                                    onPress: () => router.replace('/auth/login'),
+                                    onPress: () => resetToLogin(),
                                 }
                             ]);
                         } catch (error: any) {

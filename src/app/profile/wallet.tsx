@@ -17,6 +17,7 @@ import {
     View,
 } from 'react-native';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { resetToLogin } from '@/shared/lib/navigation';
 
 const PIX_KEY_TYPE_LABELS: Record<string, string> = {
     CPF: 'CPF',
@@ -41,7 +42,7 @@ export default function WalletScreen() {
         if (showLoader) setLoading(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { router.replace('/auth/login'); return; }
+            if (!session) { resetToLogin(); return; }
             setUserId(session.user.id);
             const [profile, withdrawalConfig] = await Promise.all([
                 userService.getProfile(session.user.id),

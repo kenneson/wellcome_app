@@ -233,7 +233,7 @@ export default function PaymentScreen() {
         || (paymentDueAt && new Date(paymentDueAt).getTime() <= Date.now() && !paid)
     );
 
-    const backToEvent = () => router.replace(`/events/${id}`);
+    const backToEvent = () => router.dismissTo(`/events/${id}`);
     const formattedAmount = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
     if (loading) {

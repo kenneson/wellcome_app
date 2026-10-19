@@ -7,7 +7,7 @@ import { supabase } from '@/shared/lib/supabase';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -22,6 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 import { firstError, profileSchema, validateForm } from '@/shared/lib/validation';
+import { goHome, resetToLogin } from '@/shared/lib/navigation';
 
 const lookingForOptions = [
     { label: 'Participar', value: 'comer', icon: 'restaurant-outline' },
@@ -30,7 +31,6 @@ const lookingForOptions = [
 ];
 
 export default function EditProfileScreen() {
-    const router = useRouter();
     const { width } = useWindowDimensions();
     const { mandatory } = useLocalSearchParams<{ mandatory?: string }>();
     const { refetchProfile } = useUserProfile();
@@ -54,7 +54,7 @@ export default function EditProfileScreen() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
-                router.replace('/auth/login');
+                resetToLogin();
                 return;
             }
 
@@ -139,7 +139,7 @@ export default function EditProfileScreen() {
 
             await refetchProfile();
             Alert.alert('Perfil atualizado', 'Suas informações foram salvas com sucesso.', [
-                { text: 'OK', onPress: () => router.replace('/(tabs)/profile') },
+                { text: 'OK', onPress: () => goHome('/(tabs)/profile') },
             ]);
         } catch (error: any) {
             console.error('[EditProfile] Falha ao atualizar perfil', error?.code || error?.message);
