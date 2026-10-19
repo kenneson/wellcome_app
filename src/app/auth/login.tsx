@@ -1,6 +1,7 @@
 import { authService } from '@/services/api/AuthService';
 import { supabase } from '@/shared/lib/supabase';
-import { AppIcon as FontAwesome, AppIcon as Ionicons } from '@/components/ui/icon';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { GoogleLogo } from '@/components/ui/GoogleLogo';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
 import { Link } from 'expo-router';
@@ -17,6 +18,8 @@ import {
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { BrandHeader, BrandSheet } from '@/components/ui/wellcome';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { FieldErrors, loginSchema, validateForm } from '@/shared/lib/validation';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -25,12 +28,19 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [errors, setErrors] = useState<FieldErrors<{ email: string; password: string }>>({});
 
     async function signInWithEmail() {
+        const validation = validateForm(loginSchema, { email, password });
+        if (!validation.success) {
+            setErrors(validation.errors);
+            return;
+        }
+        setErrors({});
         setLoading(true);
 
         try {
-            const data = await authService.login(email, password);
+            const data = await authService.login(validation.data.email, validation.data.password);
 
             if (data?.session) {
                 const { error } = await supabase.auth.setSession({
@@ -40,8 +50,8 @@ export default function LoginScreen() {
                 if (error) throw error;
             }
             // Navigation is handled by the auth listener in _layout
-        } catch (error: any) {
-            Alert.alert('Error', error.message);
+        } catch (error) {
+            Alert.alert('Não foi possível entrar', friendlyErrorMessage(error, 'Confira seu e-mail e senha e tente novamente.'));
         }
         setLoading(false);
     }
@@ -79,8 +89,8 @@ export default function LoginScreen() {
                     }
                 }
             }
-        } catch (error: any) {
-            Alert.alert('Error', error.message);
+        } catch (error) {
+            Alert.alert('Não foi possível entrar com o Google', friendlyErrorMessage(error));
         }
     }
 
@@ -116,26 +126,34 @@ export default function LoginScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>E-mail</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={[styles.input, errors.email && styles.inputError]}
                                     placeholder="email@email.com"
                                     placeholderTextColor={Palette.subtle}
                                     value={email}
-                                    onChangeText={setEmail}
+                                    onChangeText={(value) => {
+                                        setEmail(value);
+                                        if (errors.email) setErrors((current) => ({ ...current, email: undefined }));
+                                    }}
                                     autoCapitalize="none"
+                                    autoComplete="email"
                                     keyboardType="email-address"
                                     accessibilityLabel="E-mail"
                                 />
+                                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Senha</Text>
-                                <View style={styles.passwordContainer}>
+                                <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
                                     <TextInput
                                         style={styles.passwordInput}
                                         placeholder=""
                                         placeholderTextColor={Palette.subtle}
                                         value={password}
-                                        onChangeText={setPassword}
+                                        onChangeText={(value) => {
+                                            setPassword(value);
+                                            if (errors.password) setErrors((current) => ({ ...current, password: undefined }));
+                                        }}
                                         secureTextEntry={!showPassword}
                                         accessibilityLabel="Senha"
                                     />
@@ -152,6 +170,7 @@ export default function LoginScreen() {
                                         />
                                     </TouchableOpacity>
                                 </View>
+                                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                             </View>
 
                             <TouchableOpacity
@@ -173,7 +192,7 @@ export default function LoginScreen() {
                             </View>
 
                             <TouchableOpacity style={styles.socialButton} onPress={signInWithGoogle} accessibilityRole="button">
-                                <FontAwesome name="google" size={22} color={Palette.ink} />
+                                <GoogleLogo size={20} />
                                 <Text style={styles.socialButtonText}>Continuar com Google</Text>
                             </TouchableOpacity>
                         </View>
@@ -257,6 +276,16 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         fontSize: 16,
         color: Palette.ink,
+    },
+    inputError: {
+        borderColor: Palette.danger,
+    },
+    errorText: {
+        marginTop: 6,
+        fontSize: 13,
+        lineHeight: 18,
+        color: Palette.danger,
+        fontWeight: '600',
     },
     passwordContainer: {
         minHeight: 48,

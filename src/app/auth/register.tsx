@@ -1,6 +1,7 @@
 import { authService } from '@/services/api/AuthService';
 import { supabase } from '@/shared/lib/supabase';
-import { AppIcon as FontAwesome, AppIcon as Ionicons } from '@/components/ui/icon';
+import { AppIcon as Ionicons } from '@/components/ui/icon';
+import { GoogleLogo } from '@/components/ui/GoogleLogo';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Link, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -16,6 +17,10 @@ import {
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { BrandSheet, BrandStackHeader } from '@/components/ui/wellcome';
 import { BorderRadius, Palette, Spacing } from '@/shared/constants/theme';
+import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
+import { FieldErrors, registerSchema, validateForm } from '@/shared/lib/validation';
+
+type RegisterField = 'name' | 'email' | 'phoneNumber' | 'password' | 'confirmPassword' | 'acceptedTerms';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,21 +37,31 @@ export default function RegisterScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [errors, setErrors] = useState<FieldErrors<Record<RegisterField, unknown>>>({});
+
+    function clearError(field: RegisterField) {
+        if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
+    }
 
     async function signUpWithEmail() {
-        if (!acceptedTerms) {
-            Alert.alert('Aceite necessário', 'Leia e aceite os Termos de Uso e a Política de Privacidade para continuar.');
+        const validation = validateForm(registerSchema, {
+            name,
+            email,
+            phoneNumber,
+            password,
+            confirmPassword,
+            acceptedTerms,
+        });
+        if (!validation.success) {
+            setErrors(validation.errors);
             return;
         }
+        setErrors({});
 
-        if (password !== confirmPassword) {
-            Alert.alert('Erro', 'As senhas não coincidem.');
-            return;
-        }
-
+        const values = validation.data;
         setLoading(true);
         try {
-            const data = await authService.register(email, password, name, phoneNumber, acceptedTerms);
+            const data = await authService.register(values.email, values.password, values.name, values.phoneNumber, values.acceptedTerms);
 
             if (data?.session) {
                 const { error } = await supabase.auth.setSession({
@@ -62,8 +77,8 @@ export default function RegisterScreen() {
                 router.replace('/auth/login');
             }
 
-        } catch (error: any) {
-            Alert.alert('Erro', error.message);
+        } catch (error) {
+            Alert.alert('Não foi possível criar sua conta', friendlyErrorMessage(error, 'Confira os dados informados e tente novamente.'));
         }
         setLoading(false);
     }
@@ -116,8 +131,8 @@ export default function RegisterScreen() {
                     }
                 }
             }
-        } catch (error: any) {
-            Alert.alert('Error', error.message);
+        } catch (error) {
+            Alert.alert('Não foi possível entrar com o Google', friendlyErrorMessage(error));
         } finally {
             setLoading(false);
         }
@@ -149,51 +164,68 @@ export default function RegisterScreen() {
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Nome completo</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={[styles.input, errors.name && styles.inputError]}
                                     placeholder="Seu nome"
                                     placeholderTextColor={Palette.subtle}
                                     value={name}
-                                    onChangeText={setName}
+                                    onChangeText={(value) => {
+                                        setName(value);
+                                        clearError('name');
+                                    }}
+                                    autoComplete="name"
                                     accessibilityLabel="Nome completo"
                                 />
+                                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>E-mail</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={[styles.input, errors.email && styles.inputError]}
                                     placeholder="email@email.com"
                                     placeholderTextColor={Palette.subtle}
                                     value={email}
-                                    onChangeText={setEmail}
+                                    onChangeText={(value) => {
+                                        setEmail(value);
+                                        clearError('email');
+                                    }}
                                     autoCapitalize="none"
+                                    autoComplete="email"
                                     keyboardType="email-address"
                                     accessibilityLabel="E-mail"
                                 />
+                                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>WhatsApp / Telefone</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={[styles.input, errors.phoneNumber && styles.inputError]}
                                     placeholder="(11) 99999-9999"
                                     placeholderTextColor={Palette.subtle}
                                     value={phoneNumber}
-                                    onChangeText={setPhoneNumber}
+                                    onChangeText={(value) => {
+                                        setPhoneNumber(value);
+                                        clearError('phoneNumber');
+                                    }}
                                     keyboardType="phone-pad"
                                     accessibilityLabel="WhatsApp / Telefone"
                                 />
+                                {errors.phoneNumber && <Text style={styles.errorText}>{errors.phoneNumber}</Text>}
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Senha</Text>
-                                <View style={styles.passwordContainer}>
+                                <View style={[styles.passwordContainer, errors.password && styles.inputError]}>
                                     <TextInput
                                         style={styles.passwordInput}
                                         placeholder=""
                                         placeholderTextColor={Palette.subtle}
                                         value={password}
-                                        onChangeText={setPassword}
+                                        onChangeText={(value) => {
+                                            setPassword(value);
+                                            clearError('password');
+                                        }}
                                         secureTextEntry={!showPassword}
                                         accessibilityLabel="Senha"
                                     />
@@ -210,17 +242,21 @@ export default function RegisterScreen() {
                                         />
                                     </TouchableOpacity>
                                 </View>
+                                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                             </View>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Repita sua senha</Text>
-                                <View style={styles.passwordContainer}>
+                                <View style={[styles.passwordContainer, errors.confirmPassword && styles.inputError]}>
                                     <TextInput
                                         style={styles.passwordInput}
                                         placeholder=""
                                         placeholderTextColor={Palette.subtle}
                                         value={confirmPassword}
-                                        onChangeText={setConfirmPassword}
+                                        onChangeText={(value) => {
+                                            setConfirmPassword(value);
+                                            clearError('confirmPassword');
+                                        }}
                                         secureTextEntry={!showConfirmPassword}
                                         accessibilityLabel="Repita sua senha"
                                     />
@@ -237,6 +273,7 @@ export default function RegisterScreen() {
                                         />
                                     </TouchableOpacity>
                                 </View>
+                                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
                             </View>
 
                             <View style={styles.termsContainer}>
@@ -298,7 +335,7 @@ export default function RegisterScreen() {
                                 accessibilityRole="button"
                                 accessibilityState={{ disabled: loading || !acceptedTerms }}
                             >
-                                <FontAwesome name="google" size={22} color={Palette.ink} />
+                                <GoogleLogo size={20} />
                                 <Text style={styles.socialButtonText}>Cadastrar com Google</Text>
                             </TouchableOpacity>
                         </View>
@@ -378,6 +415,16 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.md,
         fontSize: 16,
         color: Palette.ink,
+    },
+    inputError: {
+        borderColor: Palette.danger,
+    },
+    errorText: {
+        marginTop: 6,
+        fontSize: 13,
+        lineHeight: 18,
+        color: Palette.danger,
+        fontWeight: '600',
     },
     passwordContainer: {
         minHeight: 48,
