@@ -75,6 +75,12 @@ export class UserController {
                 return reply.code(400).send({ message: error.message });
             }
 
+            // username is the only unique profile field a user can type.
+            if ((error as { code?: string })?.code === 'P2002') {
+                return reply.code(409).send({ message: 'Este nome de usuário já está em uso. Escolha outro.' });
+            }
+
+            request.log.error(error, 'Failed to update user profile');
             return reply.code(500).send({ message: 'Internal server error' });
         }
     }
