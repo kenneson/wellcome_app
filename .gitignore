@@ -52,3 +52,7 @@ app-example
 # Python (tools/)
 __pycache__/
 *.pyc
+
+# Local-only folders
+.claude/
+material google play/
