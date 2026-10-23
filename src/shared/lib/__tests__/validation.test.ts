@@ -48,7 +48,7 @@ describe('register validation', () => {
         const result = validateForm(registerSchema, { ...valid, password: '123', confirmPassword: '124', phoneNumber: '123' });
         expect(result.success).toBe(false);
         if (result.success) return;
-        expect(result.errors.password).toMatch(/pelo menos 6/);
+        expect(result.errors.password).toMatch(/pelo menos 8/);
         expect(result.errors.confirmPassword).toBe('As senhas não coincidem.');
         expect(result.errors.phoneNumber).toMatch(/DDD/);
     });

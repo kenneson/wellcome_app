@@ -18,6 +18,10 @@ import {
 import { EventCreationError } from '../../../application/errors/EventCreationError';
 import { registrationHoldsCapacity } from '../../../domain/services/RegistrationPaymentPolicy';
 
+// Small radii would let anyone narrow down a host's home address.
+const MIN_SEARCH_RADIUS_KM = 5;
+const MAX_SEARCH_RADIUS_KM = 200;
+
 const eventPriceSchema = z.number().nonnegative().refine(isValidEventPrice, {
     message: INVALID_EVENT_PRICE_MESSAGE,
 });
@@ -131,8 +135,12 @@ export class EventController {
             if ((latitude === undefined) !== (longitude === undefined)) {
                 return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'Informe latitude e longitude juntas', fieldErrors: {} });
             }
-            if (radiusInKm !== undefined && radiusInKm <= 0) {
-                return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'O raio deve ser maior que zero', fieldErrors: {} });
+            if (radiusInKm !== undefined && (radiusInKm < MIN_SEARCH_RADIUS_KM || radiusInKm > MAX_SEARCH_RADIUS_KM)) {
+                return reply.code(400).send({
+                    code: 'INVALID_EVENT_FILTER',
+                    message: `O raio deve ficar entre ${MIN_SEARCH_RADIUS_KM} e ${MAX_SEARCH_RADIUS_KM} km`,
+                    fieldErrors: {},
+                });
             }
             if (minimumPrice !== undefined && maximumPrice !== undefined && minimumPrice > maximumPrice) {
                 return reply.code(400).send({ code: 'INVALID_EVENT_FILTER', message: 'O valor minimo nao pode superar o maximo', fieldErrors: {} });

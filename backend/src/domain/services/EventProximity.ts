@@ -19,6 +19,21 @@ export function calculateDistanceKm(origin: Coordinates, destination: Coordinate
     return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
+// Public listings must never reveal a host's exact address. Distances are
+// measured to a coarse grid point (~1 km) around the event and shown in whole
+// kilometres, so repeated radius/origin queries cannot triangulate the venue.
+const PUBLIC_LOCATION_GRID_DEGREES = 0.01;
+
+export function toPublicCoordinates(coordinates: Coordinates): Coordinates {
+    const snap = (value: number) =>
+        Math.round(value / PUBLIC_LOCATION_GRID_DEGREES) * PUBLIC_LOCATION_GRID_DEGREES;
+    return { latitude: snap(coordinates.latitude), longitude: snap(coordinates.longitude) };
+}
+
+export function toPublicDistanceKm(distanceKm: number): number {
+    return Math.max(1, Math.round(distanceKm));
+}
+
 export function filterAndSortEventsByProximity(
     events: Event[],
     origin: Coordinates,
@@ -28,10 +43,10 @@ export function filterAndSortEventsByProximity(
         .flatMap((event) => {
             if (event.latitude === null || event.longitude === null) return [];
 
-            const distanceKm = calculateDistanceKm(origin, {
+            const distanceKm = calculateDistanceKm(origin, toPublicCoordinates({
                 latitude: event.latitude,
                 longitude: event.longitude,
-            });
+            }));
             if (distanceKm > radiusInKm) return [];
 
             return [{ event, distanceKm }];
@@ -42,7 +57,7 @@ export function filterAndSortEventsByProximity(
         )
         .map(({ event, distanceKm }) => ({
             ...event,
-            distanceKm: Number(distanceKm.toFixed(1)),
+            distanceKm: toPublicDistanceKm(distanceKm),
         }));
 }
 

@@ -29,7 +29,8 @@ export class UserController {
                 return reply.code(401).send({ message: error.message });
             }
 
-            return reply.code(500).send({ message: 'Internal server error', error: error?.message });
+            request.log.error(error, 'Failed to load user profile');
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 
@@ -98,7 +99,8 @@ export class UserController {
                 return reply.code(404).send({ message: error.message });
             }
 
-            return reply.code(500).send({ message: 'Internal server error', error });
+            request.log.error(error, 'Failed to delete user account');
+            return reply.code(500).send({ message: 'Internal server error' });
         }
     }
 

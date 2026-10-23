@@ -67,6 +67,7 @@ import { WithdrawalController } from './presentation/http/controllers/Withdrawal
 import { ForbiddenRequestError, getAuthenticatedUserContext, getAuthenticatedUserId } from './presentation/http/helpers/auth';
 import { getMinimumWithdrawalAmount, getProcessingFeePayer } from './domain/services/PaymentEconomics';
 import { eventListResponseSchema } from './presentation/http/schemas/EventResponseSchemas';
+import { registerRateLimit } from './presentation/http/security/rateLimit';
 
 
 const fastify = Fastify({
@@ -118,6 +119,8 @@ const start = async () => {
             methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             credentials: true
         });
+
+        registerRateLimit(fastify);
 
         const enableApiDocs = process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_DOCS === 'true';
 
@@ -366,11 +369,6 @@ const start = async () => {
         );
         const getPlatformEconomicsUseCase = new GetPlatformEconomicsUseCase(paymentRepository);
         const adminController = new AdminController(getPlatformEconomicsUseCase);
-
-        // Test route to verify deploy
-        fastify.get('/test-deploy', async () => {
-            return { deploy: 'OK', time: new Date().toISOString() };
-        });
 
         // Auth Routes
         fastify.post('/auth/login', {
@@ -1856,30 +1854,7 @@ const start = async () => {
         const port = Number(process.env.PORT) || 3000;
         const address = await fastify.listen({ port, host: '0.0.0.0' });
 
-        console.log(`\n🚀 Backend running at: ${address}`);
-
-        // Log LAN IPs for easier access
-        const { networkInterfaces } = require('os');
-        const nets = networkInterfaces();
-        const results = Object.create(null);
-
-        for (const name of Object.keys(nets)) {
-            for (const net of nets[name]) {
-                // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-                if (net.family === 'IPv4' && !net.internal) {
-                    if (!results[name]) {
-                        results[name] = [];
-                    }
-                    results[name].push(net.address);
-                }
-            }
-        }
-
-        console.log('📍 Available on your network:');
-        Object.keys(results).forEach(name => {
-            results[name].forEach((ip: string) => console.log(`   - http://${ip}:3000`));
-        });
-        console.log('\n');
+        fastify.log.info(`Backend running at: ${address}`);
 
     } catch (err) {
         fastify.log.error(err);

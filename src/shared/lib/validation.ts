@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const MIN_PASSWORD_LENGTH = 6;
+export const MIN_PASSWORD_LENGTH = 8;
 
 const requiredText = (message: string) => z.string().trim().min(1, message);
 

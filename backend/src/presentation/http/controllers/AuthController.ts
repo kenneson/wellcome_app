@@ -34,7 +34,7 @@ export class AuthController {
     async register(req: FastifyRequest, reply: FastifyReply) {
         const registerSchema = z.object({
             email: z.string().email('Digite um e-mail válido.'),
-            password: z.string().min(6, 'A senha precisa ter pelo menos 6 caracteres.'),
+            password: z.string().min(8, 'A senha precisa ter pelo menos 8 caracteres.'),
             fullName: z.string().trim().min(1, 'Informe seu nome.'),
             phoneNumber: z.string().optional(),
             acceptedTerms: z.literal(true, { message: 'Aceite os Termos de Uso e a Política de Privacidade.' }),

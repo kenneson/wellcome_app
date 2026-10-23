@@ -35,8 +35,8 @@ describe('EventProximity', () => {
         );
 
         expect(result.map((event) => event.id)).toEqual(['near', 'far']);
-        expect(result[0].distanceKm).toBe(5.6);
-        expect(result[1].distanceKm).toBe(16.7);
+        expect(result[0].distanceKm).toBe(6);
+        expect(result[1].distanceKm).toBe(17);
     });
 
     it('uses event date as the tie breaker for equal distances', () => {
