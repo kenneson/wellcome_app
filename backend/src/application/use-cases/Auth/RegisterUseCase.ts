@@ -31,6 +31,13 @@ export class RegisterUseCase {
             throw new Error(error.message);
         }
 
+        // With email confirmation on, Supabase answers an existing email (e.g. a
+        // Google account) with an obfuscated user that has no identities and
+        // sends no email. Surface it instead of "check your inbox".
+        if (data.user && data.user.identities?.length === 0) {
+            throw new Error('User already registered');
+        }
+
         return data;
     }
 }

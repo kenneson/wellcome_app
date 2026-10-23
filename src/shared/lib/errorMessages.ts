@@ -1,7 +1,7 @@
 const KNOWN_MESSAGES: [RegExp, string][] = [
     [/invalid login credentials/i, 'E-mail ou senha incorretos.'],
     [/email not confirmed/i, 'Confirme seu e-mail antes de entrar. O link de confirmação está na sua caixa de entrada.'],
-    [/user already registered|already been registered/i, 'Já existe uma conta com este e-mail.'],
+    [/user already registered|already been registered/i, 'Já existe uma conta com este e-mail. Entre pela tela de login (se você se cadastrou com o Google, use "Continuar com Google").'],
     [/password should be at least/i, 'A senha precisa ter pelo menos 8 caracteres.'],
     [/rate limit|for security purposes|too many requests/i, 'Muitas tentativas seguidas. Aguarde um pouco e tente novamente.'],
     [/network request failed|failed to fetch|network ?error|load failed/i, 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.'],

@@ -47,4 +47,16 @@ describe('RegisterUseCase', () => {
             },
         }));
     });
+
+    it('reports an email that already has an account (e.g. Google) instead of faking success', async () => {
+        signUpMock.mockResolvedValue({ data: { user: { id: 'fake', identities: [] }, session: null }, error: null });
+
+        await expect(new RegisterUseCase().execute(
+            'user@example.com',
+            'secret123',
+            'User Name',
+            '',
+            true
+        )).rejects.toThrow('User already registered');
+    });
 });
