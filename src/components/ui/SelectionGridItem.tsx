@@ -34,8 +34,11 @@ export function SelectionGridItem({ label, selected, onPress }: SelectionGridIte
             accessibilityState={{ selected }}
         >
             <Animated.View style={animatedStyle} className="w-full">
+                {/* Fixed height on purpose: a percentage width plus aspect-ratio inside a
+                    flex-wrap row is measured too short on Android (new architecture), which
+                    cut off the rest of the scroll view below the grid. */}
                 <View
-                    className={`w-full aspect-[1.3] items-center justify-center p-2 rounded-2xl border ${selected
+                    className={`w-full h-[72px] items-center justify-center p-2 rounded-2xl border ${selected
                         ? 'bg-orange-50 border-[#FF8C42]'
                         : 'bg-white border-gray-200'
                         }`}
