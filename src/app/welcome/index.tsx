@@ -18,6 +18,7 @@ import {
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandHeader, BrandSheet } from '@/components/ui/wellcome';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 import { BorderRadius, Elevation, Palette, Spacing } from '@/shared/constants/theme';
 import { friendlyErrorMessage } from '@/shared/lib/errorMessages';
 import { firstError, onboardingSteps, validateForm } from '@/shared/lib/validation';
@@ -34,6 +35,7 @@ export default function WelcomeScreen() {
     const insets = useSafeAreaInsets();
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [showCityModal, setShowCityModal] = useState(false);
     const [fadeAnim] = useState(new Animated.Value(1));
 
     // User data from Google Auth
@@ -301,14 +303,17 @@ export default function WelcomeScreen() {
                     <Ionicons name="business-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Cidade</Text>
                 </View>
-                <TextInput
+                {/* City comes from the IBGE list so it matches what event search uses. */}
+                <TouchableOpacity
                     style={styles.input}
-                    placeholder="Ex: São Paulo"
-                    placeholderTextColor={Palette.subtle}
-                    value={formData.city}
-                    onChangeText={(t) => updateForm('city', t)}
-                    autoCapitalize="words"
-                />
+                    onPress={() => setShowCityModal(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={formData.city ? `Cidade: ${formData.city}. Toque para alterar` : 'Selecionar cidade'}
+                >
+                    <Text style={{ color: formData.city ? Palette.ink : Palette.subtle, fontSize: 16 }}>
+                        {formData.city || 'Toque para buscar sua cidade'}
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.inputGroup}>
@@ -316,6 +321,7 @@ export default function WelcomeScreen() {
                     <Ionicons name="location-outline" size={18} color={Palette.orangeDeep} />
                     <Text style={styles.label}>Bairro</Text>
                 </View>
+                {/* ponytail: free text, no reliable nationwide neighbourhood list (IBGE/Geoapify). */}
                 <TextInput
                     style={styles.input}
                     placeholder="Ex: Pinheiros"
@@ -394,6 +400,16 @@ export default function WelcomeScreen() {
                     </TouchableOpacity>
                 </View>
             </BrandSheet>
+
+            <LocationAutocomplete
+                visible={showCityModal}
+                onClose={() => setShowCityModal(false)}
+                onSelectMunicipality={(municipality) => updateForm('city', municipality.name)}
+                type="municipality"
+                asModal
+                value={formData.city}
+                placeholder="Digite sua cidade"
+            />
         </View>
     );
 }
